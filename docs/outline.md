@@ -1,7 +1,7 @@
 ---
 title: Evidence providing problem solvers in Agda
 subtitle: Project outline
-author: Unai Zalakain
+author: '\protect\parbox{\textwidth}{\protect\centering Unai Zalakain\\ Supervisor: Conor McBride}'
 date: October 2017
 ---
 
@@ -22,8 +22,8 @@ encoded into types, or proofs that show that the answer makes some predicates
 hold.
 
 The aim of this project is to translate into Agda some existing problem solver
-algorithms so that the validity of their answers is proven by the type of their
-answers, and can therefore be checked by Agda's typechecker.
+algorithms so that the validity of their answers is proven by their type, and
+can therefore be checked by Agda's typechecker.
 
 <!--
 Most problem solving algorithms take a problem description and answer either
@@ -69,11 +69,12 @@ to trust external solvers.
 
 # Methodology
 
-1. Better understand the problem domain (reading, talking to people).
-2. Solve a problem with a good interest/difficulty ratio.
+1. Select a problem with a good interest/difficulty ratio.
+2. Better understand the problem domain (reading, talking to people).
+3. Solve it.
 3. Reflect on the strategies used.
-4. Go to 2.
-5. Compare and evaluate different problem domains and solutions.
+5. Compare with other problem domains and solutions.
+4. If time permitting, go to 1.
 
 # Evaluation
 
@@ -97,3 +98,12 @@ Experimentation-based with Significant Software Development Project.
 
 - Understanding problems and foreseeing implementations requires research.
 - Implementations involve engineering.
+
+# Supervisor's statement
+
+I have now met with Unai twice. They have established a clear picture of what
+the project involves and the techniques which will be necessary. They have set
+about acquiring the necessary background and skills and already found useful
+papers in the literature, in addition to those I alerted them to. I am very much
+looking forward to working with them on this project. Done well, it could even
+lead to a scientific publication.
