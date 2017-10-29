@@ -166,8 +166,17 @@ nat-expr-2 = op
       (var 1)
         (op (var 3) (var 2))))
 
+nat-expr-3 : Expr Nat
+nat-expr-3 = neut
+
 nat-fact : (env : Env Nat Nat) → evalExpr env nat-expr-1 ≡ evalExpr env nat-expr-2
 nat-fact = fact nat-expr-1 nat-expr-2 comp-nat
 
 nat-answer : evalExpr nat-env nat-expr-1 ≡ evalExpr nat-env nat-expr-2
-nat-answer = 9 [QED]
+nat-answer = nat-fact nat-env
+
+nat-answer₁ : nat-fact nat-env ≡ refl 9
+nat-answer₁ = (refl 9) [QED]
+
+nat-lie : ⊤₁
+nat-lie = fact nat-expr-1 nat-expr-3 comp-nat
