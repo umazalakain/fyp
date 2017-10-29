@@ -1,35 +1,35 @@
-{-# OPTIONS --type-in-type #-}  -- yes, I will let you cheat in this exercise
-
 module Monoids where
 
 open import Agda.Builtin.List
-open import Agda.Builtin.Unit
 open import Agda.Builtin.Nat
 
-data _≡_ {X : Set} : X -> X -> Set where
-  refl : (x : X) -> x ≡ x           -- the relation that's "only reflexive"
+data _≡_ {X : Set} : X → X → Set where
+  refl : (x : X) → x ≡ x
 {-# BUILTIN EQUALITY _≡_ #-}
   
-_[QED] : {X : Set}(x : X) -> x ≡ x
+_[QED] : {X : Set}(x : X) → x ≡ x
 x [QED] = refl x
 
-_=[_>=_ : {X : Set}(x : X){y z : X} -> x ≡ y -> y ≡ z -> x ≡ z
+_=[_>=_ : {X : Set}(x : X){y z : X} → x ≡ y → y ≡ z → x ≡ z
 x =[ refl .x >= q = q
 
-_=<_]=_ : {X : Set}(x : X){y z : X} -> y ≡ x -> y ≡ z -> x ≡ z
+_=<_]=_ : {X : Set}(x : X){y z : X} → y ≡ x → y ≡ z → x ≡ z
 x =< refl .x ]= q = q
 
 infixr 1 _=[_>=_ _=<_]=_
 infixr 2 _[QED]
 
-_=$=_ : {X Y : Set}{f f' : X -> Y}{x x' : X} ->
-        f ≡ f' -> x ≡ x' -> f x ≡ f' x'
+_=$=_ : {X Y : Set}{f f' : X → Y}{x x' : X} →
+        f ≡ f' → x ≡ x' → f x ≡ f' x'
 refl f =$= refl x = refl (f x)
 infixl 2 _=$=_
 
-_++_ : ∀ {X} → List X → List X → List X
+_++_ : {X : Set} → List X → List X → List X
 [] ++ q = q
 (x ∷ p) ++ q = x ∷ p ++ q
+
+record ⊤₁ : Set₁ where
+  constructor ⊤
 
 data Expr (X : Set) : Set where
   var : X              → Expr X
@@ -98,10 +98,10 @@ compareList (x ∷ p) (y ∷ q) f | no | _ = no
 compareList (x ∷ p) (y ∷ q) f | yes _ | no = no
 compareList (x ∷ p) (y ∷ q) f | yes h | yes t = yes (refl _∷_ =$= h =$= t)
 
-Fact : ∀ {X} → Expr X → Expr X → Comp X → Set
+Fact : ∀ {X} → Expr X → Expr X → Comp X → Set₁
 Fact {X} p q c with compareList (exprList p) (exprList q) (comp c)
-... | yes _ = ∀ {M} → (env : Env X M) → evalExpr env p ≡ evalExpr env q
-... | no = ⊤
+... | yes _ = ∀ {M : Set} → (env : Env X M) → evalExpr env p ≡ evalExpr env q
+... | no = ⊤₁
 
 fact : ∀ {X} → (p : Expr X) → (q : Expr X) → (f : Comp X) → Fact p q f
 fact p q c with compareList (exprList p) (exprList q) (comp c)
@@ -113,7 +113,7 @@ fact p q c | yes leq = λ env →
   evalList env (exprList q)
     =< eval-homomorphism env q ]=
   evalExpr env q [QED]
-fact p q c | no = tt 
+fact p q c | no = ⊤
 
 {-
   EXAMPLE: Natural numbers with addition, expressions indexed by natural numbers
