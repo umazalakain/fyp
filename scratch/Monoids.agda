@@ -39,12 +39,9 @@ data Expr (X : Set) : Set where
 data Maybe (X : Set) : Set where
   yes : X → Maybe X
   no  :     Maybe X
-  
-record Comp (X : Set) : Set where
-  field
-    comp : (x y : X) → Maybe (x ≡ y)
 
-open Comp
+Comp : (X : Set) → Set
+Comp X = (x y : X) → Maybe (x ≡ y)
 
 record Env (X M : Set) : Set where
   field
@@ -98,12 +95,12 @@ compareList (x ∷ p) (y ∷ q) f | yes _ | no = no
 compareList (x ∷ p) (y ∷ q) f | yes h | yes t = yes (refl _∷_ =$= h =$= t)
 
 Fact : ∀ {X} → Expr X → Expr X → Comp X → Set₁
-Fact {X} p q c with compareList (exprList p) (exprList q) (comp c)
+Fact {X} p q c with compareList (exprList p) (exprList q) c
 ... | yes _ = ∀ {M : Set} → (env : Env X M) → evalExpr env p ≡ evalExpr env q
 ... | no = ⊤₁
 
 fact : ∀ {X} → (p : Expr X) → (q : Expr X) → (f : Comp X) → Fact p q f
-fact p q c with compareList (exprList p) (exprList q) (comp c)
+fact p q c with compareList (exprList p) (exprList q) c
 fact p q c | yes leq = λ env → 
   evalExpr env p
     =[ eval-commutes env p >=
@@ -144,9 +141,6 @@ nat-comp (suc x) (suc y) with nat-comp x y
 nat-comp (suc x) (suc y) | yes z = yes (refl suc =$= z)
 nat-comp (suc x) (suc y) | no = no
 
-comp-nat : Comp Nat
-comp-nat = record { comp = nat-comp }
-
 nat-expr-1 : Expr Nat
 nat-expr-1 = op'
   (op' 
@@ -169,7 +163,7 @@ nat-expr-3 : Expr Nat
 nat-expr-3 = neut'
 
 nat-fact : (env : Env Nat Nat) → evalExpr env nat-expr-1 ≡ evalExpr env nat-expr-2
-nat-fact = fact nat-expr-1 nat-expr-2 comp-nat
+nat-fact = fact nat-expr-1 nat-expr-2 nat-comp
 
 nat-answer : evalExpr nat-env nat-expr-1 ≡ evalExpr nat-env nat-expr-2
 nat-answer = nat-fact nat-env
@@ -178,4 +172,4 @@ nat-answer₁ : nat-fact nat-env ≡ refl 9
 nat-answer₁ = (refl 9) [QED]
 
 nat-lie : ⊤₁
-nat-lie = fact nat-expr-1 nat-expr-3 comp-nat
+nat-lie = fact nat-expr-1 nat-expr-3 nat-comp
