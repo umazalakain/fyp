@@ -1,3 +1,9 @@
+*.agdai
 *.aux
 *.log
 *.pdf
+*.bbl
+*.blg
+*.out
+*.pdf
+latex

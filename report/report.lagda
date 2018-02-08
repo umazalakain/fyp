@@ -1,28 +1,16 @@
-\documentclass[12pt,a4paper]{report}
+\documentclass[12pt,a4paper]{scrreprt}
 
-
-% This handles the translation of unicode to latex:
-\usepackage[utf8]{inputenc}
-% \usepackage{autofe}
-
-% The following packages are needed because unicode is translated (using the
-% next set of packages) to latex commands. You may need more packages if you use
-% more unicode characters:
-
-\usepackage{amssymb}
-% \usepackage{bbm}
 \usepackage[english]{babel}
 
+% Links inside the bibliography
+\usepackage{hyperref}
 
-% Title options
+\usepackage{agda}[conor]
+% \setmathfont{texgyreschola-math.otf}
 
-% \subject{Submitted for the Degree of B.Sc. in Computer Science}
-\title{Evidence providing problem solvers in Agda}
-\author{Uma Zalakain}
-\date{March 2018}
+\usepackage{fullpage}
 
 \begin{document}
-
 \begin{titlepage}
     \centering{}
 
@@ -64,20 +52,129 @@
 %   - an acknowledgements page, and
 %   - a table of contents.
 
+\begin{abstract}
+\end{abstract}
+
+\section*{Acknowledgements}
+
+\tableofcontents
+
 - Proving certain theorems can be boring and we want to automate it
 - We don't want just the answer, we want a proof that it is the correct answer
 
-\section{Introduction}
+\chapter{Introduction}
 
-%   Introduction This should briefly describe the problem which you set out to
-%   solve and should essentially summarise the rest of your report. The aim of
-%   an introduction is to convince the reader that they should read on, so it is
-%   very important that excessive detail is avoided at this stage.
+%   Introduction This should briefly describe the problem which you
+%   set out to solve and should essentially summarise the rest of your
+%   report. The aim of an introduction is to convince the reader that
+%   they should read on, so it is very important that excessive detail
+%   is avoided at this stage.
+
+Formal proofs construct theorems by sequentially applying the axioms
+of a formal system. Computers can assist this process and make theorem
+proving a conversation between the mathematician and the computer,
+which continually checks the correctness of the proof. Yet, theorem
+proving can often be boring and tedious: certain theorems are trivial
+or uninteresting but require many rewrites.
+
+It is in those cases where automated theorem proving shines
+strongest: instead of applying inference rules manually, the user
+provides the automated theorem prover with a proposition and gets a
+verified answer back. This verification can come from outside of the
+decision procedure — as a proof of its correctness — or from inside it
+— in the form of a witness or proof. Furthermore, these decision
+procedures are often based on some meta-theory about the system, and
+thus can result in less rewriting steps than the blind application of
+inference rules from inside the system.
+
+For a computer to verify the proof for some proposition, there must
+exist some computational model for both proofs and propositions. One
+was first discovered by Haskell Curry and later strengthened by
+William Alvin Howard, and it establishes a two way correspondence
+between type theory and constructive logic: propositions are types and
+proofs are programs; to prove a proposition is to construct a program
+inhabiting certain type. A type-checker is now suddenly capable of
+verifying proofs.
+
+\begin{code}
+-- Falsehood: an uninhabited type with no constructors
+data ⊥ : Set where
+
+-- Ex falso quodlibet
+-- Agda can see there is no way of constructing ⊥
+-- There is no need to provide a case for when that happens
+explosion : {A : Set} → ⊥ → A
+explosion ()
+
+-- Truth : a type with a trivial constructor
+record ⊤ : Set where
+  constructor tt
+
+-- Proving truth is trivial
+trivial : ⊤
+trivial = tt
+\end{code}
+
+Many variants exist on both sides of the isomorphism. The type theory
+of simply typed lambda calculus — where $→$ is the only type
+constructor — is in itself enough to model propositional logic. Type
+theories containing dependent types, where the definition of a type
+may depend on a value, model predicate logics containing quantifiers.
+
+\begin{code}
+record Σ (A : Set) (B : A → Set) : Set where
+  constructor _,_
+  field
+    proj₁ : A
+    proj₂ : B proj₁
+
+data ℕ : Set where
+  zero :     ℕ
+  suc  : ℕ → ℕ
+  
+NonZero : ℕ → Set
+NonZero zero = ⊥
+NonZero (suc n) = ⊤
+
+-- NonZero (suc n) computes to ⊤
+one-is-non-zero : Σ ℕ NonZero
+one-is-non-zero = suc zero , tt
+
+-- NonZero zero computes to ⊥
+-- zero-is-not-non-zero : Σ ℕ NonZero
+-- zero-is-not-non-zero = zero , ?
+\end{code}
+
+Type-checking — that is, proof verification — should be decidable and
+terminating. If type-checking involves executing functions, these
+functions have to be:
+
+\begin{itemize}
+  \item purely functional;
+  \item defined for all of their domain; and
+  \item guaranteed to terminate.
+\end{itemize}
+
+The termination guarantee can be achieved by requiring recursive calls
+to happen on structurally smaller arguments. If data is defined
+inductively, this assures that a base case will be eventually reached,
+and therefore that recursion will terminate.
+
+\begin{code}
+_+_ : ℕ → ℕ → ℕ
+-- Base case of second argument
+n + zero = n
+-- Second argument gets smaller
+n + suc m = suc (n + m)
+
+-- No inductively defined data type decreasing in size
+-- nonsense : ?
+-- nonsense = nonsense
+\end{code}
+
 
 - What Agda is
 - How Agda works as a proof assistant
-- Types as propositions
-- What a solver is
 - Presburger arithmetic as an interesting goal
 
 %   The introduction should include the list of objectives that you identified
@@ -88,14 +185,74 @@
 - Better understand theorem proving in Agda
 - Write something that can be useful for others to use
 
-\section{Related work}
+\chapter{Related work}
 
 %   Related Work You should survey and critically evaluate other work which you
 %   have read or otherwise considered in the general area of the project topic.
 %   The aim here is to place your project work in the context of the related
 %   work.
 
+Before we start trying to envisage a solution to our main challenge — writing a
+solver for Presburger arithmetic in Agda —, it is sensible to consider and
+implement easier, yet non-trivial problems. We will look at two distinct
+solvers, both of them solvers for algebraic structures.
+
 \subsection{Monoid solver}
+
+It is not unlikely that while solving some bigger problem, one finds
+out that part of it can be modeled as an equation on monoids, and thus
+solved by a monoid solver.
+
+A monoid is a set `M` together with:
+
+\begin{itemize}
+  \item a binary operation \(· : M → M → M\) that is associative:
+    \[
+    ∀ (x y z : M) → (x · y) · z ≡ x · (y · z)
+    \]
+  \item a neutral element \(ε : M\)
+    \[
+    ∀ (x : M) → ε · m ≡ m
+    ∀ (x : M) → m · ε ≡ m
+    \]
+\end{itemize}
+
+It is important to note that a monoid is not required to be
+commutative. Examples of monoids are \((ℕ, +, 0)\), \((ℕ, ·, 1)\) and
+\((∀ {T} → List T, ++, [])\).
+
+
+
+
+
+With Agda and its dependent types, we can make the typechecker check such a proof, at compile time. Our solver is going to return something of type Solution :: Expression → Expression → Set.
+
+Let P = ((0 + x) + (x + y)) and Q = ((x + x) + y). Then Solution P Q [code] will give back the type ∀ (x y) → P ≡ Q representing an equality proof between P and Q for all possible assignments. If both sides were not equivalent, we would get a Failure [code] or some other trivial type.
+
+We can now define a function solve : (p : P) → (q : Q) → Solution p q [code]. This function has to give back either the actual equality proof on all possible assignments, or some trivial value indicating failure.
+
+The monoid laws can be used to distill an expression’s essence: [code]
+
+P = ((0 + x) + (x + y))  Q = ((x + x) + y)
+-- Absorb all neutral elements
+P = (x + (x + y))        Q = ((x + x) + y)
+-- Associativity doesn't matter
+P = x + x + y            Q = x + x + y
+-- We don't get any information out of +, it's meaningless
+-- Let's translate them into lists
+P = x ∷ x ∷ y ∷ []       Q = x ∷ x ∷ y ∷ []
+
+If these two lists are equal, then the expressions they came from must be equivalent. In other words: given any variable assignment, it doesn’t matter if we evaluate the original expressions [code] or the resulting lists [code], the result is the same. Translating them into lists (free monoids), we get rid of anything that makes two equivalent expressions constructively different.
+
+Now we only need to prove to Agda that translating expressions into lists to then evaluate those and evaluating expressions is indeed equivalent. [code]
+
+ Expr X --evalExpr----.  If
+   |                  |  ∀ (e : Expr X) →
+exprList              |  evalList (exprList e) ≡ evalExpr e
+   |                  |  Then
+   v                  v  ∀ (p q : Expr X) →
+ List X --evalList--> M  exprList p ≡ exprList q ⇔ evalExpr p ≡ evalExpr q
+
 
 - What is a Monoid?
 - Canonical forms and evaluation homomorphism
@@ -106,7 +263,7 @@
 - What is a commutative ring?
 - Horner normal form + constraints
 
-\section{Problem description and specification}
+\chapter{Problem description and specification}
 
 %   Problem Description and Specification Describe in detail, with examples if
 %   appropriate, the problem which you are trying to solve. You should clearly
@@ -125,8 +282,9 @@
 %   not, however, be particularly concerned if your project deviated slightly
 %   from this plan.
 
-\section{System design}
+\chapter{System design}
 
+- Why Prelude
 - High level plan of the module
     - Representation
     - Normalisation
@@ -140,7 +298,7 @@
 %   description of the architecture of your project's product and, if
 %   appropriate, the design of the user interface and data management.
 
-\section{Detailed design and implementation}
+\chapter{Detailed design and implementation}
 
 %   Detailed Design and Implementation In this chapter you should describe your
 %   design in more detail, taking the most interesting aspects right down to the
@@ -159,7 +317,7 @@
 - The source code itself, minus the boring bits
 - Things from agda-stdlib in the abstract?
 
-\section{Verification and validation}
+\chapter{Verification and validation}
 
 %   Verification and Validation In this section you should outline the
 %   verification and validation procedures that you've adopted throughout the
@@ -171,7 +329,7 @@
 
 - Why is this absolutely correct, Agda?
 
-\section{Results and evaluation}
+\chapter{Results and evaluation}
 
 %   Results and Evaluation The aim of this chapter is twofold. On one hand, it
 %   aims to present the final outcome of the project – i.e., the system
@@ -197,7 +355,7 @@
 %   the project. This will normally include the lessons learnt and explanations
 %   of any significant deviations from the original project plan.
 
-\section{Summary and conclusions}
+\chapter{Summary and conclusions}
 
 %   Summary and Conclusions In the final chapter of your report, you should
 %   summarise how successful you were in achieving the original project
@@ -206,7 +364,7 @@
 %   developed in future to enhance its utility. It is OK to be upbeat,
 %   especially if you are pleased with what you have achieved!
 
-\section{Bibliography}
+\chapter{Bibliography}
 
 %   References/Bibliography The references should consist of a list of papers
 %   and books referred to in the body of your report. These should be formatted
@@ -234,18 +392,24 @@
 %   URLs! Web pages are not scholarly publications. In particular, they are not
 %   peer reviewed, and so could contain erroneous or inaccurate information.
 
-\section{Appendices}
+\appendix
 
+\chapter{Detailed Specification and Design}
 %   Appendix A - Detailed Specification and Design This appendix should contain
 %   the details of your project specification that were not included in the main
 %   body of your report.
 
+\chapter{Detailed Test Strategy and Test Cases}
 %   Appendix B - Detailed Test Strategy and Test Cases This appendix should
 %   contain the details of the strategy you used to test your software, together
 %   with your tabulated and commented test results.
 
+\chapter{User Guide}
 %   Appendix C - User Guide This appendix should provide a detailed description
 %   of how to use your system. In some cases, it may also be appropriate to
 %   include a second guide dealing with maintenance and updating issues.
+
+\bibliographystyle{alpha}
+\bibliography{bibliography}
 
 \end{document}
