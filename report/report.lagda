@@ -2,8 +2,15 @@
 
 \usepackage[english]{babel}
 
-% Links inside the bibliography
-\usepackage[colorlinks=true,linkcolor=teal]{hyperref}
+% Links and their colors
+\usepackage[
+  colorlinks=true,
+  linkcolor=darkgray,
+  citecolor=darkgray,
+  urlcolor=darkgray
+  ]{hyperref}
+% And fonts
+\urlstyle{rm}
 
 % Type checking for Agda
 \usepackage[conor,references]{agda}
@@ -16,8 +23,8 @@
 % List customization
 \usepackage[inline]{enumitem}
 
+% They are all over the place
 \usepackage{todonotes}
-
 
 \begin{document}
 
@@ -97,17 +104,17 @@
 
 Formal proofs construct theorems by sequentially applying the axioms
 of a formal system. Computers can assist this process and make theorem
-proving a conversation between the human and the computer that checks
-the correctness of the proof. Yet, theorem proving can often be boring
-and tedious: certain theorems are trivial or uninteresting but require
-many rewrites.
+proving a conversation between the human and the computer, which
+checks the correctness of their proof. Yet, theorem proving can often
+be boring and tedious: certain theorems are trivial or uninteresting
+but require many rewrites.
 
 It is in these cases where automated theorem proving shines strongest:
-instead of applying inference rules manually, the user can provide the
-solver with a proposition and get a verified solution back. These
-decision procedures are often based on some meta-theory about the
-system, and thus can result in less rewriting steps than the repeated
-application of inference rules from inside the system.
+instead of applying inference rules manually, the user can provide an
+automated solver with a proposition and get a verified solution
+back. These decision procedures are often based on some meta-theory
+about the system, and thus can result in less rewriting steps than the
+repeated application of inference rules from inside the system.
 
 This project embarks upon constructing such solvers and proving them
 correct. Three different problems will be considered: the first two
@@ -123,13 +130,13 @@ Curry-Howard lens.
 \section{Proofs as programs; propositions as types}
 
 If a computer is to verify the proof of some proposition, there must
-exist some computational model for both proofs and propositions. Such
-one was first discovered by Haskell Curry and later strengthened by
-William Alvin Howard. It establishes a two way correspondence between
-type theory and intuitionistic logic: propositions are isomorphic to
-types and proofs are to programs; to prove a proposition is to
-construct a program inhabiting its corresponding type. Formal proofs
-can be verified by type-checkers.
+exist some computational model for both proofs and propositions. One
+such model was first discovered by Haskell Curry and later
+strengthened by William Alvin Howard. It establishes a two way
+correspondence between type theory and intuitionistic logic:
+propositions are isomorphic to types and proofs are to programs; to
+prove a proposition is to construct a program inhabiting its
+corresponding type. Formal proofs can be verified by type-checkers.
 
 \todo{Agda 2.5.4 for correct indentation}
 
@@ -150,7 +157,7 @@ lnc a a→⊥ = a→⊥ a
 
 -- No RAA in a constructive proof
 dne : {A : Set} → ((A → ⊥) → ⊥) → A
-dne f = {!!} -- We need to manufacture an A, but we got none
+dne f = {!!} -- We need to manufacture an A, but we have none
 
 -- No LEM in a constructive proof
 data _⊎_ (A B : Set) : Set where
@@ -197,10 +204,10 @@ termination cannot be verified should be rejected.
 One way of showing termination is by always making recursive calls on
 structurally smaller arguments. If data is defined inductively, this
 assures that a base case is always eventually reached, and that
-therefore recursion is always eventually terminating.
+therefore recursion always eventually terminates.
 
 \begin{code}
--- The lowerscores show where the arguments go
+-- The underscores show where the arguments go
 _+_ : ℕ → ℕ → ℕ
 zero + m = m            -- Base case of first argument
 suc n + m = suc (n + m) -- First argument gets smaller
@@ -219,9 +226,9 @@ case) language based on Per Martin-Löf's intuitionistic type
 theory. It was first developed by Catarina Coquand in 1999 and later
 rewriten by Ulf Norell in 2007. \cite{Norell2009} is an excellent
 introduction; more in-depth documentation can be found at
-\cite{Agda}. This section will only briefly cover the basics required
-to familiarise the reader with what theorem proving in Agda looks
-like.
+\url{https://agda.readthedocs.io}. This section will only briefly
+cover the basics required to familiarise the reader with what theorem
+proving in Agda looks like.
 
 \subsection{The experience of programming in Agda}
 
@@ -245,16 +252,44 @@ This interactive way of programming, often described as "hole driven",
 allows the programmer to work with partial definitions and to receive
 constant feedback from the type-checker.
 
-\subsection{A quick note on the syntax}
+\subsection{Some peculiarities}
 
-\todo{misfix, implicit arguments, multiple arguments same type, named
-arguments, ∀}
+Arguments can be named, allowing subsequent arguments to depend on
+them. If an argument can be inferred by the type-checker, the
+programmer may choose to make it implicit by naming it and enclosing
+it in curly braces. Implicit arguments can later still be explicitly
+provided and pattern matched against. If the type of an argument can
+be inferred by the type-checker, the programmer may omit it and use
+$∀$:
+
+\begin{code}
+-- The successor of an even number cannot be even
+foo : ∀ n → {p : Even n} → Even (suc n) → ⊥
+foo zero {p} ()
+foo (suc zero) {()} sp
+foo (suc (suc n)) {p} sp = foo n {p} sp 
+\end{code}
+
+Multiple arguments sharing the same type can be grouped by providing
+more than one name for them. With the exception of whitespace and a
+few special symbols, names in Agda may contain arbitrary unicode
+symbols. In addition, names can use underscores as placeholders for
+any arguments they might receive.
+
+\begin{code}
+∣_-_∣ : (x y : ℕ) → ℕ
+∣ zero - y ∣ = y
+∣ suc x - zero ∣ = suc x
+∣ suc x - suc y ∣ = ∣ x - y ∣
+\end{code}
+
+\todo{lambdas}
 
 \subsection{Datatypes and pattern matching}
 
 Algebraic data types are introduced by the \AgdaKeyword{data}
 keyword. They may contain multiple constructors, all of which must be
-of the previously declared type.
+of the declared type.
 
 \begin{code}
 data Direction : Set where
@@ -309,7 +344,7 @@ those constructors capable of constructing that type:
 \begin{code}
 -- Vec A n matches both constructors
 wrong-head : {A : Set}{n : ℕ} → Vec A n → A
-wrong-head [] = {!!} -- There is no A
+wrong-head [] = {!!} -- But there is no A
 wrong-head (x ∷ xs) = x
 
 -- Vec A (suc n) only matches _∷_
@@ -323,30 +358,50 @@ result of it further refines the types in context.
 \begin{code}
 -- Note that xs, ys and the result have the same length
 zipWith : {A B : Set}{n : ℕ} (f : A → A → B) (xs ys : Vec A n ) → Vec B n
---> zipWith f xs ys = {!!}
--- If xs was constructed with [], it has length zero
---> zipWith f [] ys = {!!}
--- If xs has length zero, so does ys
+-- zipWith f xs ys = {!!}
+-- -- If xs was constructed with [], it has length zero
+-- zipWith f [] ys = {!!}
+-- -- If xs has length zero, so does ys
 zipWith f [] [] = []
--- If xs was constructed with _∷_, it has length (suc n)
---> zipWith f (x ∷ xs) ys = {!!}
--- If xs has length (suc n), so does ys 
---> zipWith f (x ∷ xs) (y ∷ ys) = {!!}
--- And so does the result
---> zipWith f (x ∷ xs) (y ∷ ys) = {!!} ∷ {!!}
+-- -- If xs was constructed with _∷_, it has length (suc n)
+-- zipWith f (x ∷ xs) ys = {!!}
+-- -- If xs has length (suc n), so does ys 
+-- zipWith f (x ∷ xs) (y ∷ ys) = {!!}
+-- -- And so does the result
+-- zipWith f (x ∷ xs) (y ∷ ys) = {!!} ∷ {!!}
 zipWith f (x ∷ xs) (y ∷ ys) = f x y ∷ zipWith f xs ys
 \end{code}
 
-\subsection{Views}
+\subsection{With abstraction and dotted patterns}
 
 With abstraction gives the programmer the ability to steer unification
 in a particular direction by allowing them to pattern match on
 arbitrary well-formed expressions on the left hand side of a
-definition. This may result in the remaining arguments being refined.
+definition. This may result in the refinemend of the rest of the
+arguments. The following example is adapted from Agda-Stdlib and was
+originally presented in \cite{McBride2004}:
 
 \begin{code}
+-- An Ordering n m is a proof
+data Ordering : ℕ → ℕ → Set where
+  less    : ∀ m k → Ordering m (suc (m + k))
+  equal   : ∀ m   → Ordering m m
+  greater : ∀ m k → Ordering (suc (m + k)) m
+
+-- Such a proof can be generated for any two numbers
+compare : ∀ m n → Ordering m n
+compare zero    zero    = equal   zero
+compare (suc m) zero    = greater zero m
+compare zero    (suc n) = less    zero n
+compare (suc m) (suc n) with compare m n
+-- ... | compare-m-n = {!!}
+-- -- When we pattern match on compare-m-n:
+compare (suc .m)           (suc .(suc m + k)) | less    m k = less    (suc m) k
+compare (suc .m)           (suc .m)           | equal   m   = equal   (suc m)
+compare (suc .(suc m + k)) (suc .m)           | greater m k = greater (suc m) k
 \end{code}
 
+\todo{dot pattern}
 \cite{Oury2008}
 
 \subsection{Propositional equality}
@@ -362,8 +417,8 @@ data _≡_ {A : Set} (x : A) : A → Set where
 \AgdaRef{\_≡\_} is parametrised by an implicit type $A$ and a value $x
 : A$ and indexed by a value in $A$. Given some fixed parameter $x$,
 for every $y : A$ $x ≡ y$ is thus a type. The constructor
-\AgdaRef{refl} is the only way of constructing a value of type $x ≡ y$
-and crucially, it can only construct values where $x ≡ x$ after
+\AgdaRef{refl} is the only means of constructing a value of type $x ≡
+y$ and crucially, it can only construct values where $x ≡ x$ after
 normalisation.
 
 \begin{code}
@@ -373,11 +428,11 @@ normalisation.
 1+1≡2 = refl
 
 sym : {A : Set}{x y : A} → x ≡ y → y ≡ x
---> sym r = {!!}
--- r : x ≡ y
--- Goal : y ≡ x
---> sym refl = {!!} <-- We learn that x and y unify
--- Goal : x ≡ x
+-- sym r = {!!}
+-- -- r : x ≡ y
+-- -- Goal : y ≡ x
+-- sym refl = {!!} <-- We learn that x and y unify
+-- -- Goal : x ≡ x
 sym refl = refl
 \end{code}
 
@@ -409,7 +464,7 @@ n+0≡n (suc n) rewrite n+0≡n n = refl
 
 \section{A comment on Agda-Stdlib}
 
-\cite{AgdaStdlib}
+\url{https://agda.github.io/agda-stdlib/}
 
 \chapter{A solver for monoids}
 
@@ -479,7 +534,7 @@ exprList              |  evalList (exprList e) ≡ evalExpr e
 
 \chapter{A solver for Presburger arithmetic}
 
-\chapter{Problem description and specification}
+% \chapter{Problem description and specification}
 
 %   Problem Description and Specification Describe in detail, with examples if
 %   appropriate, the problem which you are trying to solve. You should clearly
@@ -498,7 +553,7 @@ exprList              |  evalList (exprList e) ≡ evalExpr e
 %   not, however, be particularly concerned if your project deviated slightly
 %   from this plan.
 
-\chapter{System design}
+% \chapter{System design}
 
 - Why Prelude
 - High level plan of the module
@@ -514,7 +569,7 @@ exprList              |  evalList (exprList e) ≡ evalExpr e
 %   description of the architecture of your project's product and, if
 %   appropriate, the design of the user interface and data management.
 
-\chapter{Detailed design and implementation}
+% \chapter{Detailed design and implementation}
 
 %   Detailed Design and Implementation In this chapter you should describe your
 %   design in more detail, taking the most interesting aspects right down to the
@@ -530,7 +585,7 @@ exprList              |  evalList (exprList e) ≡ evalExpr e
 %   project, and you should thoroughly discuss the most demanding and
 %   interesting aspects of your design and implementation.
 
-\chapter{Verification and validation}
+% \chapter{Verification and validation}
 
 %   Verification and Validation In this section you should outline the
 %   verification and validation procedures that you've adopted throughout the
@@ -542,7 +597,7 @@ exprList              |  evalList (exprList e) ≡ evalExpr e
 
 - Why is this absolutely correct, Agda?
 
-\chapter{Results and evaluation}
+% \chapter{Results and evaluation}
 
 %   Results and Evaluation The aim of this chapter is twofold. On one hand, it
 %   aims to present the final outcome of the project – i.e., the system
@@ -568,14 +623,14 @@ exprList              |  evalList (exprList e) ≡ evalExpr e
 %   the project. This will normally include the lessons learnt and explanations
 %   of any significant deviations from the original project plan.
 
-\chapter{Related work}
+% \chapter{Related work}
 
 %   Related Work You should survey and critically evaluate other work which you
 %   have read or otherwise considered in the general area of the project topic.
 %   The aim here is to place your project work in the context of the related
 %   work.
 
-\chapter{Summary and conclusions}
+% \chapter{Summary and conclusions}
 
 %   Summary and Conclusions In the final chapter of your report, you should
 %   summarise how successful you were in achieving the original project
@@ -584,7 +639,7 @@ exprList              |  evalList (exprList e) ≡ evalExpr e
 %   developed in future to enhance its utility. It is OK to be upbeat,
 %   especially if you are pleased with what you have achieved!
 
-\bibliographystyle{alpha}
+\bibliographystyle{apalike}
 \bibliography{bibliography}
 
 %   References/Bibliography The references should consist of a list of papers
@@ -615,17 +670,17 @@ exprList              |  evalList (exprList e) ≡ evalExpr e
 
 \appendix
 
-\chapter{Detailed Specification and Design}
+% \chapter{Detailed Specification and Design}
 %   Appendix A - Detailed Specification and Design This appendix should contain
 %   the details of your project specification that were not included in the main
 %   body of your report.
 
-\chapter{Detailed Test Strategy and Test Cases}
+% \chapter{Detailed Test Strategy and Test Cases}
 %   Appendix B - Detailed Test Strategy and Test Cases This appendix should
 %   contain the details of the strategy you used to test your software, together
 %   with your tabulated and commented test results.
 
-\chapter{User Guide}
+% \chapter{User Guide}
 %   Appendix C - User Guide This appendix should provide a detailed description
 %   of how to use your system. In some cases, it may also be appropriate to
 %   include a second guide dealing with maintenance and updating issues.
