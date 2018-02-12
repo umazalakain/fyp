@@ -16,6 +16,12 @@
 \usepackage[conor,references]{agda}
 % We ought to be able to just change the font used for \mathsf?
 \setsansfont{XITS}
+% XITS doesn't have small caps
+\setmainfont[
+  Ligatures=TeX,
+  SmallCapsFont={TeX Gyre Termes},
+  SmallCapsFeatures={Letters=SmallCaps},
+]{XITS}
 
 % Less margins
 \usepackage{fullpage}
@@ -26,6 +32,10 @@
 % They are all over the place
 \usepackage{todonotes}
 
+% Two columns in the title page
+\usepackage{multicol}
+
+
 \begin{document}
 
 \AgdaHide{
@@ -34,34 +44,44 @@
 \end{code}}
 
 \begin{titlepage}
-    \centering{}
+    {
+        \centering
+        \scshape
 
-    {\scshape\LARGE University of Strathclyde \par}
-    \vspace{1cm}
+        Submitted for the Degree of B.Sc. in Computer Science, 2017-2018
 
-    {\scshape\Large Submitted for the Degree of B.Sc. in Computer Science \par}
-    \vspace{1.5cm}
+        \rule{\textwidth}{1.6pt}
+        \vspace{0mm}
 
-    {\huge\bfseries Evidence providing problem solvers in Agda \par}
-    \vspace{2cm}
+        {\Huge Evidence providing\\ problem solvers\\ in Agda\\}
 
-    {\Large\itshape Uma Zalakain\par}
-    \vfill
+        \vspace{8mm}
+        \rule{\textwidth}{1.6pt}
 
-    supervised by\par
-    Dr. Conor \textsc{McBride}
+        \vfill
 
-    \vfill
-
-    {\small
-    Except where explicitly stated all the work in this report, including
-    appendices, is my own and was carried out during my final year. It has not
-    been submitted for assessment in any other context.
+        \begin{multicols}{2}
+            {\raggedright{}
+                {\scriptsize 201434138}\\
+                {\Large Uma Zalakain}\\
+            }
+            \columnbreak
+            {\raggedleft{}
+                {\small Supervised by}\\
+                {\Large Conor McBride}\\
+            }
+        \end{multicols}
+        \vspace{1cm}
     }
 
-    \vfill
-
-    {\large \today \par}
+    {\raggedleft{}
+    Except where explicitly stated all the work in this report,
+    including appendices, is my own and was carried out during my
+    final year. It has not been submitted for assessment in any other
+    context. I agree to this material being made available in whole or
+    in part to benefit the education of future students.
+    }
+    \vspace{1cm}
 \end{titlepage}
 
 
