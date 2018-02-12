@@ -7,10 +7,11 @@ BIBLIOGRAPHY=bibliography
 POSTPROCESS=postprocess-latex.pl
 COMPILER=latexmk -pdf -use-make -e '$$pdflatex=q/xelatex %O %S/'
 
-report.pdf: report.lagda bibliography.bib
+report.pdf: report.lagda bibliography.bib agda.sty chi.png
 	mkdir -p $(OUT)
 	cp $(BIBLIOGRAPHY).bib $(OUT)
 	cp $(STY).sty $(OUT)
+	cp chi.png $(OUT)
 	$(AGDA) $(AFLAGS) $(SOURCE).lagda
 	cd $(OUT) && \
                  perl ../$(POSTPROCESS) $(SOURCE).tex > $(SOURCE).processed && \
