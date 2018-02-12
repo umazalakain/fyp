@@ -14,14 +14,14 @@
 
 % Type checking for Agda
 \usepackage[conor,references]{agda}
-% We ought to be able to just change the font used for \mathsf?
-\setsansfont{XITS}
+\setmathsf{XITS Math}
 % XITS doesn't have small caps
 \setmainfont[
   Ligatures=TeX,
   SmallCapsFont={TeX Gyre Termes},
   SmallCapsFeatures={Letters=SmallCaps},
 ]{XITS}
+
 
 % Less margins
 \usepackage{fullpage}
@@ -34,7 +34,10 @@
 
 % Two columns in the title page
 \usepackage{multicol}
+% And an image too
+\usepackage{graphicx}
 
+\renewcommand{\thefootnote}{\fnsymbol{footnote}}
 
 \begin{document}
 
@@ -58,6 +61,10 @@
         \vspace{8mm}
         \rule{\textwidth}{1.6pt}
 
+        \vfill
+        \todo{Remove borders}
+        \includegraphics[width=3.5cm]{chi.png}
+        \footnote{The Curry-Howard homeomorphism, by Luca Cardelli}
         \vfill
 
         \begin{multicols}{2}
@@ -122,12 +129,12 @@
 %   outcome. In its final part, the introduction will usually outline
 %   the structure of the rest of the report.
 
-Formal proofs construct theorems by sequentially applying the axioms
-of a formal system. Computers can assist this process and make theorem
-proving a conversation between the human and the computer, which
-checks the correctness of their proof. Yet, theorem proving can often
-be boring and tedious: certain theorems are trivial or uninteresting
-but require many rewrites.
+Formal proofs construct theorems by applying the rules of a formal
+system. Computers can assist this process and make theorem proving a
+conversation between the human and the computer, which checks the
+correctness of their proof. Yet, theorem proving can often be boring
+and tedious: certain theorems are trivial or uninteresting but require
+many steps.
 
 It is in these cases where automated theorem proving shines strongest:
 instead of applying inference rules manually, the user can provide an
@@ -143,23 +150,29 @@ deciding a first-order predicate logic — Presburger arithmetic. The
 aim is to better understand theorem proving as seen through the
 Curry-Howard lens.
 
+\todo{Four color theorem}
+
 \todo{Sections}
 
 \chapter{Background}
+
+\todo{Present sections and their thoughtfulness}
 
 \section{Proofs as programs; propositions as types}
 
 If a computer is to verify the proof of some proposition, there must
 exist some computational model for both proofs and propositions. One
-such model was first discovered by Haskell Curry and later
-strengthened by William Alvin Howard. It establishes a two way
-correspondence between type theory and intuitionistic logic:
-propositions are isomorphic to types and proofs are to programs; to
-prove a proposition is to construct a program inhabiting its
-corresponding type. Formal proofs can be verified by type-checkers.
+such model was first devised by Haskell Curry \cite{Curry1934} and
+later strengthened by William Alvin Howard \cite{Howard1980a}. It
+establishes a two way correspondence between type theory and
+intuitionistic logic: propositions are isomorphic to types and proofs
+are to programs; to prove a proposition is to construct a program
+inhabiting its corresponding type. Formal proofs can be verified by
+type-checkers.
 
-\todo{Agda 2.5.4 for correct indentation}
+\todo{Agda 2.5.4 to fix whitespace}
 
+\todo{Fix kerning}
 \begin{code}
 -- Falsehood: an uninhabited type with no constructors
 data ⊥ : Set where
@@ -192,6 +205,7 @@ of simply typed lambda calculus — where $→$ is the only type
 constructor — is in itself enough to model propositional logic. Type
 theories containing dependent types — where the definition of a type
 may depend on a value — model predicate logics containing quantifiers.
+Further introduction to these ideas can be found at \cite{Wadler2015}.
 
 \begin{code}
 -- Truth: a type with a single constructor trivial to satisfy
@@ -233,7 +247,7 @@ zero + m = m            -- Base case of first argument
 suc n + m = suc (n + m) -- First argument gets smaller
 
 -- Would never terminate
--- nonsense : {!!} -- There is no type for it
+-- nonsense : {!!}
 -- nonsense = nonsense
 \end{code}
 
@@ -255,7 +269,7 @@ proving in Agda looks like.
 Development in Agda happens inside Emacs, and is a two way
 conversation between the compiler and the programmer. Wherever a
 definition is required, the user may instead write $?$ and request the
-type-checker to reload the file. A "hole" will appear where the $?$
+type-checker to reload the file. A ``hole'' will appear where the $?$
 was. The programmer can then:
 
 \begin{itemize}[noitemsep]
@@ -313,10 +327,10 @@ of the declared type.
 
 \begin{code}
 data Direction : Set where
-  Up    : Direction
-  Left  : Direction
-  Down  : Direction
-  Right : Direction
+  up    : Direction
+  left  : Direction
+  down  : Direction
+  right : Direction
 \end{code}
 
 Constructors can accept arguments, which may be recursive:
@@ -392,7 +406,7 @@ zipWith f [] [] = []
 zipWith f (x ∷ xs) (y ∷ ys) = f x y ∷ zipWith f xs ys
 \end{code}
 
-\subsection{With abstraction and dotted patterns}
+\todo{Dot patterns}
 
 With abstraction gives the programmer the ability to steer unification
 in a particular direction by allowing them to pattern match on
@@ -421,7 +435,7 @@ compare (suc .m)           (suc .m)           | equal   m   = equal   (suc m)
 compare (suc .(suc m + k)) (suc .m)           | greater m k = greater (suc m) k
 \end{code}
 
-\todo{dot pattern}
+\todo{Comment on examples in The Power of Pi}
 \cite{Oury2008}
 
 \subsection{Propositional equality}
@@ -464,10 +478,15 @@ sym refl = refl
 
 \subsection{Implementation matters}
 
+\todo{Move before rewrites, introduce their need}
+
 One could think that proving $(n + zero) ≡ n$ is similar to proving
 $(zero + n) ≡ n$, but it is not. Depending on whether \AgdaRef{\_+\_}
 case splits on the first or on the second argument, one of those
 proofs will be trivial while the other will require induction.
+
+\todo{Explain that n+0≡n is a proof generated for any ℕ}
+\todo{Introduce the idea of an automated proof generator}
 
 \begin{code}
 -- zero + n immediately normalises to n
@@ -482,7 +501,11 @@ n+0≡n zero = refl
 n+0≡n (suc n) rewrite n+0≡n n = refl
 \end{code}
 
+\todo{Proof by reflection}
+
 \section{A comment on Agda-Stdlib}
+
+\todo{Introduce problem domains, forward reference solutions}
 
 \url{https://agda.github.io/agda-stdlib/}
 
@@ -605,7 +628,9 @@ exprList              |  evalList (exprList e) ≡ evalExpr e
 %   project, and you should thoroughly discuss the most demanding and
 %   interesting aspects of your design and implementation.
 
-% \chapter{Verification and validation}
+\chapter{Verification and validation}
+
+\todo{Dependent types, higher standards, no tests, we formally describe what correct is}
 
 %   Verification and Validation In this section you should outline the
 %   verification and validation procedures that you've adopted throughout the
