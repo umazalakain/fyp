@@ -2,6 +2,9 @@
 
 \usepackage[english]{babel}
 
+% Equations
+\usepackage{amsmath}
+
 % Links and their colors
 \usepackage[
   colorlinks=true,
@@ -9,11 +12,14 @@
   citecolor=darkgray,
   urlcolor=darkgray
   ]{hyperref}
+
 % And fonts
 \urlstyle{rm}
 
 % Type checking for Agda
 \usepackage[conor,references]{agda}
+
+% Fonts
 \setmathsf{XITS Math}
 % XITS doesn't have small caps
 \setmainfont[
@@ -21,7 +27,6 @@
   SmallCapsFont={TeX Gyre Termes},
   SmallCapsFeatures={Letters=SmallCaps},
 ]{XITS}
-
 
 % Less margins
 \usepackage{fullpage}
@@ -34,9 +39,11 @@
 
 % Two columns in the title page
 \usepackage{multicol}
+
 % And an image too
 \usepackage{graphicx}
 
+% Footnote symbols
 \renewcommand{\thefootnote}{\fnsymbol{footnote}}
 
 \begin{document}
@@ -44,6 +51,7 @@
 \AgdaHide{
 \begin{code}
 {-# OPTIONS --allow-unsolved-metas #-}
+module _ where
 \end{code}}
 
 \begin{titlepage}
@@ -109,14 +117,33 @@
 
 \section*{Acknowledgements}
 
-\todo{Acknowledgements}
+This project is an attempt to distill all the support, attention,
+knowledge, dedication and love I was given into concrete ideas in
+printable format. Despite the disclaimer saying otherwise, this
+project is far from being just my own work. At least a dozen people
+have contributed to it, either unknowingly, directly, or by
+contributing to my well-being.
 
-% I'm very to have a supervisor with a keen interest in these subjects.
-% I'm very lucky I had that 3 month intro to Agda.
+My supervisor has been a key figure, first as the lecturer of the 12
+week introduction to Agda I was lucky to receive, then as a supervisor
+who has a keen interest in the subject and is willing to share
+it. This project was the perfect excuse for countless hours of
+education.
+
+Brief but intense, this project has also involved personal frustration
+and self-doubt. It was on those occasions that my friends, both local
+and remote, and my parents, on the other side of this planet, have
+kept the ball rolling.
+
+Needless to say, this project, of little importance to anyone but me,
+is based on large amounts of previous science and countless hours of
+accumulated human effort — a thought that still wonders me.
 
 \tableofcontents
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Introduction}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %   Introduction This should briefly describe the problem which you
 %   set out to solve and should essentially summarise the rest of your
@@ -154,7 +181,9 @@ Curry-Howard lens.
 
 \todo{Sections}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Background}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \todo{Present sections and their thoughtfulness}
 
@@ -174,30 +203,39 @@ type-checkers.
 
 \todo{Fix kerning}
 \begin{code}
--- Falsehood: an uninhabited type with no constructors
-data ⊥ : Set where
+module _ where
+  private
+    -- Truth: a type with a single constructor trivial to satisfy
+    record ⊤ : Set where
+        constructor tt
 
--- Ex falso quodlibet
--- Agda can see there is no way of constructing ⊥
-explosion : {A : Set} → ⊥ → A
-explosion () -- No need to provide a case
+    -- Falsehood: an uninhabited type with no constructors
+    data ⊥ : Set where
 
--- Law of non-contradiction
--- AKA implication elimination
--- AKA function application
-lnc : {A : Set} → A → (A → ⊥) → ⊥
-lnc a a→⊥ = a→⊥ a
+    -- Disjunction
+    data _⊎_ (A B : Set) : Set where
+      inj₁ : A → A ⊎ B
+      inj₂ : B → A ⊎ B
 
--- No RAA in a constructive proof
-dne : {A : Set} → ((A → ⊥) → ⊥) → A
-dne f = {!!} -- We need to manufacture an A, but we have none
+    module PrincipleShowcase {A : Set} where
+      -- Ex falso quodlibet
+      -- Agda can see there is no way of constructing ⊥
+      explosion : ⊥ → Set
+      explosion () -- No need to provide a case
 
--- No LEM in a constructive proof
-data _⊎_ (A B : Set) : Set where
-  inj₁ : A → A ⊎ B
-  inj₂ : B → A ⊎ B
-lem : {A : Set} → A ⊎ (A → ⊥)
-lem = {!!} -- To be or not to be demands a choice
+      -- Law of non-contradiction
+      -- AKA implication elimination
+      -- AKA function application
+      lnc : A → (A → ⊥) → ⊥
+      lnc a a→⊥ = a→⊥ a
+
+      -- No RAA in a constructive proof
+      dne : ((A → ⊥) → ⊥) → A
+      dne f = {!!} -- We need to manufacture an A, but we have none
+
+      -- No LEM in a constructive proof
+      lem : A ⊎ (A → ⊥)
+      lem = {!!} -- To be or not to be demands a choice
 \end{code}
 
 Many variants exist on both sides of the isomorphism. The type theory
@@ -208,26 +246,22 @@ may depend on a value — model predicate logics containing quantifiers.
 Further introduction to these ideas can be found at \cite{Wadler2015}.
 
 \begin{code}
--- Truth: a type with a single constructor trivial to satisfy
-record ⊤ : Set where
-  constructor tt
-  
--- Natural numbers, defined inductively
-data ℕ : Set where
-  zero :     ℕ
-  suc  : ℕ → ℕ
-  
--- A predicate, or a proposition that depends on a value
-Even : ℕ → Set
-Even zero = ⊤
-Even (suc zero) = ⊥
-Even (suc (suc n)) = Even n
+    -- Natural numbers, defined inductively
+    data ℕ : Set where
+      zero :     ℕ
+      suc  : ℕ → ℕ
 
--- The type of t depends on the value n
-half : (n : ℕ) → (t : Even n) → ℕ
-half zero tt = zero
-half (suc zero) ()  -- No t ∶ Even (suc zero)
-half (suc (suc n)) t = suc (half n t)
+    -- A predicate, or a proposition that depends on a value
+    Even : ℕ → Set
+    Even zero = ⊤
+    Even (suc zero) = ⊥
+    Even (suc (suc n)) = Even n
+
+    -- The type of t depends on the value n
+    half : (n : ℕ) → (t : Even n) → ℕ
+    half zero tt = zero
+    half (suc zero) ()  -- No t ∶ Even (suc zero)
+    half (suc (suc n)) t = suc (half n t)
 \end{code}
 
 Proofs should not suffer from the halting problem — they should be
@@ -241,14 +275,14 @@ assures that a base case is always eventually reached, and that
 therefore recursion always eventually terminates.
 
 \begin{code}
--- The underscores show where the arguments go
-_+_ : ℕ → ℕ → ℕ
-zero + m = m            -- Base case of first argument
-suc n + m = suc (n + m) -- First argument gets smaller
+    -- Underscores show where the arguments go
+    _+_ : ℕ → ℕ → ℕ
+    zero + m = m            -- Base case of first argument
+    suc n + m = suc (n + m) -- First argument gets smaller
 
--- Would never terminate
--- nonsense : {!!}
--- nonsense = nonsense
+    -- Would never terminate
+    -- nonsense : {!!}
+    -- nonsense = nonsense
 \end{code}
 
 \section{Reasoning in Agda}
@@ -297,11 +331,11 @@ be inferred by the type-checker, the programmer may omit it and use
 $∀$:
 
 \begin{code}
--- The successor of an even number cannot be even
-foo : ∀ n → {p : Even n} → Even (suc n) → ⊥
-foo zero {p} ()
-foo (suc zero) {()} sp
-foo (suc (suc n)) {p} sp = foo n {p} sp 
+    -- All numbers are either even or not even
+    foo : ∀ {n} → Even n ⊎ (Even n → ⊥)
+    foo {zero} = inj₁ tt
+    foo {suc zero} = inj₂ λ b → b
+    foo {suc (suc n)} = foo {n}
 \end{code}
 
 Multiple arguments sharing the same type can be grouped by providing
@@ -311,13 +345,22 @@ symbols. In addition, names can use underscores as placeholders for
 any arguments they might receive.
 
 \begin{code}
-∣_-_∣ : (x y : ℕ) → ℕ
-∣ zero - y ∣ = y
-∣ suc x - zero ∣ = suc x
-∣ suc x - suc y ∣ = ∣ x - y ∣
+    ∣_-_∣ : (x y : ℕ) → ℕ
+    ∣ zero - y ∣ = y
+    ∣ suc x - zero ∣ = suc x
+    ∣ suc x - suc y ∣ = ∣ x - y ∣
 \end{code}
 
-\todo{lambdas}
+An anonymous function can be provided wherever a function is
+expected. The programmer can pattern match against its arguments by
+wrapping the arguments and body in curly brances.
+
+\begin{code}
+    pred : ℕ → ℕ
+    pred = λ { zero    → zero
+            ; (suc n) → n
+            }
+\end{code}
 
 \subsection{Datatypes and pattern matching}
 
@@ -326,19 +369,19 @@ keyword. They may contain multiple constructors, all of which must be
 of the declared type.
 
 \begin{code}
-data Direction : Set where
-  up    : Direction
-  left  : Direction
-  down  : Direction
-  right : Direction
+    data Direction : Set where
+      up    : Direction
+      left  : Direction
+      down  : Direction
+      right : Direction
 \end{code}
 
 Constructors can accept arguments, which may be recursive:
 
 \begin{code}
-data Path : Set where
-  start :                    Path
-  walk  : Direction → Path → Path
+    data Path : Set where
+      start :                    Path
+      walk  : Direction → Path → Path
 \end{code}
 
 Datatypes may accept parameters. If they do, every constructor in the
@@ -346,12 +389,9 @@ datatype has to have that same parameter in its return type. Hence
 these parameters are named:
 
 \begin{code}
-data List (A : Set) : Set where
-  []  :              List A
-  _∷_ : A → List A → List A
-
-Path' : Set
-Path' = List Direction
+    data List (A : Set) : Set where
+      []  :              List A
+      _∷_ : A → List A → List A
 \end{code}
 
 Moreover, datatypes can be indexed. Each of these indices is said to
@@ -360,92 +400,113 @@ the same index, and may in fact \textit{jump} from one to
 another. Parameters are forced on datatypes, but indices are a choice.
 
 \begin{code}
--- Parametrised by A : Set, indexed by ℕ
-data Vec (A : Set) : ℕ → Set where
-  []  :                       Vec A zero
-  _∷_ : ∀ {n} → A → Vec A n → Vec A (suc n)
-
-Path'' : ℕ → Set
-Path'' = Vec Direction
-
-stay-put : Path'' zero
-stay-put = []
+    -- Parametrised by A : Set, indexed by ℕ
+    data Vec (A : Set) : ℕ → Set where
+        []  :                       Vec A zero
+        _∷_ : ∀ {n} → A → Vec A n → Vec A (suc n)
 \end{code}
 
 Whenever a datatype is pattern matched against, it will split into
 those constructors capable of constructing that type:
 
 \begin{code}
--- Vec A n matches both constructors
-wrong-head : {A : Set}{n : ℕ} → Vec A n → A
-wrong-head [] = {!!} -- But there is no A
-wrong-head (x ∷ xs) = x
+    -- Vec A n matches both constructors
+    map : {A B : Set}{n : ℕ} → (A → B) → Vec A n → Vec B n
+    map f [] = []
+    map f (x ∷ xs) = f x ∷ map f xs
 
--- Vec A (suc n) only matches _∷_
-head : {A : Set}{n : ℕ} → Vec A (suc n) → A
-head (x ∷ xs) = x
+    -- Vec A (suc n) only matches _∷_
+    head : {A : Set}{n : ℕ} → Vec A (suc n) → A
+    head (x ∷ xs) = x
 \end{code}
 
-In Agda, pattern matching drives computation, and every case that is
-result of it further refines the types in context.
+In Agda, pattern matching drives computation, and every case result of
+it further refines the types in context.
 
 \begin{code}
--- Note that xs, ys and the result have the same length
-zipWith : {A B : Set}{n : ℕ} (f : A → A → B) (xs ys : Vec A n ) → Vec B n
--- zipWith f xs ys = {!!}
--- -- If xs was constructed with [], it has length zero
--- zipWith f [] ys = {!!}
--- -- If xs has length zero, so does ys
-zipWith f [] [] = []
--- -- If xs was constructed with _∷_, it has length (suc n)
--- zipWith f (x ∷ xs) ys = {!!}
--- -- If xs has length (suc n), so does ys 
--- zipWith f (x ∷ xs) (y ∷ ys) = {!!}
--- -- And so does the result
--- zipWith f (x ∷ xs) (y ∷ ys) = {!!} ∷ {!!}
-zipWith f (x ∷ xs) (y ∷ ys) = f x y ∷ zipWith f xs ys
+    -- Note that xs, ys and the result have the same length
+    zipWith : {A B C : Set}{n : ℕ} (f : A → B → C) → Vec A n → Vec B n → Vec C n
+    -- zipWith f xs ys = {!!}
+    -- -- If xs was constructed with [], it has length zero
+    -- zipWith f [] ys = {!!}
+    -- -- If xs has length zero, so does ys
+    -- zipWith f [] [] = {!!}
+    -- -- And so does the result
+    zipWith f [] [] = []
+    -- -- If xs was constructed with _∷_, it has length (suc n)
+    -- zipWith f (x ∷ xs) ys = {!!}
+    -- -- If xs has length (suc n), so does ys 
+    -- zipWith f (x ∷ xs) (y ∷ ys) = {!!}
+    -- -- And so does the result
+    -- zipWith f (x ∷ xs) (y ∷ ys) = {!!} ∷ {!!}
+    zipWith f (x ∷ xs) (y ∷ ys) = f x y ∷ zipWith f xs ys
 \end{code}
 
-\todo{Dot patterns}
+If the type-checker can see that a type is impossible to construct,
+pattern matching on it will render the case absurd, and thus there
+will be no need to provide a definition for it.
+
+\begin{code}
+    -- The successor of an even number cannot be even
+    bar : ∀ n → {p : Even n} → Even (suc n) → ⊥
+    bar zero {p} ()
+    bar (suc zero) {()} sp
+    bar (suc (suc n)) {p} sp = bar n {p} sp 
+\end{code}
+
+The type-checker uses dot patterns to show that pattern matching on
+one argument uniquely implies another. If a value can be inferred by
+the type checker, the user may replace it by an
+underscore. Additionally, underscores can be used as non-binded
+catch-alls outside of dot patterns on the left hand side of a
+definition.
+
+\begin{code}
+    -- Pattern matching on xs determines n
+    zipWith' : {A B C : Set} (n : ℕ) (f : A → B → C) → Vec A n → Vec B n → Vec C n
+    zipWith' .zero f [] [] = []
+    zipWith' .(suc _) f (x ∷ xs) (y ∷ ys) = f x y ∷ zipWith' _ f xs ys
+\end{code}
 
 With abstraction gives the programmer the ability to steer unification
 in a particular direction by allowing them to pattern match on
 arbitrary well-formed expressions on the left hand side of a
-definition. This may result in the refinemend of the rest of the
+definition. This may result in the refinement of the rest of the
 arguments. The following example is adapted from Agda-Stdlib and was
 originally presented in \cite{McBride2004}:
 
 \begin{code}
--- An Ordering n m is a proof
-data Ordering : ℕ → ℕ → Set where
-  less    : ∀ m k → Ordering m (suc (m + k))
-  equal   : ∀ m   → Ordering m m
-  greater : ∀ m k → Ordering (suc (m + k)) m
+    -- Ordering n m is a proof…
+    data Ordering : ℕ → ℕ → Set where
+      less    : ∀ m k → Ordering m (suc (m + k))
+      equal   : ∀ m   → Ordering m m
+      greater : ∀ m k → Ordering (suc (m + k)) m
 
--- Such a proof can be generated for any two numbers
-compare : ∀ m n → Ordering m n
-compare zero    zero    = equal   zero
-compare (suc m) zero    = greater zero m
-compare zero    (suc n) = less    zero n
-compare (suc m) (suc n) with compare m n
--- ... | compare-m-n = {!!}
--- -- When we pattern match on compare-m-n:
-compare (suc .m)           (suc .(suc m + k)) | less    m k = less    (suc m) k
-compare (suc .m)           (suc .m)           | equal   m   = equal   (suc m)
-compare (suc .(suc m + k)) (suc .m)           | greater m k = greater (suc m) k
+    -- …that can be generated for any two numbers
+    compare : ∀ m n → Ordering m n
+    compare zero    zero    = equal   zero
+    compare (suc m) zero    = greater zero m
+    compare zero    (suc n) = less    zero n
+    compare (suc m) (suc n) with compare m n
+    compare (suc .m)           (suc .(suc m + k)) | less    m k = less    (suc m) k
+    compare (suc .m)           (suc .m)           | equal   m   = equal   (suc m)
+    compare (suc .(suc m + k)) (suc .m)           | greater m k = greater (suc m) k
 \end{code}
 
-\todo{Comment on examples in The Power of Pi}
-\cite{Oury2008}
+As a result of pattern matching on $compare m n$ we learn about $m$
+and $n$. This is the difference between with abstraction and ordinary
+case splitting on the right hand side. \cite{Oury2008} contains other
+interesting examples of views.
 
-\subsection{Propositional equality}
+\subsection{Equality and reasoning}
+\todo{Finish section}
 
 Any two terms are considered propositionally equal if they unify with
 each other:
 
 \begin{code}
-data _≡_ {A : Set} (x : A) : A → Set where
-  refl : x ≡ x
+    data _≡_ {A : Set} (x : A) : A → Set where
+      refl : x ≡ x
 \end{code}
 
 \AgdaRef{\_≡\_} is parametrised by an implicit type $A$ and a value $x
@@ -453,95 +514,250 @@ data _≡_ {A : Set} (x : A) : A → Set where
 for every $y : A$ $x ≡ y$ is thus a type. The constructor
 \AgdaRef{refl} is the only means of constructing a value of type $x ≡
 y$ and crucially, it can only construct values where $x ≡ x$ after
-normalisation.
+normalisation. \todo{Colors}
 
 \begin{code}
--- Computation of suc zero + suc zero happens at compile time
--- Both sides normalise to suc (suc zero)
-1+1≡2 : (suc zero + suc zero) ≡ suc (suc zero)
-1+1≡2 = refl
-
-sym : {A : Set}{x y : A} → x ≡ y → y ≡ x
--- sym r = {!!}
--- -- r : x ≡ y
--- -- Goal : y ≡ x
--- sym refl = {!!} <-- We learn that x and y unify
--- -- Goal : x ≡ x
-sym refl = refl
+    -- Computation of suc zero + suc zero happens at compile time
+    -- Both sides normalise to suc (suc zero)
+    1+1≡2 : (suc zero + suc zero) ≡ suc (suc zero)
+    1+1≡2 = refl
 \end{code}
 
-\subsection{Rewrites}
+Let us fetch some handy equipment for building proofs. \todo{mention stdlib}
 
 \begin{code}
-{-# BUILTIN EQUALITY _≡_ #-} 
+    module Reasoning {A : Set} where
+      -- x and y unify when we pattern match on the first argument
+      sym : ∀ {x y : A} → x ≡ y → y ≡ x
+      sym refl = refl
+
+      -- x and y unify when we pattern match on the first argument
+      -- y ≡ z then becomes x ≡ z
+      trans : ∀ {x y z : A} → x ≡ y → y ≡ z → x ≡ z
+      trans refl eq = eq
+
+      infix  3 _∎
+      infixr 2 _≡⟨⟩_ _≡⟨_⟩_
+      infix  1 begin_
+
+      begin_ : ∀ {x y : A} → x ≡ y → x ≡ y
+      begin_ x≡y = x≡y
+
+      _≡⟨⟩_ : ∀ (x {y} : A) → x ≡ y → x ≡ y
+      _ ≡⟨⟩ x≡y = x≡y
+
+      _≡⟨_⟩_ : ∀ (x {y z} : A) → x ≡ y → y ≡ z → x ≡ z
+      _ ≡⟨ x≡y ⟩ y≡z = trans x≡y y≡z
+
+      _∎ : ∀ (x : A) → x ≡ x
+      _∎ _ = refl
+
+    open Reasoning
+
+    _⟨_⟩_ : ∀ {A B C : Set} → A → (A → B → C) → B → C
+    x ⟨ f ⟩ y = f x y
+
+    cong : {A B : Set}{x y : A} (f : A → B) → x ≡ y → f x ≡ f y
+    cong f refl = refl
+
+    _∘_ : {A B C : Set} → (B → C) → (A → B) → (A → C)
+    f ∘ g = {!!}
+
+    map-∘ : {A B C : Set}{n : ℕ} (f : A → B) (g : B → C)
+            → ∀ (xs : Vec A n) → map g (map f xs) ≡ map (g ∘ f) xs
+    map-∘ f g [] = refl
+    map-∘ f g (x ∷ xs) = {!!}
 \end{code}
 
-\subsection{Implementation matters}
+Dependent types allow to model predicate logic with ease. 
+
+\begin{code}
+    -- zero + n immediately normalises to n
+    0+n≡n : ∀ n → (zero + n) ≡ n
+    0+n≡n n = refl
+
+    record Σ (A : Set) (B : A → Set) : Set where
+      constructor _,_
+      field
+        proj₁ : A
+        proj₂ : B proj₁
+
+    ∃ : {A : Set} → (A → Set) → Set
+    ∃ = Σ _
+
+    pred-0 : ∃ λ n → pred n ≡ n
+    pred-0 = zero , refl
+\end{code}
 
 \todo{Move before rewrites, introduce their need}
-
-One could think that proving $(n + zero) ≡ n$ is similar to proving
-$(zero + n) ≡ n$, but it is not. Depending on whether \AgdaRef{\_+\_}
-case splits on the first or on the second argument, one of those
-proofs will be trivial while the other will require induction.
-
 \todo{Explain that n+0≡n is a proof generated for any ℕ}
 \todo{Introduce the idea of an automated proof generator}
 
-\begin{code}
--- zero + n immediately normalises to n
-0+n≡n : (n : ℕ) → (zero + n) ≡ n
-0+n≡n n = refl
+One could think that proving that $∀ n → (n + zero) ≡ n$ is similar to
+proving that $∀ n → (zero + n) ≡ n$, but it is not. Depending on
+whether \AgdaRef{\_+\_} case splits on the first or on the second
+argument, one of those proofs will be trivial while the other will
+require induction.
 
--- n + zero cannot normalise:
--- Was n constructed with zero or with suc?
--- We need to use induction
-n+0≡n : (n : ℕ) → (n + zero) ≡ n
-n+0≡n zero = refl
-n+0≡n (suc n) rewrite n+0≡n n = refl
+
+\begin{code}
+    n+0≡n : ∀ n → (n + zero) ≡ n
+    n+0≡n zero = refl
+    n+0≡n (suc n) with n + zero | n+0≡n n
+    n+0≡n (suc n) | .n          | refl = refl
+
+    -- n + zero cannot normalise:
+    -- Was n constructed with zero or with suc?
+    -- We need to use induction
+    -- n+0≡n' : ∀ n → (n + zero) ≡ n
+    -- n+0≡n' zero = refl
+    -- n+0≡n' (suc n) rewrite n+0≡n' n = refl
+
+
+    data Dec (P : Set) : Set where
+      yes : P       → Dec P
+      no  : (P → ⊥) → Dec P
+
+    Decidable : {A : Set} → (A → Set) → Set
+    Decidable {A} P = ∀ (x : A) → Dec (P x)
+
+    is-even? : Decidable Even
+    is-even? zero = yes tt
+    is-even? (suc zero) = no λ b → b
+    is-even? (suc (suc n)) = is-even? n
 \end{code}
 
-\todo{Proof by reflection}
+\subsection{Proof by reflection}
+
+\section{Problem solvers}
+
+\todo{Forward reference solutions}
 
 \section{A comment on Agda-Stdlib}
 
-\todo{Introduce problem domains, forward reference solutions}
-
 \url{https://agda.github.io/agda-stdlib/}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{A solver for monoids}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\AgdaHide{
+\begin{code}
+open import Data.List
+open import Data.Nat using (ℕ ; zero ; suc ; _+_)
+open import Data.Fin using (Fin ; zero ; suc)
+open import Data.Fin.Properties using (_≟_)
+open import Relation.Binary.PropositionalEquality
+open import Relation.Binary.List.Pointwise using (decidable-≡)
+open import Relation.Nullary using (yes ; no)
+open ≡-Reasoning
+\end{code}
+}
+
+\todo{Monoids as an easy challenge}
 
 It is not unlikely that while solving some bigger problem, one finds
 out that part of it can be modeled as an equation on monoids, and thus
 solved by a monoid solver.
 
-A monoid is a set `M` together with:
+\section{Problem description and specification}
 
-\begin{itemize}
-  \item a binary operation \(· : M → M → M\) that is associative:
-    \[
-    ∀ (x y z : M) → (x · y) · z ≡ x · (y · z)
-    \]
-  \item a neutral element \(ε : M\)
-    \[
-    ∀ (x : M) → ε · m ≡ m
-    ∀ (x : M) → m · ε ≡ m
-    \]
-\end{itemize}
+A monoid is a set $M$: 
 
-It is important to note that a monoid is not required to be
-commutative. Examples of monoids are \((ℕ, +, 0)\), \((ℕ, ·, 1)\) and
-\((∀ {T} → List T, ++, [])\).
+\begin{code}
+record Monoid (M : Set) : Set where
+  infix 25 _·_
+  field
+\end{code}
+
+Together with an associative binary operation \AgdaRef{\_·\_}:
+
+\begin{code}
+    _·_ : M → M → M
+    law-·-· : (x y z : M) → (x · y) · z ≡ x · (y · z)
+\end{code}
+
+And a neutral element \AgdaRef{ε} absorbed on both sides:
+
+\begin{code}
+    ε : M
+    law-ε-· : (m : M) → ε · m ≡ m
+    law-·-ε : (m : M) → m ≡ m · ε
+\end{code}
+
+$(ℕ, +, 0)$ and $(ℕ, ·, 1)$ are examples of monoids. Note however that
+these also happen to be commutative, while monoids need not be. An
+example of a non-commutative monoid are lists together with the
+concatenation operation:
+
+\begin{code}
+open import Data.List using (List ; [] ; _++_)
+
+LIST-MONOID : (T : Set) → Monoid (List T)
+LIST-MONOID T = record
+              { ε = []
+              ; _·_ = _++_
+              ; law-ε-· = λ xs → refl
+              ; law-·-ε = right-[]
+              ; law-·-· = assoc
+              } where
+              
+              right-[] : (xs : List T) → xs ≡ xs ++ []
+              right-[] [] = refl
+              right-[] (x ∷ xs) = cong (x ∷_) (right-[] xs)
+              
+              assoc : (xs ys zs : List T) → (xs ++ ys) ++ zs ≡ xs ++ (ys ++ zs)
+              assoc [] ys zs = refl
+              assoc (x ∷ xs) ys zs rewrite assoc xs ys zs = refl
+\end{code}
+
+A solver for monoids should decide whether an equation on monoids
+holds for all environments. Without an automated solver, the length of
+such a proof is linear with respect to the number of rule
+applications.
+
+\begin{code}
+module _ {T : Set} where
+  open Monoid (LIST-MONOID T)
+
+  example : (xs ys zs : List T) → (xs · ε) · (ε · (ys · (ys · zs))) ≡ xs · ((ys · ys) · (zs · ε))
+  example xs ys zs = begin
+    (xs · ε) · (ε · (ys · (ys · zs)))
+      ≡⟨ cong (_· (ε · (ys · (ys · zs)))) (sym (law-·-ε xs)) ⟩
+    xs · (ε · (ys · (ys · zs)))
+      ≡⟨ cong (xs ·_) (law-ε-· (ys · (ys · zs))) ⟩
+    xs · (ys · (ys · zs))
+      ≡⟨ cong (xs ·_) (sym (law-·-· ys ys zs)) ⟩
+    xs · ((ys · ys) · zs)
+      ≡⟨ cong (λ zs' → xs · ((ys · ys) · zs')) (law-·-ε _) ⟩
+    xs · ((ys · ys) · (zs · ε))
+      ∎
+\end{code}
+
+\section{Design and implementation}
+
+\begin{code}
+data Expr (n : ℕ) : Set where
+  var' : Fin n           → Expr n
+  ε'   :                   Expr n
+  _·'_ : Expr n → Expr n → Expr n
+\end{code}
 
 
+With Agda and its dependent types, we can make the typechecker check
+such a proof, at compile time. Our solver is going to return something
+of type Solution :: Expression → Expression → Set.
 
+Let P = ((0 + x) + (x + y)) and Q = ((x + x) + y). Then Solution P Q
+[code] will give back the type ∀ (x y) → P ≡ Q representing an
+equality proof between P and Q for all possible assignments. If both
+sides were not equivalent, we would get a Failure [code] or some other
+trivial type.
 
-
-With Agda and its dependent types, we can make the typechecker check such a proof, at compile time. Our solver is going to return something of type Solution :: Expression → Expression → Set.
-
-Let P = ((0 + x) + (x + y)) and Q = ((x + x) + y). Then Solution P Q [code] will give back the type ∀ (x y) → P ≡ Q representing an equality proof between P and Q for all possible assignments. If both sides were not equivalent, we would get a Failure [code] or some other trivial type.
-
-We can now define a function solve : (p : P) → (q : Q) → Solution p q [code]. This function has to give back either the actual equality proof on all possible assignments, or some trivial value indicating failure.
+We can now define a function solve : (p : P) → (q : Q) → Solution p q
+[code]. This function has to give back either the actual equality
+proof on all possible assignments, or some trivial value indicating
+failure.
 
 The monoid laws can be used to distill an expression’s essence: [code]
 
@@ -554,9 +770,16 @@ P = x + x + y            Q = x + x + y
 -- Let's translate them into lists
 P = x ∷ x ∷ y ∷ []       Q = x ∷ x ∷ y ∷ []
 
-If these two lists are equal, then the expressions they came from must be equivalent. In other words: given any variable assignment, it doesn’t matter if we evaluate the original expressions [code] or the resulting lists [code], the result is the same. Translating them into lists (free monoids), we get rid of anything that makes two equivalent expressions constructively different.
+If these two lists are equal, then the expressions they came from must
+be equivalent. In other words: given any variable assignment, it
+doesn’t matter if we evaluate the original expressions [code] or the
+resulting lists [code], the result is the same. Translating them into
+lists (free monoids), we get rid of anything that makes two equivalent
+expressions constructively different.
 
-Now we only need to prove to Agda that translating expressions into lists to then evaluate those and evaluating expressions is indeed equivalent. [code]
+Now we only need to prove to Agda that translating expressions into
+lists to then evaluate those and evaluating expressions is indeed
+equivalent. [code]
 
  Expr X --evalExpr----.  If
    |                  |  ∀ (e : Expr X) →
@@ -566,67 +789,97 @@ exprList              |  evalList (exprList e) ≡ evalExpr e
  List X --evalList--> M  exprList p ≡ exprList q ⇔ evalExpr p ≡ evalExpr q
 
 
-- What is a Monoid?
-- Canonical forms and evaluation homomorphism
-- Lists are free monoids
+\begin{code}
+NormalForm : ℕ → Set
+NormalForm n = List (Fin n)
 
+Env : Set → Set
+Env M = ∀ {n} → Fin n → M
+\end{code}
+
+\begin{code}
+
+exprList : ∀ {n} → Expr n → NormalForm n
+exprList (var' x) = x ∷ []
+exprList ε' = []
+exprList (i ·' j) = exprList i ++ exprList j
+
+module _ {M : Set} (monoid : Monoid M) (var : Env M) where
+  open Monoid monoid
+
+  evalList : ∀ {n} → List (Fin n) → M
+  evalList [] = ε
+  evalList (x ∷ xs) = (var x) · (evalList xs)
+
+  evalExpr : ∀ {n} → Expr n → M
+  evalExpr (var' x) = var x
+  evalExpr ε' = ε
+  evalExpr (xs ·' ys) = (evalExpr xs) · (evalExpr ys)
+
+  eval-distr : ∀ {n} → (p q : NormalForm n)
+               → (evalList p) · (evalList q) ≡ evalList (p ++ q )
+
+  eval-distr [] q = law-ε-· _
+  eval-distr (x ∷ p) q = begin
+      ((var x) · (evalList p)) · (evalList q)
+    ≡⟨ law-·-· _ _ _ ⟩
+      (var x) · ((evalList p) · (evalList q))
+    ≡⟨ cong (_·_ (var x)) (eval-distr p q) ⟩
+      (var x) · (evalList (p ++ q))
+    ∎
+
+  eval-commutes : ∀ {n} → (expr : Expr n)
+                  → evalExpr expr ≡ evalList (exprList expr)     
+
+  eval-commutes (var' x) = law-·-ε _
+  eval-commutes ε' = refl
+  eval-commutes (p ·' q) rewrite eval-commutes p | eval-commutes q
+    = eval-distr (exprList p) (exprList q)
+
+record Failure : Set₁ where
+  constructor Fail
+
+Solution : ∀ {n} → Expr n → Expr n → Set₁
+Solution p q with decidable-≡ _≟_ (exprList p) (exprList q)
+... | no _ = Failure
+... | yes _ = ∀ {M : Set} (monoid : Monoid M) (env : Env M)
+              → evalExpr monoid env p ≡ evalExpr monoid env q
+
+solve : ∀ {n} (p q : Expr n) → Solution p q
+solve p q with decidable-≡ _≟_ (exprList p) (exprList q)
+solve p q | no _ = Fail
+solve p q | yes leq = λ monoid env → 
+  evalExpr monoid env p
+    ≡⟨ eval-commutes monoid env p ⟩
+  evalList monoid env (exprList p)
+    ≡⟨ cong (evalList monoid env) leq  ⟩
+  evalList monoid env (exprList q)
+    ≡⟨ sym (eval-commutes monoid env q) ⟩
+  evalExpr monoid env q
+    ∎
+\end{code}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{A solver for commutative rings}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 - What is a commutative ring?
 - Horner normal form + constraints
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{A solver for Presburger arithmetic}
-
-% \chapter{Problem description and specification}
-
-%   Problem Description and Specification Describe in detail, with examples if
-%   appropriate, the problem which you are trying to solve. You should clearly
-%   and concisely specify the problem and should say how the specification was
-%   arrived at. You should also provide a general discussion of your approach to
-%   solving the project problem.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 - What Presburger arithmetic is
 - The three ways of solving it
 - What ways we chose, and why
 - How to do this in Agda, what the benefits are
-
-%   As part of this chapter – or more likely in a related appendix – you should
-%   also normally include the original plan which was submitted as part of your
-%   Project Specification and Plan deliverable in the first semester. You should
-%   not, however, be particularly concerned if your project deviated slightly
-%   from this plan.
-
-% \chapter{System design}
-
-- Why Prelude
 - High level plan of the module
     - Representation
     - Normalisation
-    - Simplification
+    - Evaluation
     - Correctness proofs
     - Quoting
-
-%   System Design In this chapter, you should describe how the project was
-%   designed. You should include discussions of the design method, design
-%   process, and final design outcome. This is where you include the high level
-%   description of the architecture of your project's product and, if
-%   appropriate, the design of the user interface and data management.
-
-% \chapter{Detailed design and implementation}
-
-%   Detailed Design and Implementation In this chapter you should describe your
-%   design in more detail, taking the most interesting aspects right down to the
-%   implementation details. You should include detailed design decisions and
-%   trade-offs considered and made, such as the selection of algorithms, data
-%   structures, implementation languages, and appropriate tools to support the
-%   development process. It should also include your justifications for these
-%   choices. In addition, you should describe how you have tried to address
-%   relevant qualities of the product produced, such as maintainability,
-%   reliability, and user-friendliness. It is not necessary to describe every
-%   aspect of your system in excruciating detail, but you should describe each
-%   in enough detail that the reader of your report can understand the overall
-%   project, and you should thoroughly discuss the most demanding and
-%   interesting aspects of your design and implementation.
 
 \chapter{Verification and validation}
 
