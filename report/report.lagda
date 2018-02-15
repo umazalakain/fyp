@@ -178,7 +178,7 @@ aim is to better understand theorem proving as seen through the
 Curry-Howard lens.
 
 \todo{Four color theorem}
-
+\todo{Comment on use cases}
 \todo{Sections}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -200,8 +200,8 @@ inhabiting its corresponding type. Formal proofs can be verified by
 type-checkers.
 
 \todo{Agda 2.5.4 to fix whitespace}
-
 \todo{Fix kerning}
+
 \begin{code}
 module _ where
   private
@@ -498,7 +498,7 @@ and $n$. This is the difference between with abstraction and ordinary
 case splitting on the right hand side. \cite{Oury2008} contains other
 interesting examples of views.
 
-\subsection{Equality and reasoning}
+\subsection{Reasoning about equality}
 \todo{Finish section}
 
 Any two terms are considered propositionally equal if they unify with
@@ -629,7 +629,7 @@ require induction.
 
 \subsection{Proof by reflection}
 
-\section{Problem solvers}
+\section{Problem solvers and their domains}
 
 \todo{Forward reference solutions}
 
@@ -643,9 +643,11 @@ require induction.
 
 \AgdaHide{
 \begin{code}
-open import Data.List
+open import Data.Unit using (⊤ ; tt)
+open import Data.List using (List ; [] ; _∷_)
 open import Data.Nat using (ℕ ; zero ; suc ; _+_)
 open import Data.Fin using (Fin ; zero ; suc)
+open import Data.Vec using (Vec ; _∷_ ; [] ; tabulate ; lookup)
 open import Data.Fin.Properties using (_≟_)
 open import Relation.Binary.PropositionalEquality
 open import Relation.Binary.List.Pointwise using (decidable-≡)
@@ -654,15 +656,21 @@ open ≡-Reasoning
 \end{code}
 }
 
-\todo{Monoids as an easy challenge}
-
 It is not unlikely that while solving some bigger problem, one finds
 out that part of it can be modeled as an equation on monoids, and thus
 solved by a monoid solver.
 
+Constructing a monoid solver is a good first approach to building
+automated solvers: it lacks the complexity of numerous other problems,
+yet has the same high-level structure.
+
 \section{Problem description and specification}
 
-A monoid is a set $M$: 
+\href{https://agda.github.io/agda-stdlib/Algebra.html#1079}{Agda-Stdlib's
+definition of a monoid} is based on notions about many other algebraic
+structures, and is therefore fairly complex. Instead, we will use our
+own definition, which is entirely self-contained and fairly simple. A
+monoid is a set:
 
 \begin{code}
 record Monoid (M : Set) : Set where
@@ -686,9 +694,9 @@ And a neutral element \AgdaRef{ε} absorbed on both sides:
 \end{code}
 
 $(ℕ, +, 0)$ and $(ℕ, ·, 1)$ are examples of monoids. Note however that
-these also happen to be commutative, while monoids need not be. An
-example of a non-commutative monoid are lists together with the
-concatenation operation:
+these also happen to be commutative, while monoids need not be — more
+on solving commutative monoids later. An example of a non-commutative
+monoid are lists together with the concatenation operation:
 
 \begin{code}
 open import Data.List using (List ; [] ; _++_)
@@ -713,40 +721,43 @@ LIST-MONOID T = record
 
 A solver for monoids should decide whether an equation on monoids
 holds for all environments. Without an automated solver, the length of
-such a proof is linear with respect to the number of rule
-applications.
+such a proof can be linear with respect to the size of the monoid.
 
 \begin{code}
-module _ {T : Set} where
-  open Monoid (LIST-MONOID T)
-
-  example : (xs ys zs : List T) → (xs · ε) · (ε · (ys · (ys · zs))) ≡ xs · ((ys · ys) · (zs · ε))
-  example xs ys zs = begin
-    (xs · ε) · (ε · (ys · (ys · zs)))
-      ≡⟨ cong (_· (ε · (ys · (ys · zs)))) (sym (law-·-ε xs)) ⟩
-    xs · (ε · (ys · (ys · zs)))
-      ≡⟨ cong (xs ·_) (law-ε-· (ys · (ys · zs))) ⟩
-    xs · (ys · (ys · zs))
-      ≡⟨ cong (xs ·_) (sym (law-·-· ys ys zs)) ⟩
-    xs · ((ys · ys) · zs)
-      ≡⟨ cong (λ zs' → xs · ((ys · ys) · zs')) (law-·-ε _) ⟩
-    xs · ((ys · ys) · (zs · ε))
-      ∎
+by-hand : {T : Set}(xs ys zs : List T) → (xs ++ []) ++ ([] ++ (ys ++ (ys ++ zs))) ≡ xs ++ ((ys ++ ys) ++ (zs ++ []))
+by-hand {T} xs ys zs = begin
+  (xs ++ []) ++ ([] ++ (ys ++ (ys ++ zs)))
+    ≡⟨ cong (_++ ([] ++ (ys ++ (ys ++ zs)))) (sym (law-·-ε xs)) ⟩
+  xs ++ ([] ++ (ys ++ (ys ++ zs)))
+     ≡⟨ cong (xs ++_) (law-ε-· (ys ++ (ys ++ zs))) ⟩
+  xs ++ (ys ++ (ys ++ zs))
+     ≡⟨ cong (xs ++_) (sym (law-·-· ys ys zs)) ⟩
+  xs ++ ((ys ++ ys) ++ zs)
+     ≡⟨ cong (λ zs' → xs ++ ((ys ++ ys) ++ zs')) (law-·-ε _) ⟩
+  xs ++ ((ys ++ ys) ++ (zs ++ []))
+     ∎
+  where open Monoid (LIST-MONOID T)
 \end{code}
 
 \section{Design and implementation}
+
 
 \begin{code}
 data Expr (n : ℕ) : Set where
   var' : Fin n           → Expr n
   ε'   :                   Expr n
   _·'_ : Expr n → Expr n → Expr n
+
+data Eqn (n : ℕ) : Set where
+  _≡'_ : Expr n → Expr n → Eqn n
 \end{code}
 
+\cite{Bruijn1972}
+\cite{Walt2012}
 
-With Agda and its dependent types, we can make the typechecker check
-such a proof, at compile time. Our solver is going to return something
-of type Solution :: Expression → Expression → Set.
+
+\todo{Note on commutative monoids}
+
 
 Let P = ((0 + x) + (x + y)) and Q = ((x + x) + y). Then Solution P Q
 [code] will give back the type ∀ (x y) → P ≡ Q representing an
@@ -793,70 +804,86 @@ exprList              |  evalList (exprList e) ≡ evalExpr e
 NormalForm : ℕ → Set
 NormalForm n = List (Fin n)
 
-Env : Set → Set
-Env M = ∀ {n} → Fin n → M
+normalise : ∀ {n} → Expr n → NormalForm n
+normalise (var' x) = x ∷ []
+normalise ε' = []
+normalise (i ·' j) = normalise i ++ normalise j
+
+module _ {M : Set} (monoid : Monoid M) where
+  open Monoid monoid
+
+  Env : ℕ → Set
+  Env n = Vec M n
+
+  ⟦_⟧n : ∀ {n} → List (Fin n) → Env n → M
+  ⟦ [] ⟧n       ρ = ε
+  ⟦ (x ∷ xs) ⟧n ρ = (lookup x ρ) · ⟦ xs ⟧n ρ
+
+  ⟦_⟧ : ∀ {n} → Expr n → Env n → M
+  ⟦ var' x ⟧   ρ = lookup x ρ
+  ⟦ ε' ⟧       ρ = ε
+  ⟦ xs ·' ys ⟧ ρ = ⟦ xs ⟧ ρ · ⟦ ys ⟧ ρ
+
+  eval-distr : ∀ {n} (p q : NormalForm n) → (ρ : Env n)
+               → ⟦ p ⟧n ρ · ⟦ q ⟧n ρ ≡ ⟦ p ++ q ⟧n ρ
+
+  eval-distr [] q ρ = law-ε-· _
+  eval-distr (x ∷ p) q ρ = begin
+      ((lookup x ρ) · ⟦ p ⟧n ρ) · ⟦ q ⟧n ρ
+    ≡⟨ law-·-· _ _ _ ⟩
+      (lookup x ρ) · (⟦ p ⟧n ρ · ⟦ q ⟧n ρ)
+    ≡⟨ cong (_·_ (lookup x ρ)) (eval-distr p q ρ) ⟩
+      (lookup x ρ) · ⟦ p ++ q ⟧n ρ
+    ∎
+
+  eval-commutes : ∀ {n} → (expr : Expr n) → (ρ : Env n)
+                  → ⟦ expr ⟧ ρ ≡ ⟦ normalise expr ⟧n ρ
+
+  eval-commutes (var' x) ρ = law-·-ε _
+  eval-commutes ε'       ρ = refl
+  eval-commutes (p ·' q) ρ rewrite eval-commutes p ρ | eval-commutes q ρ
+    = eval-distr (normalise p) (normalise q) ρ
+
+  Solution : ∀ {n} → Eqn n → Set
+  Solution {n} (p ≡' q) with decidable-≡ _≟_ (normalise p) (normalise q)
+  ... | no _ = ⊤
+  ... | yes _ = ∀ (ρ : Env n) → ⟦ p ⟧ ρ ≡ ⟦ q ⟧ ρ
+
+  solve : ∀ {n} (eqn : Eqn n) → Solution eqn
+  solve (p ≡' q) with decidable-≡ _≟_ (normalise p) (normalise q)
+  ...            | no _ = tt
+  ...            | yes leq = λ ρ → 
+    ⟦ p ⟧ ρ
+      ≡⟨ eval-commutes p ρ ⟩
+    ⟦ normalise p ⟧n ρ
+      ≡⟨ cong (λ x → ⟦ x ⟧n ρ) leq  ⟩
+    ⟦ normalise q ⟧n ρ
+      ≡⟨ sym (eval-commutes q ρ) ⟩
+    ⟦ q ⟧ ρ
+      ∎
+
+-- This is magic
+N-ary : ℕ → Set → Set → Set
+N-ary zero A B = B
+N-ary (suc n) A B = A → N-ary n A B
+
+_$ⁿ_ : ∀ {n A B} → N-ary n A B → (Vec A n → B)
+f $ⁿ [] = f
+f $ⁿ (x ∷ xs) = f x $ⁿ xs
+
+vars : ∀ {n} → Vec (Expr n) n
+vars = tabulate var'
+
+build : ∀ {A}(n : ℕ) → N-ary n (Expr n) A → A
+build n f = f $ⁿ vars {n}
+
 \end{code}
 
 \begin{code}
+auto : {T : Set}(xs ys zs : List T) → (xs ++ []) ++ ([] ++ (ys ++ (ys ++ zs))) ≡ xs ++ ((ys ++ ys) ++ (zs ++ []))
+auto {T} xs ys zs = solve (LIST-MONOID T)
+  (build 3 λ xs ys zs → ((xs ·' ε') ·' (ε' ·' (ys ·' (ys ·' zs)))) ≡' (xs ·' ((ys ·' ys) ·' (zs ·' ε')))) (xs ∷ ys ∷ zs ∷ [])
 
-exprList : ∀ {n} → Expr n → NormalForm n
-exprList (var' x) = x ∷ []
-exprList ε' = []
-exprList (i ·' j) = exprList i ++ exprList j
-
-module _ {M : Set} (monoid : Monoid M) (var : Env M) where
-  open Monoid monoid
-
-  evalList : ∀ {n} → List (Fin n) → M
-  evalList [] = ε
-  evalList (x ∷ xs) = (var x) · (evalList xs)
-
-  evalExpr : ∀ {n} → Expr n → M
-  evalExpr (var' x) = var x
-  evalExpr ε' = ε
-  evalExpr (xs ·' ys) = (evalExpr xs) · (evalExpr ys)
-
-  eval-distr : ∀ {n} → (p q : NormalForm n)
-               → (evalList p) · (evalList q) ≡ evalList (p ++ q )
-
-  eval-distr [] q = law-ε-· _
-  eval-distr (x ∷ p) q = begin
-      ((var x) · (evalList p)) · (evalList q)
-    ≡⟨ law-·-· _ _ _ ⟩
-      (var x) · ((evalList p) · (evalList q))
-    ≡⟨ cong (_·_ (var x)) (eval-distr p q) ⟩
-      (var x) · (evalList (p ++ q))
-    ∎
-
-  eval-commutes : ∀ {n} → (expr : Expr n)
-                  → evalExpr expr ≡ evalList (exprList expr)     
-
-  eval-commutes (var' x) = law-·-ε _
-  eval-commutes ε' = refl
-  eval-commutes (p ·' q) rewrite eval-commutes p | eval-commutes q
-    = eval-distr (exprList p) (exprList q)
-
-record Failure : Set₁ where
-  constructor Fail
-
-Solution : ∀ {n} → Expr n → Expr n → Set₁
-Solution p q with decidable-≡ _≟_ (exprList p) (exprList q)
-... | no _ = Failure
-... | yes _ = ∀ {M : Set} (monoid : Monoid M) (env : Env M)
-              → evalExpr monoid env p ≡ evalExpr monoid env q
-
-solve : ∀ {n} (p q : Expr n) → Solution p q
-solve p q with decidable-≡ _≟_ (exprList p) (exprList q)
-solve p q | no _ = Fail
-solve p q | yes leq = λ monoid env → 
-  evalExpr monoid env p
-    ≡⟨ eval-commutes monoid env p ⟩
-  evalList monoid env (exprList p)
-    ≡⟨ cong (evalList monoid env) leq  ⟩
-  evalList monoid env (exprList q)
-    ≡⟨ sym (eval-commutes monoid env q) ⟩
-  evalExpr monoid env q
-    ∎
 \end{code}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
