@@ -202,9 +202,14 @@ type-checkers.
 \todo{Agda 2.5.4 to fix whitespace}
 \todo{Fix kerning}
 
+\AgdaHide{
 \begin{code}
 module _ where
   private
+\end{code}
+}
+
+\begin{code}
     -- Truth: a type with a single constructor trivial to satisfy
     record ⊤ : Set where
         constructor tt
@@ -217,7 +222,7 @@ module _ where
       inj₁ : A → A ⊎ B
       inj₂ : B → A ⊎ B
 
-    module PrincipleShowcase {A : Set} where
+    module Laws {A : Set} where
       -- Ex falso quodlibet
       -- Agda can see there is no way of constructing ⊥
       explosion : ⊥ → Set
@@ -332,10 +337,10 @@ $∀$:
 
 \begin{code}
     -- All numbers are either even or not even
-    foo : ∀ {n} → Even n ⊎ (Even n → ⊥)
-    foo {zero} = inj₁ tt
-    foo {suc zero} = inj₂ λ b → b
-    foo {suc (suc n)} = foo {n}
+    prf₁ : ∀ {n} → Even n ⊎ (Even n → ⊥)
+    prf₁ {zero} = inj₁ tt
+    prf₁ {suc zero} = inj₂ λ b → b
+    prf₁ {suc (suc n)} = prf₁ {n}
 \end{code}
 
 Multiple arguments sharing the same type can be grouped by providing
@@ -448,10 +453,10 @@ will be no need to provide a definition for it.
 
 \begin{code}
     -- The successor of an even number cannot be even
-    bar : ∀ n → {p : Even n} → Even (suc n) → ⊥
-    bar zero {p} ()
-    bar (suc zero) {()} sp
-    bar (suc (suc n)) {p} sp = bar n {p} sp 
+    prf₂ : ∀ n → {p : Even n} → Even (suc n) → ⊥
+    prf₂ zero {p} ()
+    prf₂ (suc zero) {()} sp
+    prf₂ (suc (suc n)) {p} sp = prf₂ n {p} sp 
 \end{code}
 
 The type-checker uses dot patterns to show that pattern matching on
@@ -498,16 +503,28 @@ and $n$. This is the difference between with abstraction and ordinary
 case splitting on the right hand side. \cite{Oury2008} contains other
 interesting examples of views.
 
-\subsection{Reasoning about equality}
-\todo{Finish section}
+\subsection{Tools for reasoning}
 
-Any two terms are considered propositionally equal if they unify with
-each other:
+Two terms of the same type are considered propositionally equal if
+they unify with each other:
+
+\AgdaHide{
+\begin{code}
+    module _ where
+      private
+\end{code}
+}
 
 \begin{code}
-    data _≡_ {A : Set} (x : A) : A → Set where
-      refl : x ≡ x
+        data _≡_ {A : Set} (x : A) : A → Set where
+          refl : x ≡ x
 \end{code}
+
+\AgdaHide{
+\begin{code}
+    open import Agda.Builtin.Equality
+\end{code}
+}
 
 \AgdaRef{\_≡\_} is parametrised by an implicit type $A$ and a value $x
 : A$ and indexed by a value in $A$. Given some fixed parameter $x$,
@@ -517,13 +534,53 @@ y$ and crucially, it can only construct values where $x ≡ x$ after
 normalisation. \todo{Colors}
 
 \begin{code}
-    -- Computation of suc zero + suc zero happens at compile time
     -- Both sides normalise to suc (suc zero)
-    1+1≡2 : (suc zero + suc zero) ≡ suc (suc zero)
-    1+1≡2 = refl
+    prf₃ : (suc zero + suc zero) ≡ suc (suc zero)
+    prf₃ = refl
 \end{code}
 
-Let us fetch some handy equipment for building proofs. \todo{mention stdlib}
+We can now start writing functions that compute proofs that involve
+equality:
+
+\begin{code}
+    -- zero + n immediately normalises to n
+    prf₄ : ∀ n → (zero + n) ≡ n
+    prf₄ n = refl
+\end{code}
+
+However, not all equations immediately unify. Consider the following:
+
+\begin{code}
+    prf₅ : ∀ n → (n + zero) ≡ n
+\end{code}
+
+$n + zero$ cannot normalise: because of how \AgdaRef{_+_} was defined,
+it needs to know whether $n$ was constructed with \AgdaRef{zero} or
+\AgdaRef{suc}. We can can advance the computation by pattern matching
+on $n$. While the base case is now trivial ($zero + zero$ unifies with
+$zero$), the problem persist in the inductive case, where $suc (n +
+zero)$ has to unify with $suc n$. By recursing on the inductive
+hypothesis, we can unify $n + zero$ with $n$, and thus the remainder
+of the proof becomes trivial:
+
+\begin{code}
+    prf₅ zero = refl
+    prf₅ (suc n) with n + zero | prf₅ n
+    prf₅ (suc n) | .n          | refl = refl
+\end{code}
+
+This recursion on the induction hypothesis is common enough that there
+is special syntax for it:
+
+\begin{code}
+    prf₆ : ∀ n → (n + zero) ≡ n
+    prf₆ zero = refl
+    prf₆ (suc n) rewrite prf₆ n = refl
+\end{code}
+
+Next, we introduce common reasoning tools enabling whiteboard-like
+reasoning, all part of
+\href{https://agda.github.io/agda-stdlib/Relation.Binary.PropositionalEquality.html#3767}{Agda-Stdlib}:
 
 \begin{code}
     module Reasoning {A : Set} where
@@ -554,77 +611,23 @@ Let us fetch some handy equipment for building proofs. \todo{mention stdlib}
 
     open Reasoning
 
-    _⟨_⟩_ : ∀ {A B C : Set} → A → (A → B → C) → B → C
-    x ⟨ f ⟩ y = f x y
-
     cong : {A B : Set}{x y : A} (f : A → B) → x ≡ y → f x ≡ f y
     cong f refl = refl
-
-    _∘_ : {A B C : Set} → (B → C) → (A → B) → (A → C)
-    f ∘ g = {!!}
-
-    map-∘ : {A B C : Set}{n : ℕ} (f : A → B) (g : B → C)
-            → ∀ (xs : Vec A n) → map g (map f xs) ≡ map (g ∘ f) xs
-    map-∘ f g [] = refl
-    map-∘ f g (x ∷ xs) = {!!}
 \end{code}
 
-Dependent types allow to model predicate logic with ease. 
+Following, a boring example ilustrating their use:
 
 \begin{code}
-    -- zero + n immediately normalises to n
-    0+n≡n : ∀ n → (zero + n) ≡ n
-    0+n≡n n = refl
-
-    record Σ (A : Set) (B : A → Set) : Set where
-      constructor _,_
-      field
-        proj₁ : A
-        proj₂ : B proj₁
-
-    ∃ : {A : Set} → (A → Set) → Set
-    ∃ = Σ _
-
-    pred-0 : ∃ λ n → pred n ≡ n
-    pred-0 = zero , refl
-\end{code}
-
-\todo{Move before rewrites, introduce their need}
-\todo{Explain that n+0≡n is a proof generated for any ℕ}
-\todo{Introduce the idea of an automated proof generator}
-
-One could think that proving that $∀ n → (n + zero) ≡ n$ is similar to
-proving that $∀ n → (zero + n) ≡ n$, but it is not. Depending on
-whether \AgdaRef{\_+\_} case splits on the first or on the second
-argument, one of those proofs will be trivial while the other will
-require induction.
-
-
-\begin{code}
-    n+0≡n : ∀ n → (n + zero) ≡ n
-    n+0≡n zero = refl
-    n+0≡n (suc n) with n + zero | n+0≡n n
-    n+0≡n (suc n) | .n          | refl = refl
-
-    -- n + zero cannot normalise:
-    -- Was n constructed with zero or with suc?
-    -- We need to use induction
-    -- n+0≡n' : ∀ n → (n + zero) ≡ n
-    -- n+0≡n' zero = refl
-    -- n+0≡n' (suc n) rewrite n+0≡n' n = refl
-
-
-    data Dec (P : Set) : Set where
-      yes : P       → Dec P
-      no  : (P → ⊥) → Dec P
-
-    Decidable : {A : Set} → (A → Set) → Set
-    Decidable {A} P = ∀ (x : A) → Dec (P x)
-
-    is-even? : Decidable Even
-    is-even? zero = yes tt
-    is-even? (suc zero) = no λ b → b
-    is-even? (suc (suc n)) = is-even? n
+    prf₇ : ∀ l n m → ((zero + (l + zero)) + (n + zero)) + m ≡ (l + n) + m
+    prf₇ l n m = begin
+      (((zero + (l + zero)) + (n + zero)) + m)
+        ≡⟨⟩
+      (((l + zero) + (n + zero)) + m)
+        ≡⟨ cong (λ t → (t + (n + zero)) + m) (prf₆ l) ⟩
+      ((l + (n + zero)) + m)
+        ≡⟨ cong (λ t → (l + t) + m) (prf₆ n) ⟩
+      (l + n) + m
+        ∎ 
 \end{code}
 
 \subsection{Proof by reflection}
@@ -648,6 +651,7 @@ open import Data.List using (List ; [] ; _∷_)
 open import Data.Nat using (ℕ ; zero ; suc ; _+_)
 open import Data.Fin using (Fin ; zero ; suc)
 open import Data.Vec using (Vec ; _∷_ ; [] ; tabulate ; lookup)
+open import Data.Vec.N-ary using (N-ary)
 open import Data.Fin.Properties using (_≟_)
 open import Relation.Binary.PropositionalEquality
 open import Relation.Binary.List.Pointwise using (decidable-≡)
@@ -660,15 +664,15 @@ It is not unlikely that while solving some bigger problem, one finds
 out that part of it can be modeled as an equation on monoids, and thus
 solved by a monoid solver.
 
-Constructing a monoid solver is a good first approach to building
-automated solvers: it lacks the complexity of numerous other problems,
-yet has the same high-level structure.
+Moreover constructing a monoid solver is a good first approach to
+building automated solvers: it lacks the complexity of numerous other
+problems, yet has the same high-level structure.
 
 \section{Problem description and specification}
 
 \href{https://agda.github.io/agda-stdlib/Algebra.html#1079}{Agda-Stdlib's
 definition of a monoid} is based on notions about many other algebraic
-structures, and is therefore fairly complex. Instead, we will use our
+structures, and is therefore fairly complex. We will instead use our
 own definition, which is entirely self-contained and fairly simple. A
 monoid is a set:
 
@@ -693,10 +697,11 @@ And a neutral element \AgdaRef{ε} absorbed on both sides:
     law-·-ε : (m : M) → m ≡ m · ε
 \end{code}
 
-$(ℕ, +, 0)$ and $(ℕ, ·, 1)$ are examples of monoids. Note however that
-these also happen to be commutative, while monoids need not be — more
-on solving commutative monoids later. An example of a non-commutative
-monoid are lists together with the concatenation operation:
+$(ℕ, +, 0)$ and $(ℕ, ·, 1)$ are both examples of monoids. Note however
+that these also happen to be commutative, while monoids need not be —
+more on solving commutative monoids later. An example of a
+non-commutative monoid are lists together with the concatenation
+operation:
 
 \begin{code}
 open import Data.List using (List ; [] ; _++_)
@@ -719,13 +724,29 @@ LIST-MONOID T = record
               assoc (x ∷ xs) ys zs rewrite assoc xs ys zs = refl
 \end{code}
 
-A solver for monoids should decide whether an equation on monoids
-holds for all environments. Without an automated solver, the length of
-such a proof can be linear with respect to the size of the monoid.
+We cannot rely on definitional equality to prove that an equation on
+monoids holds regardless of the environment: two propositionally
+different equations might have the same meaning. We need to make use
+of the monoid laws.
 
 \begin{code}
-by-hand : {T : Set}(xs ys zs : List T) → (xs ++ []) ++ ([] ++ (ys ++ (ys ++ zs))) ≡ xs ++ ((ys ++ ys) ++ (zs ++ []))
-by-hand {T} xs ys zs = begin
+eqn₁ : {T : Set}(xs : List T) → [] ++ xs ≡ xs ++ []
+eqn₁ {T} xs = begin
+  [] ++ xs
+    ≡⟨ law-ε-· xs ⟩
+  xs
+    ≡⟨ law-·-ε xs ⟩
+  xs ++ []
+    ∎
+  where open Monoid (LIST-MONOID T) 
+\end{code}
+
+Without an automated solver, the length of such a proof grows linearly
+with respect to the size of the monoid.
+
+\begin{code}
+eqn₂ : {T : Set}(xs ys zs : List T) → (xs ++ []) ++ ([] ++ (ys ++ (ys ++ zs))) ≡ xs ++ ((ys ++ ys) ++ (zs ++ []))
+eqn₂ {T} xs ys zs = begin
   (xs ++ []) ++ ([] ++ (ys ++ (ys ++ zs)))
     ≡⟨ cong (_++ ([] ++ (ys ++ (ys ++ zs)))) (sym (law-·-ε xs)) ⟩
   xs ++ ([] ++ (ys ++ (ys ++ zs)))
@@ -739,8 +760,16 @@ by-hand {T} xs ys zs = begin
   where open Monoid (LIST-MONOID T)
 \end{code}
 
+Our aim is thus to implement a proof generator which will effortlessly
+satisfy a type like \AgdaRef{eqn₂}'s.
+
 \section{Design and implementation}
 
+Our automated problem solver needs to be handed a representation of
+the equation it must solve. By referring to variables by their de
+Bruijn index \cite{Bruijn1972}, here represented by \AgdaRef{Fin}, we
+can avoid \todo{stuff}. Moreover, we can use the type of the
+representation to limit the amount of variables carried within.
 
 \begin{code}
 data Expr (n : ℕ) : Set where
@@ -752,11 +781,35 @@ data Eqn (n : ℕ) : Set where
   _≡'_ : Expr n → Expr n → Eqn n
 \end{code}
 
-\cite{Bruijn1972}
+
+
+\begin{code}
+NormalForm : ℕ → Set
+NormalForm n = List (Fin n)
+
+normalise : ∀ {n} → Expr n → NormalForm n
+normalise (var' x) = x ∷ []
+normalise ε' = []
+normalise (i ·' j) = normalise i ++ normalise j
+\end{code}
+
+\todo{Note on commutative monoids}
+
+Strategy to solve equations on monoids and commutative rings.
+
+- Define:
+    - the *source theory* of expressions $S$
+    - an evaluation function $e_S : S \rightarrow T$
+    - a canonical form $N$
+    - a normalising function $n : S \rightarrow N$
+    - an evaluation function $e_N : N \rightarrow T$
+
+- Proof that $\forall x : S \rightarrow e_N \, (n \, x) \equiv e_S \, x$ \newline
+  Then $\forall x y : S \rightarrow n \,x \equiv n \, y \implies e_S \, x \equiv e_S \, y$
+
 \cite{Walt2012}
 
 
-\todo{Note on commutative monoids}
 
 
 Let P = ((0 + x) + (x + y)) and Q = ((x + x) + y). Then Solution P Q
@@ -799,25 +852,16 @@ exprList              |  evalList (exprList e) ≡ evalExpr e
    v                  v  ∀ (p q : Expr X) →
  List X --evalList--> M  exprList p ≡ exprList q ⇔ evalExpr p ≡ evalExpr q
 
-
 \begin{code}
-NormalForm : ℕ → Set
-NormalForm n = List (Fin n)
-
-normalise : ∀ {n} → Expr n → NormalForm n
-normalise (var' x) = x ∷ []
-normalise ε' = []
-normalise (i ·' j) = normalise i ++ normalise j
-
 module _ {M : Set} (monoid : Monoid M) where
   open Monoid monoid
 
   Env : ℕ → Set
   Env n = Vec M n
-
-  ⟦_⟧n : ∀ {n} → List (Fin n) → Env n → M
-  ⟦ [] ⟧n       ρ = ε
-  ⟦ (x ∷ xs) ⟧n ρ = (lookup x ρ) · ⟦ xs ⟧n ρ
+ 
+  ⟦_⇓⟧ : ∀ {n} → List (Fin n) → Env n → M
+  ⟦ [] ⇓⟧       ρ = ε
+  ⟦ (x ∷ xs) ⇓⟧ ρ = (lookup x ρ) · ⟦ xs ⇓⟧ ρ
 
   ⟦_⟧ : ∀ {n} → Expr n → Env n → M
   ⟦ var' x ⟧   ρ = lookup x ρ
@@ -825,23 +869,24 @@ module _ {M : Set} (monoid : Monoid M) where
   ⟦ xs ·' ys ⟧ ρ = ⟦ xs ⟧ ρ · ⟦ ys ⟧ ρ
 
   eval-distr : ∀ {n} (p q : NormalForm n) → (ρ : Env n)
-               → ⟦ p ⟧n ρ · ⟦ q ⟧n ρ ≡ ⟦ p ++ q ⟧n ρ
+               → ⟦ p ⇓⟧ ρ · ⟦ q ⇓⟧ ρ ≡ ⟦ p ++ q ⇓⟧ ρ
 
   eval-distr [] q ρ = law-ε-· _
   eval-distr (x ∷ p) q ρ = begin
-      ((lookup x ρ) · ⟦ p ⟧n ρ) · ⟦ q ⟧n ρ
-    ≡⟨ law-·-· _ _ _ ⟩
-      (lookup x ρ) · (⟦ p ⟧n ρ · ⟦ q ⟧n ρ)
-    ≡⟨ cong (_·_ (lookup x ρ)) (eval-distr p q ρ) ⟩
-      (lookup x ρ) · ⟦ p ++ q ⟧n ρ
-    ∎
+    ((lookup x ρ) · ⟦ p ⇓⟧ ρ) · ⟦ q ⇓⟧ ρ
+      ≡⟨ law-·-· _ _ _ ⟩
+    (lookup x ρ) · (⟦ p ⇓⟧ ρ · ⟦ q ⇓⟧ ρ)
+      ≡⟨ cong (_·_ (lookup x ρ)) (eval-distr p q ρ) ⟩
+    (lookup x ρ) · ⟦ p ++ q ⇓⟧ ρ
+      ∎
 
   eval-commutes : ∀ {n} → (expr : Expr n) → (ρ : Env n)
-                  → ⟦ expr ⟧ ρ ≡ ⟦ normalise expr ⟧n ρ
+                  → ⟦ expr ⟧ ρ ≡ ⟦ normalise expr ⇓⟧ ρ
 
   eval-commutes (var' x) ρ = law-·-ε _
   eval-commutes ε'       ρ = refl
-  eval-commutes (p ·' q) ρ rewrite eval-commutes p ρ | eval-commutes q ρ
+  eval-commutes (p ·' q) ρ
+    rewrite eval-commutes p ρ | eval-commutes q ρ
     = eval-distr (normalise p) (normalise q) ρ
 
   Solution : ∀ {n} → Eqn n → Set
@@ -855,19 +900,16 @@ module _ {M : Set} (monoid : Monoid M) where
   ...            | yes leq = λ ρ → 
     ⟦ p ⟧ ρ
       ≡⟨ eval-commutes p ρ ⟩
-    ⟦ normalise p ⟧n ρ
-      ≡⟨ cong (λ x → ⟦ x ⟧n ρ) leq  ⟩
-    ⟦ normalise q ⟧n ρ
+    ⟦ normalise p ⇓⟧ ρ
+      ≡⟨ cong (λ x → ⟦ x ⇓⟧ ρ) leq  ⟩
+    ⟦ normalise q ⇓⟧ ρ
       ≡⟨ sym (eval-commutes q ρ) ⟩
     ⟦ q ⟧ ρ
       ∎
 
--- This is magic
-N-ary : ℕ → Set → Set → Set
-N-ary zero A B = B
-N-ary (suc n) A B = A → N-ary n A B
+-- Cite magic
 
-_$ⁿ_ : ∀ {n A B} → N-ary n A B → (Vec A n → B)
+_$ⁿ_ : ∀ {n}{A B : Set} → N-ary n A B → (Vec A n → B)
 f $ⁿ [] = f
 f $ⁿ (x ∷ xs) = f x $ⁿ xs
 
