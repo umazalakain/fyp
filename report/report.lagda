@@ -46,6 +46,10 @@
 % Footnote symbols
 \renewcommand{\thefootnote}{\fnsymbol{footnote}}
 
+% Commutative diagrams
+\usepackage{tikz}
+
+
 \begin{document}
 
 \AgdaHide{
@@ -109,13 +113,18 @@ module _ where
 %   - an acknowledgements page, and
 %   - a table of contents.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{abstract}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \todo{Abstract}
 % Proving certain theorems can be boring and we want to automate it
 % We don't want just the answer, we want a proof that it is the correct answer
 \end{abstract}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section*{Acknowledgements}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This project is an attempt to distill all the support, attention,
 knowledge, dedication and love I was given into concrete ideas in
@@ -187,7 +196,9 @@ Curry-Howard lens.
 
 \todo{Present sections and their thoughtfulness}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Proofs as programs; propositions as types}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 If a computer is to verify the proof of some proposition, there must
 exist some computational model for both proofs and propositions. One
@@ -290,7 +301,9 @@ therefore recursion always eventually terminates.
     -- nonsense = nonsense
 \end{code}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Reasoning in Agda}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Agda is a \textbf{purely functional} (no side-effects)
 \textbf{dependently typed} (types contain values) \textbf{totally
@@ -303,7 +316,9 @@ introduction; more in-depth documentation can be found at
 cover the basics required to familiarise the reader with what theorem
 proving in Agda looks like.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{The experience of programming in Agda}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Development in Agda happens inside Emacs, and is a two way
 conversation between the compiler and the programmer. Wherever a
@@ -325,7 +340,9 @@ This interactive way of programming, often described as "hole driven",
 allows the programmer to work with partial definitions and to receive
 constant feedback from the type-checker.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Some peculiarities}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Arguments can be named, allowing subsequent arguments to depend on
 them. If an argument can be inferred by the type-checker, the
@@ -367,7 +384,9 @@ wrapping the arguments and body in curly brances.
             }
 \end{code}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Datatypes and pattern matching}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Algebraic data types are introduced by the \AgdaKeyword{data}
 keyword. They may contain multiple constructors, all of which must be
@@ -498,12 +517,15 @@ originally presented in \cite{McBride2004}:
     compare (suc .(suc m + k)) (suc .m)           | greater m k = greater (suc m) k
 \end{code}
 
-As a result of pattern matching on $compare m n$ we learn about $m$
-and $n$. This is the difference between with abstraction and ordinary
-case splitting on the right hand side. \cite{Oury2008} contains other
-interesting examples of views.
+As a result of pattern matching
+on \AgdaFunction{compare}~\AgdaBound{m}~\AgdaBound{n} we learn
+about \AgdaBound{m} and \AgdaBound{n}. This is the difference between
+with abstraction and ordinary case splitting on the right hand
+side. \cite{Oury2008} contains other interesting examples of views.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Tools for reasoning}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Two terms of the same type are considered propositionally equal if
 they unify with each other:
@@ -526,12 +548,16 @@ they unify with each other:
 \end{code}
 }
 
-\AgdaRef{\_≡\_} is parametrised by an implicit type $A$ and a value $x
-: A$ and indexed by a value in $A$. Given some fixed parameter $x$,
-for every $y : A$ $x ≡ y$ is thus a type. The constructor
-\AgdaRef{refl} is the only means of constructing a value of type $x ≡
-y$ and crucially, it can only construct values where $x ≡ x$ after
-normalisation. \todo{Colors}
+\AgdaRef{\_≡\_} is parametrised by an implicit type \AgdaBound{A} and
+a value \AgdaBound{x}~\AgdaSymbol{:}~\AgdaBound{A} and indexed by a
+value in \AgdaBound{A}. Given some fixed parameter \AgdaBound{x}, for
+every
+\AgdaBound{y}~\AgdaSymbol{:}~\AgdaBound{A}~\AgdaBound{x}~\AgdaDatatype{≡}~\AgdaBound{y}
+is thus a type. The constructor \AgdaRef{refl} is the only means of
+constructing a value of type
+\AgdaBound{x}~\AgdaDatatype{≡}~\AgdaBound{y} and crucially, it can
+only construct values where
+\AgdaBound{x}~\AgdaDatatype{≡}~\AgdaBound{x} after normalisation.
 
 \begin{code}
     -- Both sides normalise to suc (suc zero)
@@ -554,14 +580,18 @@ However, not all equations immediately unify. Consider the following:
     prf₅ : ∀ n → (n + zero) ≡ n
 \end{code}
 
-$n + zero$ cannot normalise: because of how \AgdaRef{_+_} was defined,
-it needs to know whether $n$ was constructed with \AgdaRef{zero} or
+\AgdaBound{n} \AgdaFunction{+} \AgdaRef{zero} cannot
+normalise: because of how \AgdaRef{_+_} was defined, it needs to know
+whether \AgdaBound{n} was constructed with \AgdaRef{zero} or
 \AgdaRef{suc}. We can can advance the computation by pattern matching
-on $n$. While the base case is now trivial ($zero + zero$ unifies with
-$zero$), the problem persist in the inductive case, where $suc (n +
-zero)$ has to unify with $suc n$. By recursing on the inductive
-hypothesis, we can unify $n + zero$ with $n$, and thus the remainder
-of the proof becomes trivial:
+on \AgdaBound{n}. While the base case is now trivial
+(\AgdaRef{zero}~\AgdaFunction{+}~\AgdaRef{zero} unifies with
+\AgdaRef{zero}), the problem persist in the inductive case, where
+\AgdaRef{suc}~\AgdaSymbol{(}\AgdaBound{n}~\AgdaFunction{+}~\AgdaRef{zero}\AgdaSymbol{)}
+has to unify with \AgdaRef{suc}~\AgdaBound{n}. By recursing on the
+inductive hypothesis, we can unify
+\AgdaBound{n}~\AgdaFunction{+}~\AgdaRef{zero} with \AgdaBound{n}, and
+thus the remainder of the proof becomes trivial:
 
 \begin{code}
     prf₅ zero = refl
@@ -578,11 +608,14 @@ is special syntax for it:
     prf₆ (suc n) rewrite prf₆ n = refl
 \end{code}
 
-Next, we introduce common reasoning tools enabling whiteboard-like
+Next, we introduce common reasoning tools enabling whiteboard-style
 reasoning, all part of
 \href{https://agda.github.io/agda-stdlib/Relation.Binary.PropositionalEquality.html#3767}{Agda-Stdlib}:
 
 \begin{code}
+    cong : {A B : Set}{x y : A} (f : A → B) → x ≡ y → f x ≡ f y
+    cong f refl = refl
+
     module Reasoning {A : Set} where
       -- x and y unify when we pattern match on the first argument
       sym : ∀ {x y : A} → x ≡ y → y ≡ x
@@ -592,10 +625,6 @@ reasoning, all part of
       -- y ≡ z then becomes x ≡ z
       trans : ∀ {x y z : A} → x ≡ y → y ≡ z → x ≡ z
       trans refl eq = eq
-
-      infix  3 _∎
-      infixr 2 _≡⟨⟩_ _≡⟨_⟩_
-      infix  1 begin_
 
       begin_ : ∀ {x y : A} → x ≡ y → x ≡ y
       begin_ x≡y = x≡y
@@ -609,13 +638,18 @@ reasoning, all part of
       _∎ : ∀ (x : A) → x ≡ x
       _∎ _ = refl
 
-    open Reasoning
-
-    cong : {A B : Set}{x y : A} (f : A → B) → x ≡ y → f x ≡ f y
-    cong f refl = refl
 \end{code}
+\AgdaHide{
+\begin{code}
+      infix  3 _∎
+      infixr 2 _≡⟨⟩_ _≡⟨_⟩_
+      infix  1 begin_
 
-Following, a boring example ilustrating their use:
+    open Reasoning
+\end{code}
+}
+
+A trivial proof with an example of their usage:
 
 \begin{code}
     prf₇ : ∀ l n m → ((zero + (l + zero)) + (n + zero)) + m ≡ (l + n) + m
@@ -630,13 +664,21 @@ Following, a boring example ilustrating their use:
         ∎ 
 \end{code}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Proof by reflection}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\cite{Walt2012}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Problem solvers and their domains}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \todo{Forward reference solutions}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{A comment on Agda-Stdlib}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \url{https://agda.github.io/agda-stdlib/}
 
@@ -660,51 +702,45 @@ open ≡-Reasoning
 \end{code}
 }
 
-It is not unlikely that while solving some bigger problem, one finds
-out that part of it can be modeled as an equation on monoids, and thus
-solved by a monoid solver.
+Monoids are a common algebraic structure found as part of many
+problems. A monoid solver is an automated proof generator which can
+be used wherever an equation on monoids must be proved. Constructing
+one is a good first approach to building automated solvers: it lacks
+the complexity of many other problems but has the same high-level
+structure.
 
-Moreover constructing a monoid solver is a good first approach to
-building automated solvers: it lacks the complexity of numerous other
-problems, yet has the same high-level structure.
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Problem description and specification}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \href{https://agda.github.io/agda-stdlib/Algebra.html#1079}{Agda-Stdlib's
 definition of a monoid} is based on notions about many other algebraic
 structures, and is therefore fairly complex. We will instead use our
-own definition, which is entirely self-contained and fairly simple. A
-monoid is a set:
+own definition, which is entirely self-contained and fairly simple.
 
 \begin{code}
+-- A monoid is a set
 record Monoid (M : Set) : Set where
   infix 25 _·_
   field
-\end{code}
-
-Together with an associative binary operation \AgdaRef{\_·\_}:
-
-\begin{code}
+    -- Together with an associative binary operation
     _·_ : M → M → M
     law-·-· : (x y z : M) → (x · y) · z ≡ x · (y · z)
-\end{code}
-
-And a neutral element \AgdaRef{ε} absorbed on both sides:
-
-\begin{code}
+    -- And a neutral element absorbed on both sides
     ε : M
     law-ε-· : (m : M) → ε · m ≡ m
     law-·-ε : (m : M) → m ≡ m · ε
 \end{code}
 
-$(ℕ, +, 0)$ and $(ℕ, ·, 1)$ are both examples of monoids. Note however
-that these also happen to be commutative, while monoids need not be —
-more on solving commutative monoids later. An example of a
-non-commutative monoid are lists together with the concatenation
-operation:
+\AgdaRef{M}, the set on which the monoid is defined, is often referred
+to as the carrier. $(ℕ, +, 0)$ and $(ℕ, ·, 1)$ are both examples of
+monoids. Note however that these also happen to be commutative, while
+monoids need not be — more on solving commutative monoids later. An
+example of a non-commutative monoid are lists together with the
+concatenation operation:
 
 \begin{code}
-open import Data.List using (List ; [] ; _++_)
+open import Data.List using (List ; [] ; _∷_ ; _++_)
 
 LIST-MONOID : (T : Set) → Monoid (List T)
 LIST-MONOID T = record
@@ -724,10 +760,9 @@ LIST-MONOID T = record
               assoc (x ∷ xs) ys zs rewrite assoc xs ys zs = refl
 \end{code}
 
-We cannot rely on definitional equality to prove that an equation on
-monoids holds regardless of the environment: two propositionally
-different equations might have the same meaning. We need to make use
-of the monoid laws.
+An equation on monoids cannot be decided by unification alone: the
+monoid laws show that definitionally distinct propositions might in
+fact have the same meaning.
 
 \begin{code}
 eqn₁ : {T : Set}(xs : List T) → [] ++ xs ≡ xs ++ []
@@ -741,35 +776,51 @@ eqn₁ {T} xs = begin
   where open Monoid (LIST-MONOID T) 
 \end{code}
 
-Without an automated solver, the length of such a proof grows linearly
-with respect to the size of the monoid.
+Without an automated solver, the number of law applications and hence
+the length of the proof grows linearly with respect to the size of the
+monoid. An automated solver should allow us to effortlessly satisfy a
+proposition like the following:
 
 \begin{code}
-eqn₂ : {T : Set}(xs ys zs : List T) → (xs ++ []) ++ ([] ++ (ys ++ (ys ++ zs))) ≡ xs ++ ((ys ++ ys) ++ (zs ++ []))
-eqn₂ {T} xs ys zs = begin
+eqn₂ : {T : Set}(xs ys zs : List T)
+     → (xs ++ []) ++ ([] ++ (ys ++ (ys ++ zs)))
+     ≡ xs ++ ((ys ++ ys) ++ (zs ++ []))
+
+eqn₂ xs ys zs = begin
   (xs ++ []) ++ ([] ++ (ys ++ (ys ++ zs)))
     ≡⟨ cong (_++ ([] ++ (ys ++ (ys ++ zs)))) (sym (law-·-ε xs)) ⟩
   xs ++ ([] ++ (ys ++ (ys ++ zs)))
-     ≡⟨ cong (xs ++_) (law-ε-· (ys ++ (ys ++ zs))) ⟩
+    ≡⟨ cong (xs ++_) (law-ε-· (ys ++ (ys ++ zs))) ⟩
   xs ++ (ys ++ (ys ++ zs))
-     ≡⟨ cong (xs ++_) (sym (law-·-· ys ys zs)) ⟩
+    ≡⟨ cong (xs ++_) (sym (law-·-· ys ys zs)) ⟩
   xs ++ ((ys ++ ys) ++ zs)
-     ≡⟨ cong (λ zs' → xs ++ ((ys ++ ys) ++ zs')) (law-·-ε _) ⟩
+    ≡⟨ cong (λ zs' → xs ++ ((ys ++ ys) ++ zs')) (law-·-ε _) ⟩
   xs ++ ((ys ++ ys) ++ (zs ++ []))
-     ∎
-  where open Monoid (LIST-MONOID T)
+    ∎
+  where open Monoid (LIST-MONOID _)
 \end{code}
 
-Our aim is thus to implement a proof generator which will effortlessly
-satisfy a type like \AgdaRef{eqn₂}'s.
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Design and implementation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Our automated problem solver needs to be handed a representation of
-the equation it must solve. By referring to variables by their de
-Bruijn index \cite{Bruijn1972}, here represented by \AgdaRef{Fin}, we
-can avoid \todo{stuff}. Moreover, we can use the type of the
-representation to limit the amount of variables carried within.
+A proposition containing variables and monoid operators can be
+normalised into a canonical form. The characteristics that make two
+propositions definitionally distinct — when they are, in fact, equal
+in meaning — can be eliminated. It is crucial that this process —
+normalisation — guarantees the preservation of meaning. After
+normalisation, the two results can be compared: if they are equal, so
+must the original propositions be. This is the sketch of the procedure
+we are implementing.
+
+\todo{What about proving it complete?}
+
+The procedure requires some notion of the equation it is trying to
+solve. We use an abstract syntax tree to represent equations and
+finite indices to refer to variables — the
+type \AgdaDatatype{Fin}~\AgdaBound{n} contains \AgdaBound{n} distinct
+values. Moreover, we use a type parameter on \AgdaRef{Eqn} to
+\textit{push in} this limitation on the number of indices.
 
 \begin{code}
 data Expr (n : ℕ) : Set where
@@ -781,93 +832,99 @@ data Eqn (n : ℕ) : Set where
   _≡'_ : Expr n → Expr n → Eqn n
 \end{code}
 
+Let us use an example to help us come up with a suitable normal
+form. Consider the following two expressions:
+\begin{align*}
+    P &= ((ε · x) · (x · y))  &  Q &= ((x · x) · y) \\
+    \intertext{Neutral elements do not have any meaning and can be
+    absorbed:}
+    P &= (x · (x · y))        &  Q &= ((x · x) · y) \\
+    \intertext{Elements can always be re-associated and thus
+    association does not have any meaning and can be removed:}
+    P &= x · x · y            &  Q &= x · x · y     \\
+\end{align*}
+We can now see that both propositions are equal. It is important to
+note that these are not commutative monoids, and that thus the order
+of elements matters.
 
+Lists are a suitable data structure for representing flat elements —
+indices here — that can appear multiple times and whose order
+carries meaning. If we were dealing with commutative monoids, where
+order does carry meaning, a matrix of indices and number of
+occurrences could be represented as a vector of integers — where the
+position in the matrix represents the index and the content represents
+the number of occurrences.
 
 \begin{code}
 NormalForm : ℕ → Set
 NormalForm n = List (Fin n)
+\end{code}
 
+The normalising function is trivial:
+
+\begin{code}
 normalise : ∀ {n} → Expr n → NormalForm n
 normalise (var' x) = x ∷ []
 normalise ε' = []
 normalise (i ·' j) = normalise i ++ normalise j
 \end{code}
 
-\todo{Note on commutative monoids}
-
-Strategy to solve equations on monoids and commutative rings.
-
-- Define:
-    - the *source theory* of expressions $S$
-    - an evaluation function $e_S : S \rightarrow T$
-    - a canonical form $N$
-    - a normalising function $n : S \rightarrow N$
-    - an evaluation function $e_N : N \rightarrow T$
-
-- Proof that $\forall x : S \rightarrow e_N \, (n \, x) \equiv e_S \, x$ \newline
-  Then $\forall x y : S \rightarrow n \,x \equiv n \, y \implies e_S \, x \equiv e_S \, y$
-
-\cite{Walt2012}
-
-
-
-
-Let P = ((0 + x) + (x + y)) and Q = ((x + x) + y). Then Solution P Q
-[code] will give back the type ∀ (x y) → P ≡ Q representing an
-equality proof between P and Q for all possible assignments. If both
-sides were not equivalent, we would get a Failure [code] or some other
-trivial type.
-
-We can now define a function solve : (p : P) → (q : Q) → Solution p q
-[code]. This function has to give back either the actual equality
-proof on all possible assignments, or some trivial value indicating
-failure.
-
-The monoid laws can be used to distill an expression’s essence: [code]
-
-P = ((0 + x) + (x + y))  Q = ((x + x) + y)
--- Absorb all neutral elements
-P = (x + (x + y))        Q = ((x + x) + y)
--- Associativity doesn't matter
-P = x + x + y            Q = x + x + y
--- We don't get any information out of +, it's meaningless
--- Let's translate them into lists
-P = x ∷ x ∷ y ∷ []       Q = x ∷ x ∷ y ∷ []
-
-If these two lists are equal, then the expressions they came from must
-be equivalent. In other words: given any variable assignment, it
-doesn’t matter if we evaluate the original expressions [code] or the
-resulting lists [code], the result is the same. Translating them into
-lists (free monoids), we get rid of anything that makes two equivalent
-expressions constructively different.
-
-Now we only need to prove to Agda that translating expressions into
-lists to then evaluate those and evaluating expressions is indeed
-equivalent. [code]
-
- Expr X --evalExpr----.  If
-   |                  |  ∀ (e : Expr X) →
-exprList              |  evalList (exprList e) ≡ evalExpr e
-   |                  |  Then
-   v                  v  ∀ (p q : Expr X) →
- List X --evalList--> M  exprList p ≡ exprList q ⇔ evalExpr p ≡ evalExpr q
+From here on, we will work with a concrete monoid (\AgdaBound{monoid})
+on a concrete carrier \AgdaBound{M}. This results in all of the
+definitions within having \AgdaRef{M} and \AgdaRef{monoid}
+defined. When called from the outside of this module, these
+definitions will have
+\AgdaSymbol{\{}\AgdaBound{M}~\AgdaSymbol{:}~\AgdaPrimitiveType{Set}\AgdaSymbol{\}}~\AgdaSymbol{(}\AgdaBound{monoid}~\AgdaSymbol{:}~\AgdaRecord{Monoid}~\AgdaBound{M}\AgdaSymbol{)}
+prepended to their type. We can also make the insides of
+\AgdaRef{monoid} directly accessible by opening it as if it were a
+module.
 
 \begin{code}
 module _ {M : Set} (monoid : Monoid M) where
   open Monoid monoid
+\end{code}
 
+To evaluate an expression, we need a concrete assignment for the
+variables contained within. We call this an environment. An
+environment is a lookup table where each of the indices has an
+associated value in the carrier.
+The size of \AgdaDatatype{Fin}~\AgdaBound{n} is equal to the size
+of \AgdaDatatype{Vec}~\AgdaBound{M}~\AgdaBound{n}, and so we can map
+every element in \AgdaDatatype{Fin}~\AgdaBound{n} to a value
+in \AgdaDatatype{Vec}~\AgdaBound{M}~\AgdaBound{n}.
+
+\begin{code}
   Env : ℕ → Set
   Env n = Vec M n
- 
-  ⟦_⇓⟧ : ∀ {n} → List (Fin n) → Env n → M
-  ⟦ [] ⇓⟧       ρ = ε
-  ⟦ (x ∷ xs) ⇓⟧ ρ = (lookup x ρ) · ⟦ xs ⇓⟧ ρ
+\end{code}
 
+Once we have expressions, normal forms end environments, we can define
+what it is to be evaluated for both expressions and normal forms. Note
+that both expressions and normal forms cannot contain more indices
+than the environment has — every index has to have assigned a value.
+
+\begin{code}
+  -- lookup x ρ ≔ get value at position x in ρ
   ⟦_⟧ : ∀ {n} → Expr n → Env n → M
   ⟦ var' x ⟧   ρ = lookup x ρ
   ⟦ ε' ⟧       ρ = ε
   ⟦ xs ·' ys ⟧ ρ = ⟦ xs ⟧ ρ · ⟦ ys ⟧ ρ
 
+  ⟦_⇓⟧ : ∀ {n} → NormalForm n → Env n → M
+  ⟦ [] ⇓⟧       ρ = ε
+  ⟦ (x ∷ xs) ⇓⟧ ρ = (lookup x ρ) · ⟦ xs ⇓⟧ ρ
+\end{code}
+
+\begin{tikzpicture}[node distance=4cm,line width=1pt]
+  \node (E)                             {\AgdaDatatype{Expr}~\AgdaBound{n}};
+  \node (N)             [below of=E]    {\AgdaDatatype{NormalForm}~\AgdaBound{n}};
+  \node (M)             [right of=N]    {\AgdaBound{M}};
+  \draw[->] (E) to node [sloped, below] {\AgdaFunction{normalise}}  (N);
+  \draw[->] (N) to node [sloped, below] {\AgdaFunction{⟦\_⇓⟧}}      (M);
+  \draw[->] (E) to node [sloped, above] {\AgdaFunction{⟦\_⟧}}       (M);
+\end{tikzpicture}
+
+\begin{code}
   eval-distr : ∀ {n} (p q : NormalForm n) → (ρ : Env n)
                → ⟦ p ⇓⟧ ρ · ⟦ q ⇓⟧ ρ ≡ ⟦ p ++ q ⇓⟧ ρ
 
@@ -888,7 +945,9 @@ module _ {M : Set} (monoid : Monoid M) where
   eval-commutes (p ·' q) ρ
     rewrite eval-commutes p ρ | eval-commutes q ρ
     = eval-distr (normalise p) (normalise q) ρ
+\end{code}
 
+\begin{code}
   Solution : ∀ {n} → Eqn n → Set
   Solution {n} (p ≡' q) with decidable-≡ _≟_ (normalise p) (normalise q)
   ... | no _ = ⊤
@@ -906,7 +965,9 @@ module _ {M : Set} (monoid : Monoid M) where
       ≡⟨ sym (eval-commutes q ρ) ⟩
     ⟦ q ⟧ ρ
       ∎
+\end{code}
 
+\begin{code}
 -- Cite magic
 
 _$ⁿ_ : ∀ {n}{A B : Set} → N-ary n A B → (Vec A n → B)
@@ -922,11 +983,16 @@ build n f = f $ⁿ vars {n}
 \end{code}
 
 \begin{code}
-auto : {T : Set}(xs ys zs : List T) → (xs ++ []) ++ ([] ++ (ys ++ (ys ++ zs))) ≡ xs ++ ((ys ++ ys) ++ (zs ++ []))
-auto {T} xs ys zs = solve (LIST-MONOID T)
-  (build 3 λ xs ys zs → ((xs ·' ε') ·' (ε' ·' (ys ·' (ys ·' zs)))) ≡' (xs ·' ((ys ·' ys) ·' (zs ·' ε')))) (xs ∷ ys ∷ zs ∷ [])
+eqn₂-auto : {T : Set}(xs ys zs : List T)
+          → (xs ++ []) ++ ([] ++ (ys ++ (ys ++ zs)))
+          ≡ xs ++ ((ys ++ ys) ++ (zs ++ []))
 
+eqn₂-auto xs ys zs = solve (LIST-MONOID _) (build 3 λ xs ys zs
+                   → ((xs ·' ε') ·' (ε' ·' (ys ·' (ys ·' zs))))
+                   ≡' (xs ·' ((ys ·' ys) ·' (zs ·' ε')))) (xs ∷ ys ∷ zs ∷ [])
 \end{code}
+
+\todo{mention quoting}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{A solver for commutative rings}
