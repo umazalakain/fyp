@@ -261,6 +261,9 @@ theories containing dependent types — where the definition of a type
 may depend on a value — model predicate logics containing quantifiers.
 Further introduction to these ideas can be found at \cite{Wadler2015}.
 
+\todo{Check M.H. Sørensen and P. Urzyczyn. Lectures on the
+Curry-Howard isomor- phism. 1998.}
+
 \begin{code}
     -- Natural numbers, defined inductively
     data ℕ : Set where
@@ -551,13 +554,13 @@ they unify with each other:
 \AgdaRef{\_≡\_} is parametrised by an implicit type \AgdaBound{A} and
 a value \AgdaBound{x}~\AgdaSymbol{:}~\AgdaBound{A} and indexed by a
 value in \AgdaBound{A}. Given some fixed parameter \AgdaBound{x}, for
-every
-\AgdaBound{y}~\AgdaSymbol{:}~\AgdaBound{A}~\AgdaBound{x}~\AgdaDatatype{≡}~\AgdaBound{y}
-is thus a type. The constructor \AgdaRef{refl} is the only means of
-constructing a value of type
-\AgdaBound{x}~\AgdaDatatype{≡}~\AgdaBound{y} and crucially, it can
-only construct values where
-\AgdaBound{x}~\AgdaDatatype{≡}~\AgdaBound{x} after normalisation.
+every \AgdaBound{y}~\AgdaSymbol{:}~\AgdaBound{A} there is a
+type \AgdaBound{x}~\AgdaDatatype{≡}~\AgdaBound{y}. The
+constructor \AgdaRef{refl} is the only means of constructing a value
+of type \AgdaBound{x}~\AgdaDatatype{≡}~\AgdaBound{y} and crucially, it
+can only construct values
+where \AgdaBound{x}~\AgdaDatatype{≡}~\AgdaBound{x} after
+normalisation.
 
 \begin{code}
     -- Both sides normalise to suc (suc zero)
@@ -669,18 +672,19 @@ A trivial proof with an example of their usage:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \cite{Walt2012}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Problem solvers and their domains}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\todo{Forward reference solutions}
+\cite{VanDerWalt2012}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{A comment on Agda-Stdlib}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \url{https://agda.github.io/agda-stdlib/}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Problem solvers and their domains}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\todo{Forward reference solutions}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{A solver for monoids}
@@ -694,9 +698,10 @@ open import Data.Nat using (ℕ ; zero ; suc ; _+_)
 open import Data.Fin using (Fin ; zero ; suc)
 open import Data.Vec using (Vec ; _∷_ ; [] ; tabulate ; lookup)
 open import Data.Vec.N-ary using (N-ary)
-open import Data.Fin.Properties using (_≟_)
+open import Data.Fin.Properties renaming (_≟_ to _Fin-≟_)
 open import Relation.Binary.PropositionalEquality
-open import Relation.Binary.List.Pointwise using (decidable-≡)
+open import Relation.Binary using (Decidable)
+open import Relation.Binary.List.Pointwise using () renaming (decidable-≡ to List-≟)
 open import Relation.Nullary using (yes ; no)
 open ≡-Reasoning
 \end{code}
@@ -813,8 +818,6 @@ normalisation, the two results can be compared: if they are equal, so
 must the original propositions be. This is the sketch of the procedure
 we are implementing.
 
-\todo{What about proving it complete?}
-
 The procedure requires some notion of the equation it is trying to
 solve. We use an abstract syntax tree to represent equations and
 finite indices to refer to variables — the
@@ -845,7 +848,7 @@ form. Consider the following two expressions:
 \end{align*}
 We can now see that both propositions are equal. It is important to
 note that these are not commutative monoids, and that thus the order
-of elements matters.
+of the elements matters.
 
 Lists are a suitable data structure for representing flat elements —
 indices here — that can appear multiple times and whose order
@@ -860,18 +863,25 @@ NormalForm : ℕ → Set
 NormalForm n = List (Fin n)
 \end{code}
 
-The normalising function is trivial:
+\AgdaHide{
+\begin{code}
+_≟_ : ∀ {n} → Decidable {A = List (Fin n)} _≡_
+_≟_ = List-≟ _Fin-≟_ 
+\end{code}
+}
+
+The normalising function ignores neutral elements and preserves order:
 
 \begin{code}
 normalise : ∀ {n} → Expr n → NormalForm n
-normalise (var' x) = x ∷ []
-normalise ε' = []
-normalise (i ·' j) = normalise i ++ normalise j
+normalise (var' i)   = i ∷ []
+normalise ε'         = []
+normalise (e₁ ·' e₂) = normalise e₁ ++ normalise e₂
 \end{code}
 
 From here on, we will work with a concrete monoid (\AgdaBound{monoid})
 on a concrete carrier \AgdaBound{M}. This results in all of the
-definitions within having \AgdaRef{M} and \AgdaRef{monoid}
+definitions within having \AgdaBound{M} and \AgdaBound{monoid}
 defined. When called from the outside of this module, these
 definitions will have
 \AgdaSymbol{\{}\AgdaBound{M}~\AgdaSymbol{:}~\AgdaPrimitiveType{Set}\AgdaSymbol{\}}~\AgdaSymbol{(}\AgdaBound{monoid}~\AgdaSymbol{:}~\AgdaRecord{Monoid}~\AgdaBound{M}\AgdaSymbol{)}
@@ -884,10 +894,10 @@ module _ {M : Set} (monoid : Monoid M) where
   open Monoid monoid
 \end{code}
 
-To evaluate an expression, we need a concrete assignment for the
+To evaluate an expression we need a concrete assignment for the
 variables contained within. We call this an environment. An
 environment is a lookup table where each of the indices has an
-associated value in the carrier.
+associated value in the carrier \AgdaBound{M}.
 The size of \AgdaDatatype{Fin}~\AgdaBound{n} is equal to the size
 of \AgdaDatatype{Vec}~\AgdaBound{M}~\AgdaBound{n}, and so we can map
 every element in \AgdaDatatype{Fin}~\AgdaBound{n} to a value
@@ -899,77 +909,144 @@ in \AgdaDatatype{Vec}~\AgdaBound{M}~\AgdaBound{n}.
 \end{code}
 
 Once we have expressions, normal forms end environments, we can define
-what it is to be evaluated for both expressions and normal forms. Note
-that both expressions and normal forms cannot contain more indices
-than the environment has — every index has to have assigned a value.
+what the evaluation of both expressions and normal forms is. Note that
+both definitions rule out expressions and normal forms with more
+indices than the environment contains — every index within the
+expression has to have a corresponding value in the environment.
 
 \begin{code}
-  -- lookup x ρ ≔ get value at position x in ρ
+  -- lookup x ρ ≔ value for index x in ρ
   ⟦_⟧ : ∀ {n} → Expr n → Env n → M
-  ⟦ var' x ⟧   ρ = lookup x ρ
+  ⟦ var' i ⟧   ρ = lookup i ρ
   ⟦ ε' ⟧       ρ = ε
-  ⟦ xs ·' ys ⟧ ρ = ⟦ xs ⟧ ρ · ⟦ ys ⟧ ρ
+  ⟦ e₁ ·' e₂ ⟧ ρ = ⟦ e₁ ⟧ ρ · ⟦ e₂ ⟧ ρ
 
   ⟦_⇓⟧ : ∀ {n} → NormalForm n → Env n → M
-  ⟦ [] ⇓⟧       ρ = ε
-  ⟦ (x ∷ xs) ⇓⟧ ρ = (lookup x ρ) · ⟦ xs ⇓⟧ ρ
+  ⟦ [] ⇓⟧      ρ = ε
+  ⟦ (i ∷ e) ⇓⟧ ρ = (lookup i ρ) · ⟦ e ⇓⟧ ρ
 \end{code}
 
+We are finally ready to make our claim: an equation on monoids holds
+provided that both sides of the equation match after
+normalisation. We cannot make any claims in the other direction — if
+both sides do not equal after normalisation the equation must be
+false. This can most clearly be seen by taking the unit type (the type
+with a single value) as carrier of the monoid: all equations are true,
+yet the monoid laws allow to prove only some of them. Because we
+cannot make any interesting claims, we can claim true the trivial.
+
+\begin{code}
+  Solution : ∀ {n} → Eqn n → Set
+  Solution {n} (e₁ ≡' e₂) with (normalise e₁) ≟ (normalise e₂)
+  ...                     | no  _ = ⊤
+  ...                     | yes _ = ∀ (ρ : Env n) → ⟦ e₁ ⟧ ρ ≡ ⟦ e₂ ⟧ ρ
+\end{code}
+
+We define decidable equality of normal forms (here \AgdaRef{\_≟\_})
+by relying on the definitions of decidable equality of lists and
+finite indices.
+
+\AgdaRef{Solution}~\AgdaBound{eqn} represents the appropriate proof
+for the equation \AgdaBound{eqn} — either a proof that it holds or a
+trivial proof. We can construct the appropriate proof for all
+equations.
+
+\begin{code}
+  solve : ∀ {n} (eqn : Eqn n) → Solution eqn
+\end{code}
+
+The crux of such a proof is showing that the evaluation of an
+expression can be decomposed into normalisation and evaluation of the
+normal form.
+
+\begin{code}
+  eval-commutes : ∀ {n} → (e : Expr n) → (ρ : Env n)
+                  → ⟦ e ⟧ ρ ≡ ⟦ normalise e ⇓⟧ ρ
+\end{code}
+
+Put into a diagrammatic form, we ought to show that the following
+commutes:
+
+\begin{figure}[h]
+\centering
 \begin{tikzpicture}[node distance=4cm,line width=1pt]
   \node (E)                             {\AgdaDatatype{Expr}~\AgdaBound{n}};
   \node (N)             [below of=E]    {\AgdaDatatype{NormalForm}~\AgdaBound{n}};
   \node (M)             [right of=N]    {\AgdaBound{M}};
-  \draw[->] (E) to node [sloped, below] {\AgdaFunction{normalise}}  (N);
-  \draw[->] (N) to node [sloped, below] {\AgdaFunction{⟦\_⇓⟧}}      (M);
-  \draw[->] (E) to node [sloped, above] {\AgdaFunction{⟦\_⟧}}       (M);
+  \draw[->] (E) to node [sloped, below] {\AgdaBound{nf}~\AgdaSymbol{=}~\AgdaFunction{normalise}~\AgdaBound{e}} (N);
+  \draw[->] (N) to node [sloped, below] {\AgdaFunction{⟦}~\AgdaBound{nf}~\AgdaFunction{⇓⟧}~\AgdaBound{ρ}}      (M);
+  \draw[->] (E) to node [sloped, above] {\AgdaFunction{⟦}~\AgdaBound{e}~\AgdaFunction{⟧}~\AgdaBound{ρ}}        (M);
 \end{tikzpicture}
+\caption{\AgdaSymbol{∀}~\AgdaBound{e}~\AgdaBound{ρ}~\AgdaSymbol{→}~\AgdaFunction{eval-commutes}~\AgdaBound{e}~\AgdaBound{ρ}}
+\end{figure}
+
+Once we are able to show that they are, indeed, synonyms, we can
+translate the evaluation of expressions into the evaluation of normal
+forms, and then use congruence to proof that two equal normal forms
+must evaluate to equal values.
 
 \begin{code}
-  eval-distr : ∀ {n} (p q : NormalForm n) → (ρ : Env n)
-               → ⟦ p ⇓⟧ ρ · ⟦ q ⇓⟧ ρ ≡ ⟦ p ++ q ⇓⟧ ρ
+  solve (e₁ ≡' e₂) with (normalise e₁) ≟ (normalise e₂)
+  ...            | no  _  = tt
+  ...            | yes eq = λ ρ → 
+    ⟦ e₁ ⟧ ρ
+      ≡⟨ eval-commutes e₁ ρ ⟩
+    ⟦ normalise e₁ ⇓⟧ ρ
+      ≡⟨ cong (λ e₌ → ⟦ e₌ ⇓⟧ ρ) eq  ⟩
+    ⟦ normalise e₂ ⇓⟧ ρ
+      ≡⟨ sym (eval-commutes e₂ ρ) ⟩
+    ⟦ e₂ ⟧ ρ
+      ∎
+\end{code}
 
-  eval-distr [] q ρ = law-ε-· _
-  eval-distr (x ∷ p) q ρ = begin
-    ((lookup x ρ) · ⟦ p ⇓⟧ ρ) · ⟦ q ⇓⟧ ρ
+Showing \AgdaRef{eval-commutes} is done inductively and it requires a
+proof that concatenation of normal forms (\AgdaRef{\_++\_}) preserves
+the structure of monoids. Note that these proofs, perhaps
+unsurprisingly, use all of the monoid laws.
+
+\begin{code}
+  eval-homo : ∀ {n} (e₁ e₂ : NormalForm n) → (ρ : Env n)
+               → ⟦ e₁ ⇓⟧ ρ · ⟦ e₂ ⇓⟧ ρ ≡ ⟦ e₁ ++ e₂ ⇓⟧ ρ
+
+  eval-homo []       e₂ ρ = law-ε-· (⟦ e₂ ⇓⟧ ρ)
+  eval-homo (i ∷ e₁) e₂ ρ = begin
+    ((lookup i ρ) · ⟦ e₁ ⇓⟧ ρ) · ⟦ e₂ ⇓⟧ ρ
       ≡⟨ law-·-· _ _ _ ⟩
-    (lookup x ρ) · (⟦ p ⇓⟧ ρ · ⟦ q ⇓⟧ ρ)
-      ≡⟨ cong (_·_ (lookup x ρ)) (eval-distr p q ρ) ⟩
-    (lookup x ρ) · ⟦ p ++ q ⇓⟧ ρ
+    (lookup i ρ) · (⟦ e₁ ⇓⟧ ρ · ⟦ e₂ ⇓⟧ ρ)
+      ≡⟨ cong (_·_ (lookup i ρ)) (eval-homo e₁ e₂ ρ) ⟩
+    (lookup i ρ) · ⟦ e₁ ++ e₂ ⇓⟧ ρ
       ∎
 
-  eval-commutes : ∀ {n} → (expr : Expr n) → (ρ : Env n)
-                  → ⟦ expr ⟧ ρ ≡ ⟦ normalise expr ⇓⟧ ρ
-
-  eval-commutes (var' x) ρ = law-·-ε _
-  eval-commutes ε'       ρ = refl
-  eval-commutes (p ·' q) ρ
-    rewrite eval-commutes p ρ | eval-commutes q ρ
-    = eval-distr (normalise p) (normalise q) ρ
+  -- eval-commutes : ∀ {n} → (e : Expr n) → (ρ : Env n)
+  --                 → ⟦ e ⟧ ρ ≡ ⟦ normalise e ⇓⟧ ρ
+  eval-commutes ε'         ρ = refl
+  eval-commutes (var' x)   ρ = law-·-ε (lookup x ρ)
+  eval-commutes (e₁ ·' e₂) ρ rewrite eval-commutes e₁ ρ
+                                   | eval-commutes e₂ ρ
+                                   = eval-homo (normalise e₁) (normalise e₂) ρ
 \end{code}
 
-\begin{code}
-  Solution : ∀ {n} → Eqn n → Set
-  Solution {n} (p ≡' q) with decidable-≡ _≟_ (normalise p) (normalise q)
-  ... | no _ = ⊤
-  ... | yes _ = ∀ (ρ : Env n) → ⟦ p ⟧ ρ ≡ ⟦ q ⟧ ρ
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Results}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-  solve : ∀ {n} (eqn : Eqn n) → Solution eqn
-  solve (p ≡' q) with decidable-≡ _≟_ (normalise p) (normalise q)
-  ...            | no _ = tt
-  ...            | yes leq = λ ρ → 
-    ⟦ p ⟧ ρ
-      ≡⟨ eval-commutes p ρ ⟩
-    ⟦ normalise p ⇓⟧ ρ
-      ≡⟨ cong (λ x → ⟦ x ⇓⟧ ρ) leq  ⟩
-    ⟦ normalise q ⇓⟧ ρ
-      ≡⟨ sym (eval-commutes q ρ) ⟩
-    ⟦ q ⟧ ρ
-      ∎
+We can now automatically generate proofs for arbitrary equations on monoids:
+
+\begin{code}
+eqn₁-auto : {T : Set}(xs : List T) → [] ++ xs ≡ xs ++ []
+eqn₁-auto xs = solve (LIST-MONOID _)
+               ((ε' ·' var' zero) ≡' (var' zero ·' ε')) (xs ∷ [])
 \end{code}
 
-\begin{code}
--- Cite magic
+However, we still need to manually build the expressions representing
+the target theorem. This includes handling the indices referring to
+variables appropriatly. As shown by \cite{Bove2009} at
+\url{http://www.cse.chalmers.se/~ulfn/code/tphols09/}, index
+referrences can be set up automatically, partially alleviating this
+problem and resulting in the following usage:
 
+\AgdaHide{
+\begin{code}
 _$ⁿ_ : ∀ {n}{A B : Set} → N-ary n A B → (Vec A n → B)
 f $ⁿ [] = f
 f $ⁿ (x ∷ xs) = f x $ⁿ xs
@@ -979,8 +1056,8 @@ vars = tabulate var'
 
 build : ∀ {A}(n : ℕ) → N-ary n (Expr n) A → A
 build n f = f $ⁿ vars {n}
-
 \end{code}
+}
 
 \begin{code}
 eqn₂-auto : {T : Set}(xs ys zs : List T)
@@ -992,11 +1069,18 @@ eqn₂-auto xs ys zs = solve (LIST-MONOID _) (build 3 λ xs ys zs
                    ≡' (xs ·' ((ys ·' ys) ·' (zs ·' ε')))) (xs ∷ ys ∷ zs ∷ [])
 \end{code}
 
-\todo{mention quoting}
+Agda's support for reflection is required for a more comprehensive
+solution that inspects the goal type and automatically translates it
+into expressions inside the procedure.
+
+\todo{forward reference general verification}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{A solver for commutative rings}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\cite{Gregoire2005}
+\cite{Boutin1997}
 
 - What is a commutative ring?
 - Horner normal form + constraints
@@ -1004,6 +1088,9 @@ eqn₂-auto xs ys zs = solve (LIST-MONOID _) (build 3 λ xs ys zs
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{A solver for Presburger arithmetic}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\cite{Pugh1991}
+\cite{Norrish2003}
 
 - What Presburger arithmetic is
 - The three ways of solving it
@@ -1016,9 +1103,12 @@ eqn₂-auto xs ys zs = solve (LIST-MONOID _) (build 3 λ xs ys zs
     - Correctness proofs
     - Quoting
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Verification and validation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \todo{Dependent types, higher standards, no tests, we formally describe what correct is}
+\todo{This report is type-checked}
 
 %   Verification and Validation In this section you should outline the
 %   verification and validation procedures that you've adopted throughout the
@@ -1030,7 +1120,9 @@ eqn₂-auto xs ys zs = solve (LIST-MONOID _) (build 3 λ xs ys zs
 
 - Why is this absolutely correct, Agda?
 
-% \chapter{Results and evaluation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Results and evaluation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %   Results and Evaluation The aim of this chapter is twofold. On one hand, it
 %   aims to present the final outcome of the project – i.e., the system
@@ -1056,14 +1148,18 @@ eqn₂-auto xs ys zs = solve (LIST-MONOID _) (build 3 λ xs ys zs
 %   the project. This will normally include the lessons learnt and explanations
 %   of any significant deviations from the original project plan.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % \chapter{Related work}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %   Related Work You should survey and critically evaluate other work which you
 %   have read or otherwise considered in the general area of the project topic.
 %   The aim here is to place your project work in the context of the related
 %   work.
 
-% \chapter{Summary and conclusions}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Summary and conclusions}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %   Summary and Conclusions In the final chapter of your report, you should
 %   summarise how successful you were in achieving the original project
