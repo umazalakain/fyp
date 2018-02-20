@@ -211,7 +211,6 @@ inhabiting its corresponding type. Formal proofs can be verified by
 type-checkers.
 
 \todo{Agda 2.5.4 to fix whitespace}
-\todo{Fix kerning}
 
 \AgdaHide{
 \begin{code}
