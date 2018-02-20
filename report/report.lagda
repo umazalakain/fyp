@@ -19,8 +19,14 @@
 % Type checking for Agda
 \usepackage[conor,references]{agda}
 
-% Fonts
-\setmathsf{XITS Math}
+% Use DejaVu Math for all code
+\setmathsf{DejaVu Math TeX Gyre}
+\setmathfont{DejaVu Math TeX Gyre}
+\everymath{\scriptstyle}
+
+% Avoid having variables in italics
+\renewcommand{\AgdaBoundFontStyle}[1]{\ensuremath{\mathsf{#1}}}
+
 % XITS doesn't have small caps
 \setmainfont[
   Ligatures=TeX,
@@ -888,6 +894,7 @@ prepended to their type. We can also make the insides of
 \AgdaRef{monoid} directly accessible by opening it as if it were a
 module.
 
+\begin{AgdaAlign}
 \begin{code}
 module _ {M : Set} (monoid : Monoid M) where
   open Monoid monoid
@@ -963,8 +970,7 @@ normal form.
                   → ⟦ e ⟧ ρ ≡ ⟦ normalise e ⇓⟧ ρ
 \end{code}
 
-Put into a diagrammatic form, we ought to show that the following
-commutes:
+Put in a diagrammatic form, we must show that the following commutes:
 
 \begin{figure}[h]
 \centering
@@ -972,9 +978,9 @@ commutes:
   \node (E)                             {\AgdaDatatype{Expr}~\AgdaBound{n}};
   \node (N)             [below of=E]    {\AgdaDatatype{NormalForm}~\AgdaBound{n}};
   \node (M)             [right of=N]    {\AgdaBound{M}};
-  \draw[->] (E) to node [sloped, below] {\AgdaBound{nf}~\AgdaSymbol{=}~\AgdaFunction{normalise}~\AgdaBound{e}} (N);
-  \draw[->] (N) to node [sloped, below] {\AgdaFunction{⟦}~\AgdaBound{nf}~\AgdaFunction{⇓⟧}~\AgdaBound{ρ}}      (M);
-  \draw[->] (E) to node [sloped, above] {\AgdaFunction{⟦}~\AgdaBound{e}~\AgdaFunction{⟧}~\AgdaBound{ρ}}        (M);
+  \draw[->] (E) to node [sloped, below] {\AgdaBound{l}~\AgdaSymbol{=}~\AgdaFunction{normalise}~\AgdaBound{e}} (N);
+  \draw[->] (N) to node [sloped, below] {\AgdaFunction{⟦}~\AgdaBound{l}~\AgdaFunction{⇓⟧}~\AgdaBound{ρ}}      (M);
+  \draw[->] (E) to node [sloped, above] {\AgdaFunction{⟦}~\AgdaBound{e}~\AgdaFunction{⟧}~\AgdaBound{ρ}}       (M);
 \end{tikzpicture}
 \caption{\AgdaSymbol{∀}~\AgdaBound{e}~\AgdaBound{ρ}~\AgdaSymbol{→}~\AgdaFunction{eval-commutes}~\AgdaBound{e}~\AgdaBound{ρ}}
 \end{figure}
@@ -1024,6 +1030,7 @@ unsurprisingly, use all of the monoid laws.
                                    | eval-commutes e₂ ρ
                                    = eval-homo (normalise e₁) (normalise e₂) ρ
 \end{code}
+\end{AgdaAlign}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Results}
