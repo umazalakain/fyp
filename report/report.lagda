@@ -657,7 +657,7 @@ reasoning, all part of
 \end{code}
 }
 
-A trivial proof with an example of their usage:
+We can now leave a record of type rewrites and their justifications:
 
 \begin{code}
     prf₇ : ∀ l n m → ((zero + (l + zero)) + (n + zero)) + m ≡ (l + n) + m
@@ -676,14 +676,52 @@ A trivial proof with an example of their usage:
 \subsection{Proof by reflection}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\cite{Walt2012}
-\cite{VanDerWalt2012}
+Procedures that generate proofs often require a notion of what their
+target theorem is. This notion has to be translated — reflected — into
+a data structure in a source language so that the procedure can
+manipulate it. The proof that the procedure will then construct will
+depend on this data structure.
+
+\href{https://agda.readthedocs.io/en/latest/language/reflection.html}{
+The support for reflection that Agda offers}, besides providing the
+programmer with the ability to introspect code written in Agda, also
+allows them to directly control type checking and unification. A
+function making use of it can, for instance, find out about the type
+of the goal it is meant to satisfy and transform it into an inductive
+data structure that can then be feeded into a proof generating procedure.
+
+Both \cite{Walt2012} and \cite{VanDerWalt2012} are in-depth
+introductions to Agda's reflection mechanisms and come with several
+example use cases.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{A comment on Agda-Stdlib}
+\subsection{Builtins, Stdlib and Prelude}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\url{https://agda.github.io/agda-stdlib/}
+Agda is distributed together with a
+\href{https://agda.readthedocs.io/en/latest/language/built-ins.html}{set
+of builtin data types and functions} found under the
+\AgdaModule{Agda.Builtin}~module. These builtin types get special
+treatment during compilation but can nevertheless be easily redefined
+and customised by the user. \AgdaModule{Agda.Builtin}~does not provide
+the user with any proofs of the properties related to the data types
+it contains.
+
+The development of
+\href{https://github.com/agda/Agda-Stdlib}{Agda-Stdlib} happens in
+close coordination with Agda's. Unlike \AgdaModule{Agda.Builtin}'s
+conservative approach, Agda-Stdlib provides a large library of
+commonly used data structures and functions. It abstracts
+aggressively which, together with its heavy use of unicode symbols and
+infix notation, can often result in code challenging for the
+unexperienced reader. Along with the data types it provides there come
+proofs for many of their common properties.
+
+In comparison,
+\href{https://github.com/ulfnorell/agda-prelude}{Agda-Prelude} is less
+abstract and more readable and efficient, but not as complete.  For
+that reason, this project will make use of the tools provided by
+Agda-Stdlib.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Problem solvers and their domains}
@@ -712,12 +750,11 @@ open ≡-Reasoning
 \end{code}
 }
 
-Monoids are a common algebraic structure found as part of many
-problems. A monoid solver is an automated proof generator which can
-be used wherever an equation on monoids must be proved. Constructing
-one is a good first approach to building automated solvers: it lacks
-the complexity of many other problems but has the same high-level
-structure.
+Monoids are common algebraic structures involved in many problems. A
+monoid solver is an automated proof generator which can be used to
+prove an equation on monoids. Constructing such a solver is a good
+first approach to proof automation: it lacks the complexity of many
+other problems while it has their same high-level structure.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Problem description and specification}
@@ -847,8 +884,8 @@ form. Consider the following two expressions:
     \intertext{Neutral elements do not have any meaning and can be
     absorbed:}
     P &= (x · (x · y))        &  Q &= ((x · x) · y) \\
-    \intertext{Elements can always be re-associated and thus
-    association does not have any meaning and can be removed:}
+    \intertext{Elements can always be re-associated: association does
+    not have any meaning and can be removed:}
     P &= x · x · y            &  Q &= x · x · y     \\
 \end{align*}
 We can now see that both propositions are equal. It is important to
@@ -858,10 +895,10 @@ of the elements matters.
 Lists are a suitable data structure for representing flat elements —
 indices here — that can appear multiple times and whose order
 carries meaning. If we were dealing with commutative monoids, where
-order does carry meaning, a matrix of indices and number of
-occurrences could be represented as a vector of integers — where the
-position in the matrix represents the index and the content represents
-the number of occurrences.
+order does not carry meaning, a matrix of indices and the number of
+occurrences of each could be represented as a vector of integers —
+where the position in the vector represents the index and the content
+represents the number of occurrences.
 
 \begin{code}
 NormalForm : ℕ → Set
@@ -921,7 +958,7 @@ indices than the environment contains — every index within the
 expression has to have a corresponding value in the environment.
 
 \begin{code}
-  -- lookup x ρ ≔ value for index x in ρ
+  -- lookup x ρ ≔ value at index x in ρ
   ⟦_⟧ : ∀ {n} → Expr n → Env n → M
   ⟦ var' i ⟧   ρ = lookup i ρ
   ⟦ ε' ⟧       ρ = ε
@@ -961,9 +998,9 @@ equations.
   solve : ∀ {n} (eqn : Eqn n) → Solution eqn
 \end{code}
 
-The crux of such a proof is showing that the evaluation of an
-expression can be decomposed into normalisation and evaluation of the
-normal form.
+The crux of such a proof is to show that the evaluation of an
+expression can be decomposed into normalisation followed by evaluation
+of that normal form.
 
 \begin{code}
   eval-commutes : ∀ {n} → (e : Expr n) → (ρ : Env n)
@@ -1075,9 +1112,27 @@ eqn₂-auto xs ys zs = solve (LIST-MONOID _) (build 3 λ xs ys zs
                    ≡' (xs ·' ((ys ·' ys) ·' (zs ·' ε')))) (xs ∷ ys ∷ zs ∷ [])
 \end{code}
 
-Agda's support for reflection is required for a more comprehensive
-solution that inspects the goal type and automatically translates it
-into expressions inside the procedure.
+Agda's support for reflection could be used to build a macro that
+would inspect the goal type and translate it into a data structure
+that the proof generating procedure could understand. This would
+result in the following kind of usage:
+
+\AgdaHide{
+\begin{code}
+postulate
+    magic-solve : {T : Set} (m : Monoid (List T)) (xs ys zs : List T)
+                → (xs ++ []) ++ ([] ++ (ys ++ (ys ++ zs)))
+                ≡ xs ++ ((ys ++ ys) ++ (zs ++ []))
+\end{code}
+}
+
+\begin{code}
+eqn₂-magic : {T : Set}(xs ys zs : List T)
+          → (xs ++ []) ++ ([] ++ (ys ++ (ys ++ zs)))
+          ≡ xs ++ ((ys ++ ys) ++ (zs ++ []))
+
+eqn₂-magic = magic-solve (LIST-MONOID _)
+\end{code}
 
 \todo{forward reference general verification}
 
