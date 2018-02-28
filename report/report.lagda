@@ -52,9 +52,9 @@
 % Footnote symbols
 \renewcommand{\thefootnote}{\fnsymbol{footnote}}
 
-% Commutative diagrams
+% Diagrams
 \usepackage{tikz}
-
+\usetikzlibrary{positioning}
 
 \begin{document}
 
@@ -790,6 +790,8 @@ prove an equation on monoids. Constructing such a solver is a good
 first approach to proof automation: it lacks the complexity of many
 other problems while it has their same high-level structure.
 
+\todo{Boutin's paper}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Problem description and specification}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1192,6 +1194,8 @@ in the following example usage:
 \chapter{Solving Presburger arithmetic}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\todo{Note that there is no such thing in Agda}
+
 \AgdaHide{
 \begin{code}
 module _ where
@@ -1223,18 +1227,14 @@ expressiveness of Presburger arithmetic.
 ∀x.\:x\,<\,x + 1
 \end{align}
 
-Multiplication by an integer can be expressed in terms of addition;
-divisibility by an integer divisor can be expressed as an equality by
-intruducing a new existential: $∀x.\:2|4x\;≡\;∀x.\:∃y.\:2y=4x$
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Problem description and specification}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 To solve Presburger arithmetic is to create a verified procedure
-capable of deciding any well-formed Presburger predicate. Without an
-automated procedure, proving a predicate like~\ref{eq:even-or-odd} can
-already become burdensome:
+capable of deciding any well-formed Presburger predicate where all
+variables are bound. Without an automated procedure, proving a
+predicate like~\ref{eq:even-or-odd} can already become burdensome:
 
 \AgdaHide{
 \begin{code}
@@ -1290,7 +1290,7 @@ indices instead of variable names has two main advantages:
 
 \begin{itemize}[noitemsep]
   \item there is no need to rename variables on substitution; and
-  \item the choice of variable names does not affect equallity.
+  \item the choice of variable names does not affect equality.
 \end{itemize}
 
 For any formula of type ~\AgdaDatatype{Formula}~\AgdaBound{n},
@@ -1314,31 +1314,162 @@ Theorem~\ref{eq:even-or-odd} can be transcribed as follows:
 \section{Decision procedures}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\todo{Three algorithms}
-\todo{Fourier-Motzkin}
-\todo{Say why not real numbers}
-\cite{Norrish2003}
-\cite{Norrish2006}
+There exist numerous procedures able to decide Presburger
+arithmetic. They are primarily distinguished by the domain of their
+formulas. The validity of these Presburger formulas gets carried onto
+superset domains; the non-validity gets carried onto subset domains.
 
-High level plan of the module
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=4cm,line width=1pt]
+  \node (N)                             {ℕ};
+  \node (Z)             [right of=N]    {ℤ};
+  \node (Q)             [right of=Z]    {ℚ};
+  \node (R)             [right of=Q]    {ℝ};
+  \draw [->] (N.20)  -- (Z.160) node [pos=0.5,above] {$⊨_ℕ P \implies   ⊨_ℤ P$};
+  \draw [<-] (N.340) -- (Z.200) node [pos=0.5,below] {$⊭_ℕ P \impliedby ⊭_ℤ P$};
+  \draw [->] (Z.20)  -- (Q.160) node [pos=0.5,above] {$⊨_ℤ P \implies   ⊨_ℚ P$};
+  \draw [<-] (Z.340) -- (Q.200) node [pos=0.5,below] {$⊭_ℤ P \impliedby ⊭_ℚ P$};
+  \draw [->] (Q.20)  -- (R.160) node [pos=0.5,above] {$⊨_ℚ P \implies   ⊨_ℝ P$};
+  \draw [<-] (Q.340) -- (R.200) node [pos=0.5,below] {$⊭_ℚ P \impliedby ⊭_ℝ P$};
+\end{tikzpicture}
+\caption{Decidability across domains}
+\end{figure}
+
+There exist Presburger formulas that are valid on integers but invalid
+on natural numbers: $∃x.\:x+1=0$. Or some formulas that are valid on
+rational numbers but invalid on integers: $∃x.\:2x=1$. \todo{cite
+intro} When considering which decision procedures to explore, we
+immediately discarted the ones acting on real numbers — irrational
+numbers are not straightforward to handle in constructive
+mathematics. The most well-documented procedures are on integers, and
+the usage of integer Presburger arithmetic is common enough for an
+automated solver to be of value. To solve a problem on natural
+numbers, we just need add a condition $0 < x + 1$ to every existential
+quantifier.
+
+We have choosen the Omega Test and Cooper's Algorithm as
+the two decision procedures to explore. Both algorithms follow a
+common high-level structure: they normalise their input formula
+eliminating all universal quantifiers, then repeatedly select and
+eliminate any innermost existential quantifiers until there are none
+left. The elimination of universal quantifiers is carried out relying
+on the following equivalence:
+
+\begin{equation*}
+∀x.\:P(x) \equiv ¬∃x.\:¬P(x)
+\end{equation*}
+
+Additionally, by limiting our domain to the integers we are able to
+use a canonical form for relations on ~\AgdaDatatype{Atom}s.
+
+\begin{align*}
+a < b &\equiv 0 < b - a     \\
+a > b &\equiv 0 < a - b     \\
+a ≤ b &\equiv 0 < b - a + 1 \\
+a ≥ b &\equiv 0 < a - b + 1 \\
+a = b &\equiv 0 < a - b + 1 ∧ 0 < b - a + 1
+\end{align*}
+
+Both procedures need to have negation pushed to inside:
+
+\begin{align*}
+\neg (P(x) \land Q(x)) &\equiv \neg P(x) \lor  \neg Q(x) \\
+\neg (P(x) \lor  Q(x)) &\equiv \neg P(x) \land \neg Q(x) \\
+\neg \neg P(x)         &\equiv P(x)                      \\
+\neg (0 < a)           &\equiv 0 < - a + 1
+\end{align*}
+
+And implication can be decomposed:
+
+\begin{equation*}
+P(x) \implies Q(x) \equiv \neg P(x) \lor Q(x)
+\end{equation*}
+
+Additionally, while Cooper's Algorithm deals with formulas in negation
+normal form, the Omega Test requires formulas to be in disjunctive
+normal form. Formulas have to be normalised through the existential
+quantifier elimination process too, which often results in terms that
+blow up in size, making the Omega Test considerably slower than
+Cooper's Algorithm.
+
+As part of their existential quantifier elimination step, both
+algorithms require to have the coefficients of the variable to
+eliminate set to $1$ or $-1$. First, the lowest common multiplier $ℓ$
+of all coefficients on $x$ is computed, then all atoms are multiplied
+appropriately so that their coefficient on $x$ becomes equal to the
+LCM $ℓ$. Finally, all coefficients are divided by $ℓ$ in accordance to
+the following equivalence:
+
+\begin{equation*}
+P(ℓx) \equiv P(x) \land ℓ | x
+\end{equation*}
+
+Divide terms are a special case where a natural number and an
+\AgdaDatatype{Atom} are related. The Omega Test and Cooper's Algorithm
+handle divide terms differently, and we will therefore analyse their
+use separately. It suffices to say that divide terms and their
+negations can be eliminated by introducing existential quantifiers,
+which is often not desirable.
+
+\begin{align*}
+n ∣ a     &\equiv ∃x.\:nx = a \\
+n ∤ a &\equiv ∃x.\:\bigvee_{i ∈ 1 \ldots n - 1} nx = (a + i)
+\end{align*}
+
+Michael Norrish depicts in \cite{Norrish2003} the state of affairs of
+the implementation of Presburger arithmetic deciding procedures by
+proof assistants. He then continues describing the Omega Test and
+Cooper's Algorithm and proposes implementations for both of them for
+the proof assistant HOL. Our attempt to implement both procedures in
+Agda is significantly based on his work, which he also briefly
+outlines in a later talk. \cite{Norrish2006}
+
+Both solvers need of a common structure:
 
 \begin{description}
   \item [Representation]
+        Where we declare a syntax for well-formed Presburger
+        formulas. We will use the previously shown inductive
+        ~\AgdaDatatype{Formula}~ datatype for both procedures.
   \item [Normalisation]
+        Where we normalise well-formed Presburger formulas into more
+        tightly defined data structures on which the decision
+        procedures can act.
+  \item [Elimination]
+        The procedure's heart, where we eliminate a single innermost
+        existential quantifier.
   \item [Evaluation]
-  \item [Correctness proofs]
+        Where we repeatedly execute the elimination step and feed the
+        results back into the normalised original formula.
+  \item [Verification]
+        Where we proof normalisation, elimination and evaluation
+        correct.
   \item [Quoting]
+        Where we quote goals into well-formed Presburger formulas,
+        possibly failing along the way. This is outside of the scope
+        of this project.
 \end{description}
 
-High level plan of all algorithms. Normalise universal quantifiers
-into existential quantifiers. Eliminate any innermost existential
-quantifier, repeat until done.
   
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{The Omega Test}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \cite{Pugh1991}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Overview}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Implementation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Verification}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 Divides term elimination procedure
 
@@ -1363,8 +1494,20 @@ shortcircuited if $d₁ ∣ a₁$ and $d₁ ∣ e₁$.
 \subsection{Cooper's Algorithm}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\cite{Cooper1974}
+\cite{Cooper1972}
 \cite{Chaieb2003}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Overview}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Implementation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Verification}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Verification and validation}
