@@ -767,7 +767,7 @@ Agda-Stdlib.
 
 \AgdaHide{
 \begin{code}
-module _ where
+module Monoids where
   private
     open import Data.Unit using (⊤ ; tt)
     open import Data.List using (List ; [] ; _∷_)
@@ -1025,18 +1025,17 @@ We define decidable equality of normal forms (here \AgdaRef{\_≟\_})
 by relying on the definitions of decidable equality of lists and
 finite indices.
 
-Depending on whether the normal forms equal or not,
-\AgdaRef{Solution}~\AgdaBound{eqn} either computes to a proposition of
-the equation, or to a trivial proposition. We can construct the
-appropriate proof for all equations.
+\AgdaRef{Solution}~ returns an appropriate per-equation specification
+for every ~\AgdaDatatype{Eqn}~\AgdaBound{n}. We must now prove that we
+are able to meet such specifications.
 
 \begin{code}
       solve : ∀ {n} (eqn : Eqn n) → Solution eqn
 \end{code}
 
 The crux of such a proof is to show that the evaluation of an
-expression can be decomposed into normalisation followed by evaluation
-of that normal form.
+expression can be decomposed into the normalisation into a normal form
+and its posterior evaluation.
 
 \begin{code}
       eval-commutes : ∀ {n} → (e : Expr n) → (ρ : Env n)
@@ -1196,17 +1195,6 @@ in the following example usage:
 
 \todo{Note that there is no such thing in Agda}
 
-\AgdaHide{
-\begin{code}
-module _ where
-  private
-    open import Data.Fin using (Fin ; zero ; suc)
-    open import Data.Integer as Int using (ℤ ; +_ ; -_)
-    open import Data.Nat as Nat using (ℕ ; zero ; suc)
-    open import Data.Sum using (_⊎_ ; inj₁ ; inj₂)
-\end{code}
-}
-
 In 1929, Mojżesz Presburger presented and proved decidable a predicate
 logic on natural numbers (expandable to integers and real numbers)
 with addition as its only operation. The original paper
@@ -1238,48 +1226,75 @@ predicate like~\ref{eq:even-or-odd} can already become burdensome:
 
 \AgdaHide{
 \begin{code}
-    module _ where
-      open import Data.Nat using (_*_ ; _+_)
-      open import Data.Nat.Properties using (+-suc)
-      open import Data.Product using (∃ ; _,_ )
-      open import Relation.Binary.PropositionalEquality using (_≡_ ; refl; cong ; sym)
+module _ where
+  private
+    open import Data.Sum using (_⊎_ ; inj₁ ; inj₂)
+    open import Data.Nat using (zero ; suc ; _*_ ; _+_)
+    open import Data.Nat.Properties using (+-suc)
+    open import Data.Product using (∃ ; _,_ )
+    open import Relation.Binary.PropositionalEquality using (_≡_ ; refl; cong ; sym)
 \end{code}
 }
 
 \todo{Add definition of ∃ and +-suc to annex}
 
 \begin{code}
-      pred₁ : ∀ n → ∃ λ m → ((n ≡ 2 * m) ⊎ (n ≡ 2 * m + 1))
-      pred₁ zero = 0 , inj₁ refl
-      pred₁ (suc zero) = 0 , inj₂ refl
-      pred₁ (suc (suc n))                    with pred₁ n
-      pred₁ (suc (suc .(m' + (m' + 0))))     | m' , inj₁ refl =
-        suc m' , inj₁ (cong suc (sym (+-suc m' (m' + 0))))
-      pred₁ (suc (suc .(m' + (m' + 0) + 1))) | m' , inj₂ refl =
-        suc m' , inj₂ (cong suc (cong (_+ 1) (sym (+-suc m' (m' + 0)))))
+    pred₁ : ∀ n → ∃ λ m → ((n ≡ 2 * m) ⊎ (n ≡ 2 * m + 1))
+    pred₁ zero = 0 , inj₁ refl
+    pred₁ (suc zero) = 0 , inj₂ refl
+    pred₁ (suc (suc n))                    with pred₁ n
+    pred₁ (suc (suc .(m' + (m' + 0))))     | m' , inj₁ refl =
+      suc m' , inj₁ (cong suc (sym (+-suc m' (m' + 0))))
+    pred₁ (suc (suc .(m' + (m' + 0) + 1))) | m' , inj₂ refl =
+      suc m' , inj₂ (cong suc (cong (_+ 1) (sym (+-suc m' (m' + 0)))))
 \end{code}
+
+\AgdaHide{
+\begin{code}
+module Presburger where
+  open import Function using (id ; _∘_)
+  open import Data.Fin using (Fin ; zero ; suc)
+  open import Data.Integer as Int using (ℤ ; +_ ; -[1+_] ; _+_ ; _-_ ; -_ ; _*_)
+  open import Data.Nat as Nat using (ℕ ; zero ; suc)
+  open import Data.Sum using (_⊎_ ; inj₁ ; inj₂)
+  open import Data.Vec as Vec using (Vec ; [] ; _∷_)
+  open import Data.List as List using (List ; [] ; _∷_ ; _++_)
+  open import Data.Maybe using (Maybe ; nothing ; just)
+  open import Data.Product using (Σ ; _×_ ; _,_ ; proj₁ ; proj₂)
+  open import Relation.Binary.PropositionalEquality using (_≡_ ; refl; cong ; sym ; _≢_)
+  open import Relation.Nullary using (Dec ; yes ; no)
+  open import Data.Integer.Properties as IntProp
+  open import Relation.Binary using (Tri)
+  open import Data.List.All using (All ; [] ; _∷_)
+  open import Data.Unit using (⊤ ; tt)
+  open import Data.Bool using (Bool ; true ; false ; T ; not ; _∨_)
+  open import Data.Empty using (⊥)
+
+  open import Prologue using (_<?_ ; ×-list)
+\end{code}
+}
 
 From here on, we will assume the following syntax for Presburger
 predicates:
 
 \begin{code}
-    data Atom (i : ℕ) : Set where
-      num' : ℤ               → Atom i
-      _+'_ : Atom i → Atom i → Atom i
-      _*'_ : ℤ      → Atom i → Atom i
-      var' : Fin i           → Atom i
-                              
-    data Rel : Set where
-      <' >' ≤' ≥' =' : Rel
-    
-    data Formula (i : ℕ) : Set where
-      -- Divisibility
-      _∣'_           : ℕ → Atom i            → Formula i
-      _[_]_          : Atom i → Rel → Atom i → Formula i
-      _∧'_ _∨'_ _⇒'_ : Formula i → Formula i → Formula i
-      ¬'_            : Formula i             → Formula i
-      -- New variable introduction
-      ∃'_ ∀'_        : Formula (suc i)       → Formula i
+  data Atom (i : ℕ) : Set where
+    num' : ℤ               → Atom i
+    _+'_ : Atom i → Atom i → Atom i
+    _*'_ : ℤ      → Atom i → Atom i
+    var' : Fin i           → Atom i
+                            
+  data Rel : Set where
+    <' >' ≤' ≥' =' : Rel
+  
+  data Formula (i : ℕ) : Set where
+    -- Divisibility
+    _∣'_           : ℕ → Atom i            → Formula i
+    _[_]_          : Atom i → Rel → Atom i → Formula i
+    _∧'_ _∨'_ _⇒'_ : Formula i → Formula i → Formula i
+    ¬'_            : Formula i             → Formula i
+    -- New variable introduction
+    ∃'_ ∀'_        : Formula (suc i)       → Formula i
 \end{code}
 
 We use de Bruijn \cite{Bruijn1972} indices to refer to bindings by
@@ -1302,12 +1317,12 @@ arguments.
 Theorem~\ref{eq:even-or-odd} can be transcribed as follows:
 
 \begin{code}
-    pred₁' : Formula 0
-    pred₁' = ∀' ∃' ((x [ =' ] ((+ 2) *' y))
-                ∨' (x [ =' ] (((+ 2) *' y) +' (num' (+ 1)))))
-      where
-        x = var' (suc zero)
-        y = var' zero
+  pred₁' : Formula 0
+  pred₁' = ∀' ∃' ((x [ =' ] ((+ 2) *' y))
+              ∨' (x [ =' ] (((+ 2) *' y) +' (num' (+ 1)))))
+    where
+      x = var' (suc zero)
+      y = var' zero
 \end{code}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1425,33 +1440,129 @@ the proof assistant HOL. Our attempt to implement both procedures in
 Agda is significantly based on his work, which he also briefly
 outlines in a later talk. \cite{Norrish2006}
 
-Both solvers need of a common structure:
+%%%%%%%%%%%%%
+% COMMON
+%%%%%%%%%%%%%
 
-\begin{description}
-  \item [Representation]
-        Where we declare a syntax for well-formed Presburger
-        formulas. We will use the previously shown inductive
-        ~\AgdaDatatype{Formula}~ datatype for both procedures.
-  \item [Normalisation]
-        Where we normalise well-formed Presburger formulas into more
-        tightly defined data structures on which the decision
-        procedures can act.
-  \item [Elimination]
-        The procedure's heart, where we eliminate a single innermost
-        existential quantifier.
-  \item [Evaluation]
-        Where we repeatedly execute the elimination step and feed the
-        results back into the normalised original formula.
-  \item [Verification]
-        Where we proof normalisation, elimination and evaluation
-        correct.
-  \item [Quoting]
-        Where we quote goals into well-formed Presburger formulas,
-        possibly failing along the way. This is outside of the scope
-        of this project.
-\end{description}
+\AgdaHide{
+\begin{code}
+  record Affine (i : ℕ) : Set where
+    constructor _∷+_
+    field
+      cs : Vec ℤ i
+      k : ℤ
+
+  open Affine
+  pattern _x+_+ℤ_ c cs k = (c ∷ cs) ∷+ k
+  
+  infixl 20 _⊕_
+  infixl 20 _⊝_
+
+  #_ : ∀ {i} → ℤ → Affine i
+  # k = Vec.replicate (+ 0) ∷+ k
+  
+  ø : ∀ {i} → Affine i
+  ø = Vec.replicate (+ 0) ∷+ (+ 0)
+  
+  _x+ø : ∀ {i} → ℤ → Affine (suc i)
+  n x+ø = (n ∷ Vec.replicate (+ 0)) ∷+ (+ 0)
+  
+  _⊛_ : ∀ {i} → ℤ → Affine i → Affine i
+  z ⊛ (cs ∷+ k) = Vec.map (z *_) cs ∷+ (z * k)
+ 
+  _⊕_ : ∀ {i} → Affine i → Affine i → Affine i
+  (cs₁ ∷+ k₁) ⊕ (cs₂ ∷+ k₂) = Vec.zipWith _+_ cs₁ cs₂ ∷+ (k₁ + k₂)
+ 
+  _⊝_ : ∀ {i} → Affine i → Affine i → Affine i
+  (cs₁ ∷+ k₁) ⊝ (cs₂ ∷+ k₂) = Vec.zipWith _-_ cs₁ cs₂ ∷+ (k₁ - k₂)
+
+  ⊝_ : ∀ {i} → Affine i → Affine i
+  ⊝ (cs ∷+ k) = (Vec.map -_ cs) ∷+ (- k)
+
+  ⊘ : ∀ {i} → Affine i → Affine i
+  ⊘ a = (# (+ 1)) ⊝ a
+  
+  head : ∀ {i} → Affine (suc i) → ℤ
+  head (c x+ cs +ℤ k) = c
+
+--  ⊘ a = (# (+ 1)) ⊝ a
 
   
+  tail : ∀ {i} → Affine (suc i) → Affine i
+  tail (c x+ cs +ℤ k) = cs ∷+ k
+  
+  substitute : ∀ {i} → Affine i → Affine (suc i) → Affine i
+  substitute x a = (head a ⊛ x) ⊕ tail a
+
+  irrelevant : ∀ {i} → Affine (suc i) → Set
+  irrelevant (+_ zero    x+ cs +ℤ k) = ⊤
+  irrelevant (+_ (suc n) x+ cs +ℤ k) = ⊥
+  irrelevant (-[1+ n ]   x+ cs +ℤ k) = ⊥
+
+  lower-bound : ∀ {i} → Affine (suc i) → Set
+  lower-bound (+_ zero    x+ cs +ℤ k) = ⊥
+  lower-bound (+_ (suc n) x+ cs +ℤ k) = ⊤
+  lower-bound (-[1+ n ]   x+ cs +ℤ k) = ⊥
+
+  upper-bound : ∀ {i} → Affine (suc i) → Set
+  upper-bound (+_ n     x+ cs +ℤ k) = ⊥
+  upper-bound (-[1+ n ] x+ cs +ℤ k) = ⊤
+
+  classifyₐ : ∀ {i} → (a : Affine (suc i)) → Tri (lower-bound a) (irrelevant a) (upper-bound a)
+  classifyₐ (+_ zero x+ e +ℤ ke)     = Tri.tri≈ (λ z → z) tt (λ z → z)
+  classifyₐ ((+_ (suc n) ∷ cs) ∷+ k) = Tri.tri< tt (λ z → z) (λ z → z)
+  classifyₐ ((-[1+_] n ∷ cs) ∷+ k)   = Tri.tri> (λ z → z) (λ z → z) tt
+  
+  Conj : ℕ → Set
+  Conj i = List (Affine i)
+
+  classify : ∀ {i} → (as : Conj (suc i))
+             → (List (Σ (Affine (suc i)) lower-bound))
+             × (List (Σ (Affine (suc i)) irrelevant))
+             × (List (Σ (Affine (suc i)) upper-bound))
+  classify [] = [] , [] , []
+  classify (a ∷ as) with classifyₐ a | classify as
+  classify (a ∷ as) | Tri.tri< p _ _ | ls , is , us = (a , p) ∷ ls , is , us
+  classify (a ∷ as) | Tri.tri≈ _ p _ | ls , is , us = ls , (a , p) ∷ is , us
+  classify (a ∷ as) | Tri.tri> _ _ p | ls , is , us = ls , is , (a , p) ∷ us
+    
+  -- module Constraint where
+  --   data Constraint (i : ℕ) : Set where
+  --     0<_ :           (e : Affine i) → Constraint i
+  --     _∣_ : (d : ℕ) → (e : Affine i) → Constraint i
+  --     _∤_ : (d : ℕ) → (e : Affine i) → Constraint i
+  --   
+  --   affine : ∀ {i} → Constraint i → Affine i
+  --   affine (0< e)  = e
+  --   affine (d ∣ e) = e
+  --   affine (d ∤ e) = e
+  --   
+  --   on-affine : ∀ {i j} (f : Affine i → Affine j) → (Constraint i → Constraint j)
+  --   on-affine f (0< e)  = 0< f e
+  --   on-affine f (d ∣ e) = d ∣ f e
+  --   on-affine f (d ∤ e) = d ∤ f e
+  --   
+  --   on-coefficient : ∀ {i} → (ℤ → ℤ) → (Affine (suc i) → Affine (suc i))
+  --   on-coefficient f ((c ∷ cs) ∷+ k) = ((f c) ∷ cs) ∷+ k
+  --   
+  --   coefficient : ∀ {i} → Constraint (suc i) → ℤ
+  --   coefficient = Aff.head ∘ affine
+
+  --   divisor : ∀ {i} → Constraint i → Maybe ℕ
+  --   divisor (0< e)  = nothing
+  --   divisor (d ∣ e) = just d
+  --   divisor (d ∤ e) = just d
+  -- 
+  --   ¬_ : ∀ {i} → Constraint i → Constraint i
+  --   ¬ (0< e) = 0< (Aff.¬ e)
+  --   ¬ (d ∣ e) = d ∤ e
+  --   ¬ (d ∤ e) = d ∣ e
+  --   
+  -- open Constraint using (Constraint ; 0<_ ; _∣_ ; _∤_)
+\end{code}
+}
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{The Omega Test}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1466,158 +1577,413 @@ Both solvers need of a common structure:
 \subsubsection{Implementation}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Verification}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{code}
+  module NormalForm (P : ℕ → Set) where
+  
+    mutual
+      data Existential (i : ℕ) : Set where
+        ¬∃ : Conjunction (suc i) → Existential i
+        ∃  : Conjunction (suc i) → Existential i
+  
+      record Conjunction (i : ℕ) : Set where
+        inductive
+        constructor ∧_∧_∧
+        field
+          constraints : List (P i)
+          existentials : List (Existential i)
+  
+    open Existential public
+    open Conjunction public
+    
+    DNF : (i : ℕ) → Set
+    DNF i = List (Conjunction i)
+
+  open NormalForm
+\end{code}
+
+\begin{code}
+  mutual
+    traverse-binding : ∀ {i}{P Q : ℕ → Set} (f : ∀ {j} → P j → Q j) → Existential P i → Existential Q i
+    traverse-binding f (¬∃ c) = ¬∃ (traverse-conjunction f c)
+    traverse-binding f (∃ c) = ∃ (traverse-conjunction f c)
+      
+    traverse-conjunction : ∀ {i}{P Q : ℕ → Set} (f : ∀ {j} → P j → Q j) → Conjunction P i → Conjunction Q i
+    traverse-conjunction f ∧ cs ∧ es ∧ = ∧ List.map f cs ∧ traverse-bindings f es ∧
+      where
+      -- Because sometimes Agda can't see it
+      traverse-bindings : ∀ {i}{P Q : ℕ → Set} (f : ∀ {j} → P j → Q j) → List (Existential P i) → List (Existential Q i)
+      traverse-bindings f [] = []
+      traverse-bindings f (e ∷ es) = traverse-binding f e ∷ traverse-bindings f es
+      
+  traverse-dnf : ∀ {i}{P Q : ℕ → Set} (f : ∀ {j} → P j → Q j) → DNF P i → DNF Q i
+  traverse-dnf f = List.foldr (λ p q → traverse-conjunction f p ∷ q) []
+\end{code}
+
+\begin{code}
+  ¬-existential : ∀ {i P} → Existential P i → Existential P i
+  ¬-existential (¬∃ x) = ∃ x
+  ¬-existential (∃ x) = ¬∃ x
+    
+  ¬-conjunction : ∀ {i} → Conjunction Affine i → DNF Affine i
+  ¬-conjunction ∧ cs ∧ bs ∧ = List.map (λ c → ∧ ⊘ c ∷ [] ∧                   [] ∧) cs
+                           ++ List.map (λ b → ∧       [] ∧ ¬-existential b ∷ [] ∧) bs
+                                                                                               
+  _∧-dnf_ : ∀ {i} → DNF Affine i → DNF Affine i → DNF Affine i
+  xs ∧-dnf ys = List.map 
+     (λ {((∧ cx ∧ bx ∧) , (∧ cy ∧ by ∧)) → ∧ cx ++ cy ∧ bx ++ by ∧})
+     (×-list xs ys)
+  
+  _∨-dnf_ : ∀ {i P} → DNF P i → DNF P i → DNF P i
+  _∨-dnf_ = _++_
+  
+  ¬-dnf_ : ∀ {i} → DNF Affine i → DNF Affine i
+  ¬-dnf_ = List.foldl (λ dnf conj → dnf ∧-dnf ¬-conjunction conj) []
+  
+  _⇒-dnf_ : ∀ {i} → DNF Affine i → DNF Affine i → DNF Affine i
+  xs ⇒-dnf ys = (¬-dnf xs) ∨-dnf (xs ∧-dnf ys)
+  
+  ∃-dnf_ : ∀ {i} → DNF Affine (suc i) → DNF Affine i
+  ∃-dnf_ = List.map λ conj → ∧ [] ∧ (∃ conj ∷ []) ∧
+                                                     
+  ∀-dnf : ∀ {i} → DNF Affine (suc i) → DNF Affine i
+  ∀-dnf = ¬-dnf_ ∘ ∃-dnf_ ∘ ¬-dnf_
+  
+  norm-rel : ∀ {i} → Rel → Affine i → Affine i → List (Affine i)
+  norm-rel <' a₁ a₂ = (a₂ ⊝ a₁) ⊕ (# (+ 1)) ∷ []
+  norm-rel >' a₁ a₂ = (a₁ ⊝ a₂) ⊕ (# (+ 1)) ∷ []
+  norm-rel ≤' a₁ a₂ = a₂ ⊝ a₁ ∷ []
+  norm-rel ≥' a₁ a₂ = a₁ ⊝ a₂ ∷ []
+  norm-rel =' a₁ a₂ = a₂ ⊝ a₁ ∷ a₁ ⊝ a₂ ∷ []
+  
+  norm-atom : ∀ {i} → Atom i → Affine i
+  norm-atom (num' n) = # n
+  norm-atom (x +' y) = (norm-atom x) ⊕ (norm-atom y)
+  norm-atom (n *' x) = n ⊛ (norm-atom x)
+  norm-atom (var' zero) = (+ 1) x+ø
+  norm-atom (var' (suc n)) with norm-atom (var' n)
+  ...                     | cs ∷+ k = (+ 0) x+ cs +ℤ k
+    
+  norm-form : {i : ℕ} → Formula i → DNF Affine i
+  norm-form (x ∧' y) = (norm-form x) ∧-dnf (norm-form y)
+  norm-form (x ∨' y) = (norm-form x) ∨-dnf (norm-form y)
+  norm-form (x ⇒' y) = (norm-form x) ⇒-dnf (norm-form y)
+  norm-form (¬' x) = ¬-dnf (norm-form x)
+  norm-form (∃' x) = ∃-dnf (norm-form x)
+  norm-form (∀' x) = ∀-dnf (norm-form x)
+  norm-form (d ∣' x) = ∧ {!!} ∧ [] ∧ ∷ []
+  norm-form (x [ r ] y) = ∧ norm-rel r (norm-atom x) (norm-atom y) ∧ [] ∧ ∷ []
+\end{code}
 
 
-Divides term elimination procedure
+\begin{code}
+  a≤αx : ∀ {i} → Affine (suc i) → ℤ × Affine i
+  a≤αx (α x+ -a +ℤ -ka) = α , ⊝ (-a ∷+ -ka)
 
-\begin{align*}
-    ∃x . (d₁ ∣ a₁x + e₁) ∧ (d₂ ∣ a₂x + e₂) ∧ (a₃x + e₃)
-    \intertext{Introduce existential for first term}
-    ∃x . ∃y . (d₁y = a₁x + e₁) ∧ (d₂ ∣ a₂x + e₂) ∧ (a₃x + e₃)
-    \intertext{Rearrange first term}
-    ∃x . ∃y . (a₁x = d₁y - e₁) ∧ (d₂ ∣ a₂x + e₂) ∧ (a₃x + e₃)
-    \intertext{Multiply all outer coefficients to a common LCM}
-    ∃x . ∃y . (mx = n₁d₁y - n₁e₁) ∧ (n₂d₂ ∣ mx + n₂e₂) ∧ (mx + n₃e₃)
-    \intertext{Substitute mx}
-    ∃y . (m ∣ n₁d₁y - n₁e₁) ∧ (n₂d₂ ∣ n₁d₁y - n₁e₁ + n₂e₂) ∧ (n₁d₁y - n₁e₁ + n₃e₃)
-\end{align*}
+  βx≤b : ∀ {i} → Affine (suc i) → ℤ × Affine i
+  βx≤b (-β x+ b +ℤ kb) = (- -β) , (b ∷+ kb)
 
-Because $m < d₁$, this will eventually end. It might get
-shortcircuited if $d₁ ∣ a₁$ and $d₁ ∣ e₁$.
+  dark-shadow : ∀ {i} → Affine (suc i) → Affine (suc i) → Affine i
+  dark-shadow l u with a≤αx l | βx≤b u
+  ...             | (α , a)   | (β , b) = (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# ((α - + 1) * (β - + 1)))
+      
+  omega : ∀ {i} → List (Affine (suc i)) → List (Affine i)
+  omega as with classify as
+  omega as | ls , is , us = List.map (λ { ((l , _) , (u , _)) → dark-shadow l u}) (×-list ls us)
+                         ++ List.map (tail ∘ proj₁) is
 
-\todo{How does it work with multiple divide terms?}
+  Env : ℕ → Set
+  Env i = Vec ℤ i
+  
+  _[_/x]ₐ : ∀ {i} → Affine i → Env i → Affine 0
+  a [ [] /x]ₐ = a
+  a [ (x ∷ xs) /x]ₐ = (substitute (# x) a) [ xs /x]ₐ
+  
+  _[_/x] : ∀ {i} → List (Affine i) → Env i → List (Affine 0)
+  as [ xs /x] = List.map _[ xs /x]ₐ as
+  
+  ⊨ₐ₀ : Affine 0 → Set
+  ⊨ₐ₀ a = (+ 0) Int.< (Affine.k a)
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Cooper's Algorithm}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ⊨₀ : List (Affine 0) → Set
+  ⊨₀ = All ⊨ₐ₀
 
-\cite{Cooper1972}
-\cite{Chaieb2003}
+  ⊨ₐ : ∀ {i} → Affine i → Set
+  ⊨ₐ {i} a = Σ (Env i) λ ρ → ⊨ₐ₀ (a [ ρ /x]ₐ)
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Overview}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ⊨ : ∀ {i} → List (Affine i) → Set
+  ⊨ {i} as = Σ (Env i) λ ρ → ⊨₀ (as [ ρ /x])
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Implementation}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ⊭ : ∀ {i} → List (Affine i) → Set
+  ⊭ {i} as = (ρ : Env i) → ⊨₀ (as [ ρ /x]) → ⊥
+  
+  ¬⊭→⊨ : (as : List (Affine 0)) → (⊭ as → ⊥) → ⊨ as
+  ¬⊭→⊨ = {!!}
+  
+  ⟦_⟧ₐ₀ : (a : Affine 0) → Dec (⊨ₐ₀ a)
+  ⟦ [] ∷+ n ⟧ₐ₀ = (+ 0) <? n
+  
+  ⟦_⟧₀ : (as : List (Affine 0)) → Dec (⊨₀ as)
+  ⟦ [] ⟧₀ = yes []
+  ⟦ a ∷ as ⟧₀ with ⟦ a ⟧ₐ₀ | ⟦ as ⟧₀
+  ⟦ a ∷ as ⟧₀ | no ¬pa | _       = no λ { (pa ∷ pas) → ¬pa pa}
+  ⟦ a ∷ as ⟧₀ | yes _  | no ¬pas = no λ { (_ ∷ pas) → ¬pas pas}
+  ⟦ a ∷ as ⟧₀ | yes pa | yes pas = yes (pa ∷ pas)
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Verification}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ⟦_⟧ : ∀ {i} → (as : List (Affine i)) → (xs : Env i) → Dec (⊨₀ (as [ xs /x]))
+  ⟦ as ⟧ xs = ⟦ as [ xs /x] ⟧₀
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\chapter{Verification and validation}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ⟦_⟧Ω : ∀ {i} → List (Affine i) → Bool
+  ⟦_⟧Ω {zero} a with ⟦ a ⟧₀
+  ...           | yes p = true
+  ...           | no ¬p = false
+  ⟦_⟧Ω {suc i} a = ⟦ omega a ⟧Ω
 
-\todo{Dependent types, higher standards, no tests, we formally describe what correct is}
-\todo{This report is type-checked}
+  Ω-Correct : ∀ {i} (as : List (Affine i)) → Set
+  Ω-Correct as with ⟦ as ⟧Ω
+  Ω-Correct as | false = ⊤
+  Ω-Correct as | true  = ⊨ as
+  
+  
+  -- (α - 1)(β - 1) ≤ αb - aβ
+  -- α and β are positive and non-zero, thus n = (α - 1)(β - 1) must be positive
+  -- n ≤ αb - aβ
+  -- aβ + n ≤ αb
+  -- aβ ≤ αb
+  -- 0≤ αb - aβ
+  βa≤αb : ∀ {i} → (l u : Affine (suc i)) → Affine i
+  βa≤αb l u with a≤αx l | βx≤b u
+  βa≤αb l u | α , a     | β , b = (α ⊛ b) ⊝ (β ⊛ a)
 
-%   Verification and Validation In this section you should outline the
-%   verification and validation procedures that you've adopted throughout the
-%   project to ensure that the final product satisfies its specification. In
-%   particular, you should outline the test procedures that you adopted during
-%   and after implementation. Your aim here is to convince the reader that the
-%   product has been thoroughly and appropriately verified. Detailed test
-%   results should, however, form a separate appendix at the end of the report.
+  bounds : ∀ {i} → (l u : Affine (suc i)) → lower-bound l → upper-bound u → ⊨ₐ (dark-shadow l u) → ⊨ₐ (βa≤αb l u)
+  bounds (-[1+ α ] x+ -a +ℤ -ka) u () ubu pds
+  bounds (+_ α x+ -a +ℤ -ka) (+_ -β x+ b +ℤ kb) lbl () pds
+  bounds (+_ α x+ -a +ℤ -ka) (-[1+ β-1 ] x+ b +ℤ kb) lbl ubu (ρ , pds) = ρ , (bar (((+ α) ⊛ (b ∷+ kb)) ⊝ ((+ suc β-1) ⊛ (⊝ (-a ∷+ -ka)))) ((+ α - + 1) * + β-1) {!!} ρ pds)
+    where
+      open IntProp.≤-Reasoning
+      open import Data.Vec.Properties using (map-id ; map-cong ; zipWith-replicate₂)
+      open import Data.Integer.Properties using (+-identityʳ ; ≤-reflexive)
 
-- Why is this absolutely correct, Agda?
+      foo : (m : ℤ) (n : ℕ) → m - + n Int.≤ m
+      foo m zero = ≤-reflexive (+-identityʳ m)
+      foo m (suc n) = begin 
+        m + - + suc n
+          ≤⟨ {!!} ⟩
+        m
+          ∎
+      
+      bar : ∀ {i} → (a : Affine i) (n : ℤ) (pn : (+ 0) Int.≤ n) (ρ : Env i) → ⊨ₐ₀ (a ⊝ (# n) [ ρ /x]ₐ) → ⊨ₐ₀ (a [ ρ /x]ₐ)
+      bar (csa ∷+ ka) n pn ρ p = begin 
+        + 1
+          ≤⟨ p ⟩
+        k (((csa ∷+ ka) ⊝ (# n)) [ ρ /x]ₐ)
+          ≡⟨ refl ⟩
+        k ((Vec.zipWith _-_ csa (Vec.replicate (+ 0)) ∷+ (ka - n)) [ ρ /x]ₐ)
+          ≡⟨ cong (λ csa' → k ((csa' ∷+ (ka - n)) [ ρ /x]ₐ)) (zipWith-replicate₂ _-_ csa (+ 0)) ⟩
+        k ((Vec.map (_- (+ 0)) csa ∷+ (ka - n)) [ ρ /x]ₐ)
+          ≡⟨ refl ⟩
+        k ((Vec.map (_+ (+ 0)) csa ∷+ (ka - n)) [ ρ /x]ₐ)
+          ≡⟨ cong (λ csa' → k ((csa' ∷+ (ka - n)) [ ρ /x]ₐ)) (map-cong +-identityʳ csa) ⟩
+        k ((Vec.map id csa ∷+ (ka - n)) [ ρ /x]ₐ)
+          ≡⟨ cong (λ csa' → k ((csa' ∷+ (ka - n)) [ ρ /x]ₐ)) (map-id csa) ⟩
+        k ((csa ∷+ (ka + - n)) [ ρ /x]ₐ)
+          ≤⟨ {!!} ⟩
+        k ((csa ∷+ ka) [ ρ /x]ₐ)
+          ∎
+      
+      
+  
+  ds-contradiction : ∀ {i} → (l u : Affine (suc i)) → (pl : lower-bound l) → (pu : upper-bound u)
+                     → ⊨ (dark-shadow l u ∷ [])
+                     → ⊭ (l ∷ u ∷ [])
+                     → ⊥
+  ds-contradiction l u lbl ubu ⊨ds ⊭l∧u = {!!}
+  
+  ds-sound : ∀ {i} (l u : Affine (suc i)) → ⊨ ({!!}) → ⊨ (l ∷ u ∷ [])
+  ds-sound l u (ρ , pds) = {!!}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\chapter{Results and evaluation}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-- {-
+  
+--   correct : ∀ {i} (p : List (Affine (suc i))) → Correct p
+--   correct p with ⟦ p ⇓⟧
+--   correct p | partial ()
+--   correct p | false = tt
+--   correct p | true = inner {!!}
+--     where
+--     inner : true ≡ ⟦ p ⇓⟧ → (ρ : Env) → true ≡ ⟦ p ⟧ ρ
+--     inner ep ρ with ⟦ p ⟧ ρ
+--     inner ep ρ | true = refl
+--     inner ep ρ | false = {!!}
+--     inner ep ρ | partial ()
 
-%   Results and Evaluation The aim of this chapter is twofold. On one hand, it
-%   aims to present the final outcome of the project – i.e., the system
-%   developed – in an appropriate way so that readers of your report can form a
-%   clear picture of the system operation and provided functionality without the
-%   need for a live demo. This would normally require the inclusion of
-%   screenshots and/or images of the system in operation, and indicative results
-%   generated by the system. On the other hand, this chapter also aims to
-%   present an appropriate evaluation of the project as whole, both in terms of
-%   the outcome and in terms of the process followed.
+--     ind-⟦_⇓⟧ : ∀ {i} → (p : List (Affine (suc i))) → ⟦ omega p ⇓⟧ ≡ ⟦ p ⇓⟧
+--     ind-⟦_⇓⟧ = {!!}
+-- -}
 
-%   The evaluation of the outcome is expected to be primarily evidence-based,
-%   i.e., the result of either an experimental process, like usability tests and
-%   evaluations, performance-related measurements, etc., or a formal analysis,
-%   such as algorithmic and mathematical analysis of system properties, etc. The
-%   precise nature of the evaluation will depend on the project requirements.
-%   Please note that if you intend to carry out usability tests, you will need
-%   to first obtain approval from the Department's Ethics Committee - the
-%   section on Evaluation and Ethics Approval provides further detail.
+            
+-- \end{code}
 
-%   The evaluation of the process is expected to be primarily a reflective
-%   examination of the planning, organisation, implementation and evaluation of
-%   the project. This will normally include the lessons learnt and explanations
-%   of any significant deviations from the original project plan.
+-- \begin{code}
+--   example : List (Affine 2)
+--   -- 3x + 2y ≤ 18 ∧ 3y ≤ 4x ∧ 3x ≤ 2y + 1
+--   -- 0≤ - 3x - 2y + 18 ∧ 0≤ 4x - 3y ∧ 0≤ - 3x + 2y + 1
+--   -- 0< - 3x - 2y + 19 ∧ 0< 4x - 3y + 1 ∧ 0< -3x + 2y + 2
+--   example = ((Int.- + 3 ∷ Int.- + 2 ∷ []) ∷+ (+ 19))
+--           ∷ ((+ 4 ∷ Int.- + 3 ∷ []) ∷+ (+ 1))
+--           ∷ ((Int.- + 3 ∷ + 2 ∷ []) ∷+ (+ 2)) ∷ []
+-- \end{code}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% \chapter{Related work}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-- \subsubsection{Verification}
+-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%   Related Work You should survey and critically evaluate other work which you
-%   have read or otherwise considered in the general area of the project topic.
-%   The aim here is to place your project work in the context of the related
-%   work.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\chapter{Summary and conclusions}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-- Divides term elimination procedure
 
-%   Summary and Conclusions In the final chapter of your report, you should
-%   summarise how successful you were in achieving the original project
-%   objectives, what problems arose in the course of the project which could not
-%   be readily solved in the time available, and how your work could be
-%   developed in future to enhance its utility. It is OK to be upbeat,
-%   especially if you are pleased with what you have achieved!
+-- \begin{align*}
+--     ∃x . (d₁ ∣ a₁x + e₁) ∧ (d₂ ∣ a₂x + e₂) ∧ (a₃x + e₃)
+--     \intertext{Introduce existential for first term}
+--     ∃x . ∃y . (d₁y = a₁x + e₁) ∧ (d₂ ∣ a₂x + e₂) ∧ (a₃x + e₃)
+--     \intertext{Rearrange first term}
+--     ∃x . ∃y . (a₁x = d₁y - e₁) ∧ (d₂ ∣ a₂x + e₂) ∧ (a₃x + e₃)
+--     \intertext{Multiply all outer coefficients to a common LCM}
+--     ∃x . ∃y . (mx = n₁d₁y - n₁e₁) ∧ (n₂d₂ ∣ mx + n₂e₂) ∧ (mx + n₃e₃)
+--     \intertext{Substitute mx}
+--     ∃y . (m ∣ n₁d₁y - n₁e₁) ∧ (n₂d₂ ∣ n₁d₁y - n₁e₁ + n₂e₂) ∧ (n₁d₁y - n₁e₁ + n₃e₃)
+-- \end{align*}
 
-\bibliographystyle{apalike}
-\bibliography{bibliography}
+-- Because $m < d₁$, this will eventually end. It might get
+-- shortcircuited if $d₁ ∣ a₁$ and $d₁ ∣ e₁$.
 
-%   References/Bibliography The references should consist of a list of papers
-%   and books referred to in the body of your report. These should be formatted
-%   as for scholarly computer science publications. Most text- and word-
-%   processors provide useful assistance with referencing - for example latex
-%   uses bibtex. As you know, there are two principal reference schemes.
+-- \todo{How does it work with multiple divide terms?}
 
-%       In one, the list is ordered alphabetically on author's surname and
-%       within the text references take the form (Surname, Date). For example, a
-%       reference to a 2014 work by Zobel would be written (Zobel, 2014).
+-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-- \subsection{Cooper's Algorithm}
+-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%       In the other, the list is ordered in the sequence in which a reference
-%       first appears in the report.
+-- \cite{Cooper1972}
+-- \cite{Chaieb2003}
 
-%   For both schemes, each reference in the reference list should contain the
-%   following information: author, title, journal or publisher (if book), volume
-%   and part, and date. Depending of the style of references you use, Zobel's
-%   2014 book might be listed in the references of your report as follows:
+-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-- \subsubsection{Overview}
+-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%   Justin Zobel. Writing for Computer Science. Springer-Verlag, 2014.
+-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-- \subsubsection{Implementation}
+-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%   For more examples of the first style, see the way in which references are
-%   laid out in "Software Engineering: A Practitioner's Approach" by Roger
-%   Pressman. Note carefully that your references should not just be a list of
-%   URLs! Web pages are not scholarly publications. In particular, they are not
-%   peer reviewed, and so could contain erroneous or inaccurate information.
+-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-- \subsubsection{Verification}
+-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\appendix
+-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-- \chapter{Verification and validation}
+-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% \chapter{Detailed Specification and Design}
-%   Appendix A - Detailed Specification and Design This appendix should contain
-%   the details of your project specification that were not included in the main
-%   body of your report.
+-- \todo{Dependent types, higher standards, no tests, we formally describe what correct is}
+-- \todo{This report is type-checked}
 
-% \chapter{Detailed Test Strategy and Test Cases}
-%   Appendix B - Detailed Test Strategy and Test Cases This appendix should
-%   contain the details of the strategy you used to test your software, together
-%   with your tabulated and commented test results.
+-- %   Verification and Validation In this section you should outline the
+-- %   verification and validation procedures that you've adopted throughout the
+-- %   project to ensure that the final product satisfies its specification. In
+-- %   particular, you should outline the test procedures that you adopted during
+-- %   and after implementation. Your aim here is to convince the reader that the
+-- %   product has been thoroughly and appropriately verified. Detailed test
+-- %   results should, however, form a separate appendix at the end of the report.
 
-% \chapter{User Guide}
-%   Appendix C - User Guide This appendix should provide a detailed description
-%   of how to use your system. In some cases, it may also be appropriate to
-%   include a second guide dealing with maintenance and updating issues.
+-- - Why is this absolutely correct, Agda?
 
-\end{document}
+-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-- \chapter{Results and evaluation}
+-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+-- %   Results and Evaluation The aim of this chapter is twofold. On one hand, it
+-- %   aims to present the final outcome of the project – i.e., the system
+-- %   developed – in an appropriate way so that readers of your report can form a
+-- %   clear picture of the system operation and provided functionality without the
+-- %   need for a live demo. This would normally require the inclusion of
+-- %   screenshots and/or images of the system in operation, and indicative results
+-- %   generated by the system. On the other hand, this chapter also aims to
+-- %   present an appropriate evaluation of the project as whole, both in terms of
+-- %   the outcome and in terms of the process followed.
+
+-- %   The evaluation of the outcome is expected to be primarily evidence-based,
+-- %   i.e., the result of either an experimental process, like usability tests and
+-- %   evaluations, performance-related measurements, etc., or a formal analysis,
+-- %   such as algorithmic and mathematical analysis of system properties, etc. The
+-- %   precise nature of the evaluation will depend on the project requirements.
+-- %   Please note that if you intend to carry out usability tests, you will need
+-- %   to first obtain approval from the Department's Ethics Committee - the
+-- %   section on Evaluation and Ethics Approval provides further detail.
+
+-- %   The evaluation of the process is expected to be primarily a reflective
+-- %   examination of the planning, organisation, implementation and evaluation of
+-- %   the project. This will normally include the lessons learnt and explanations
+-- %   of any significant deviations from the original project plan.
+
+-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-- % \chapter{Related work}
+-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+-- %   Related Work You should survey and critically evaluate other work which you
+-- %   have read or otherwise considered in the general area of the project topic.
+-- %   The aim here is to place your project work in the context of the related
+-- %   work.
+
+-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-- \chapter{Summary and conclusions}
+-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+-- %   Summary and Conclusions In the final chapter of your report, you should
+-- %   summarise how successful you were in achieving the original project
+-- %   objectives, what problems arose in the course of the project which could not
+-- %   be readily solved in the time available, and how your work could be
+-- %   developed in future to enhance its utility. It is OK to be upbeat,
+-- %   especially if you are pleased with what you have achieved!
+
+-- \bibliographystyle{apalike}
+-- \bibliography{bibliography}
+
+-- %   References/Bibliography The references should consist of a list of papers
+-- %   and books referred to in the body of your report. These should be formatted
+-- %   as for scholarly computer science publications. Most text- and word-
+-- %   processors provide useful assistance with referencing - for example latex
+-- %   uses bibtex. As you know, there are two principal reference schemes.
+
+-- %       In one, the list is ordered alphabetically on author's surname and
+-- %       within the text references take the form (Surname, Date). For example, a
+-- %       reference to a 2014 work by Zobel would be written (Zobel, 2014).
+
+-- %       In the other, the list is ordered in the sequence in which a reference
+-- %       first appears in the report.
+
+-- %   For both schemes, each reference in the reference list should contain the
+-- %   following information: author, title, journal or publisher (if book), volume
+-- %   and part, and date. Depending of the style of references you use, Zobel's
+-- %   2014 book might be listed in the references of your report as follows:
+
+-- %   Justin Zobel. Writing for Computer Science. Springer-Verlag, 2014.
+
+-- %   For more examples of the first style, see the way in which references are
+-- %   laid out in "Software Engineering: A Practitioner's Approach" by Roger
+-- %   Pressman. Note carefully that your references should not just be a list of
+-- %   URLs! Web pages are not scholarly publications. In particular, they are not
+-- %   peer reviewed, and so could contain erroneous or inaccurate information.
+
+-- \appendix
+
+-- % \chapter{Detailed Specification and Design}
+-- %   Appendix A - Detailed Specification and Design This appendix should contain
+-- %   the details of your project specification that were not included in the main
+-- %   body of your report.
+
+-- % \chapter{Detailed Test Strategy and Test Cases}
+-- %   Appendix B - Detailed Test Strategy and Test Cases This appendix should
+-- %   contain the details of the strategy you used to test your software, together
+-- %   with your tabulated and commented test results.
+
+-- % \chapter{User Guide}
+-- %   Appendix C - User Guide This appendix should provide a detailed description
+-- %   of how to use your system. In some cases, it may also be appropriate to
+-- %   include a second guide dealing with maintenance and updating issues.
+
+-- \end{document}
