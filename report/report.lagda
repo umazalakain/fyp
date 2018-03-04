@@ -1254,13 +1254,13 @@ module _ where
 module Presburger where
   open import Function using (id ; _∘_)
   open import Data.Fin using (Fin ; zero ; suc)
-  open import Data.Integer as Int using (ℤ ; +_ ; -[1+_] ; _+_ ; _-_ ; -_ ; _*_)
+  open import Data.Integer as Int using (ℤ ; +_ ; -[1+_] ; _+_ ; _-_ ; -_ ; _*_ ; _<_ ; _≤_ ; _>_)
   open import Data.Nat as Nat using (ℕ ; zero ; suc)
   open import Data.Sum using (_⊎_ ; inj₁ ; inj₂)
   open import Data.Vec as Vec using (Vec ; [] ; _∷_)
   open import Data.List as List using (List ; [] ; _∷_ ; _++_)
   open import Data.Maybe using (Maybe ; nothing ; just)
-  open import Data.Product using (Σ ; _×_ ; _,_ ; proj₁ ; proj₂)
+  open import Data.Product using (Σ ; _×_ ; _,_ ; proj₁ ; proj₂ ; uncurry)
   open import Relation.Binary.PropositionalEquality using (_≡_ ; refl; cong ; sym ; _≢_)
   open import Relation.Nullary using (Dec ; yes ; no)
   open import Data.Integer.Properties as IntProp
@@ -1470,6 +1470,15 @@ outlines in a later talk. \cite{Norrish2006}
   _x+∅ : ∀ {i} → ℤ → Affine (suc i)
   n x+∅ = (n ∷ Vec.replicate (+ 0)) ∷+ (+ 0)
   
+  _x+_ : ∀ {i} → ℤ → Affine i → Affine (suc i)
+  n x+ (cs ∷+ k) = (n ∷ cs) ∷+ k
+
+  _≤_x : ∀ {i} → Affine i → ℤ → Affine (suc i)
+  (cs ∷+ k) ≤ α x = (α ∷ (Vec.map -_ cs)) ∷+ (- k)
+
+  _x≤_ : ∀ {i} → ℤ → Affine i → Affine (suc i)
+  β x≤ (cs ∷+ k) = ((- β) ∷ cs) ∷+ k
+  
   ⇑1 : ∀ {i} → Affine i → Affine (suc i)
   ⇑1 (cs ∷+ k) = ((+ 0) ∷ cs) ∷+ k
   
@@ -1491,9 +1500,6 @@ outlines in a later talk. \cite{Norrish2006}
   head : ∀ {i} → Affine (suc i) → ℤ
   head (c x+ cs +ℤ k) = c
 
---  ⊘ a = (# (+ 1)) ⊝ a
-
-  
   tail : ∀ {i} → Affine (suc i) → Affine i
   tail (c x+ cs +ℤ k) = cs ∷+ k
   
@@ -1501,28 +1507,18 @@ outlines in a later talk. \cite{Norrish2006}
   substitute x a = (head a ⊛ x) ⊕ tail a
 
   irrelevant : ∀ {i} → Affine (suc i) → Set
-  irrelevant (+_ zero    x+ cs +ℤ k) = ⊤
-  irrelevant (+_ (suc n) x+ cs +ℤ k) = ⊥
-  irrelevant (-[1+ n ]   x+ cs +ℤ k) = ⊥
+  irrelevant a = + 0 ≡ head a
 
   lower-bound : ∀ {i} → Affine (suc i) → Set
-  lower-bound (+_ zero    x+ cs +ℤ k) = ⊥
-  lower-bound (+_ (suc n) x+ cs +ℤ k) = ⊤
-  lower-bound (-[1+ n ]   x+ cs +ℤ k) = ⊥
+  lower-bound a = + 0 < head a
 
   upper-bound : ∀ {i} → Affine (suc i) → Set
-  upper-bound (+_ n     x+ cs +ℤ k) = ⊥
-  upper-bound (-[1+ n ] x+ cs +ℤ k) = ⊤
+  upper-bound a = + 0 > head a
 
   classifyₐ : ∀ {i} → (a : Affine (suc i)) → Tri (lower-bound a) (irrelevant a) (upper-bound a)
-  classifyₐ (+_ zero x+ e +ℤ ke)     = Tri.tri≈ (λ z → z) tt (λ z → z)
-  classifyₐ ((+_ (suc n) ∷ cs) ∷+ k) = Tri.tri< tt (λ z → z) (λ z → z)
-  classifyₐ ((-[1+_] n ∷ cs) ∷+ k)   = Tri.tri> (λ z → z) (λ z → z) tt
-  
-  Conj : ℕ → Set
-  Conj i = List (Affine i)
-
-  classify : ∀ {i} → (as : Conj (suc i))
+  classifyₐ = <-cmp (+ 0) ∘ head 
+      
+  classify : ∀ {i} → (as : List (Affine (suc i)))
              → (List (Σ (Affine (suc i)) lower-bound))
              × (List (Σ (Affine (suc i)) irrelevant))
              × (List (Σ (Affine (suc i)) upper-bound))
@@ -1682,15 +1678,21 @@ outlines in a later talk. \cite{Norrish2006}
 
 
 \begin{code}
-  a≤αx : ∀ {i} → Affine (suc i) → ℤ × Affine i
-  a≤αx (α x+ -a +ℤ -ka) = α , ⊝ (-a ∷+ -ka)
+  a≤αx : ∀ {i} → Affine (suc i) → Affine i × ℤ
+  a≤αx (α x+ -a +ℤ -ka) = ⊝ (-a ∷+ -ka) , α
+
+  ≡a≤αx : ∀ {i} → (c : Affine (suc i)) → lower-bound c → c ≡ (uncurry _≤_x (a≤αx c))
+  ≡a≤αx ((x ∷ cs₁) ∷+ k₁) p = {!!}
 
   βx≤b : ∀ {i} → Affine (suc i) → ℤ × Affine i
   βx≤b (-β x+ b +ℤ kb) = (- -β) , (b ∷+ kb)
 
+  ≡βx≤b : ∀ {i} → (c : Affine (suc i)) → upper-bound c → c ≡ (uncurry _x≤_ (βx≤b c))
+  ≡βx≤b ((x ∷ cs₁) ∷+ k₁) p = {!!}
+
   dark-shadow : ∀ {i} → Affine (suc i) → Affine (suc i) → Affine i
   dark-shadow l u with a≤αx l | βx≤b u
-  ...             | (α , a)   | (β , b) = (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# ((α - + 1) * (β - + 1)))
+  ...             | (a , α)   | (β , b) = (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# ((α - + 1) * (β - + 1)))
       
   omega : ∀ {i} → List (Affine (suc i)) → List (Affine i)
   omega as with classify as
@@ -1745,70 +1747,74 @@ outlines in a later talk. \cite{Norrish2006}
   ⟦_⟧Ω {suc i} a = ⟦ omega a ⟧Ω
   
   
-  -- (α - 1)(β - 1) ≤ αb - aβ
-  -- α and β are positive and non-zero, thus n = (α - 1)(β - 1) must be positive
-  -- n ≤ αb - aβ
-  -- aβ + n ≤ αb
-  -- aβ ≤ αb
-  -- 0≤ αb - aβ
-  βa≤αb : ∀ {i} → (l u : Affine (suc i)) → Affine i
-  βa≤αb l u with a≤αx l | βx≤b u
-  βa≤αb l u | α , a     | β , b = (α ⊛ b) ⊝ (β ⊛ a)
+  module Ω-Inner (i : ℕ) (l u : Affine (suc i)) (0<α : lower-bound l) (0<β : upper-bound u) where
+    βa≤αb : Affine i
+    βa≤αb with a≤αx l | βx≤b u
+    βa≤αb | a , α     | β , b = (α ⊛ b) ⊝ (β ⊛ a)
 
-  ⊨βa≤αb : ∀ {i} → (l u : Affine (suc i)) → lower-bound l → upper-bound u → ⊨ₐ (dark-shadow l u) → ⊨ₐ (βa≤αb l u)
-  ⊨βa≤αb (-[1+ α ] x+ -a +ℤ -ka) u () ubu pds
-  ⊨βa≤αb (+_ α x+ -a +ℤ -ka) (+_ -β x+ b +ℤ kb) lbl () pds
-  ⊨βa≤αb (+_ α x+ -a +ℤ -ka) (-[1+ β-1 ] x+ b +ℤ kb) lbl tt (ρ , pds) = ρ , (bar (((+ α) ⊛ (b ∷+ kb)) ⊝ ((+ suc β-1) ⊛ (⊝ (-a ∷+ -ka)))) ((+ α - + 1) * + β-1) {!!} ρ pds)
-    where
-      open IntProp.≤-Reasoning
-      open import Data.Vec.Properties using (map-id ; map-cong ; zipWith-replicate₂)
-      open import Data.Integer.Properties using (+-identityʳ ; ≤-reflexive)
+    ⊨βa≤αb : ⊨ₐ (dark-shadow l u) → ⊨ₐ βa≤αb
+    ⊨βa≤αb (ρ , pds) with a≤αx l | βx≤b u
+    ... | (a , α) | (β , b) = ρ , bar ((α ⊛ b) ⊝ (β ⊛ a)) ((α - + 1) * (β - + 1)) {!!} ρ pds 
+      where
+        open IntProp.≤-Reasoning
+        open import Data.Vec.Properties using (map-id ; map-cong ; zipWith-replicate₂)
+        open import Data.Integer.Properties using (+-identityʳ ; ≤-reflexive)
 
-      foo : (m : ℤ) (n : ℕ) → m - + n Int.≤ m
-      foo m zero = ≤-reflexive (+-identityʳ m)
-      foo m (suc n) = begin 
-        m + - + suc n
-          ≤⟨ {!!} ⟩
-        m
-          ∎
-      
-      bar : ∀ {i} → (a : Affine i) (n : ℤ) (pn : (+ 0) Int.≤ n) (ρ : Env i) → ⊨ₐ₀ (a ⊝ (# n) [ ρ /x]ₐ) → ⊨ₐ₀ (a [ ρ /x]ₐ)
-      bar (csa ∷+ ka) n pn ρ p = begin 
-        + 1
-          ≤⟨ p ⟩
-        k (((csa ∷+ ka) ⊝ (# n)) [ ρ /x]ₐ)
-          ≡⟨ refl ⟩
-        k ((Vec.zipWith _-_ csa (Vec.replicate (+ 0)) ∷+ (ka - n)) [ ρ /x]ₐ)
-          ≡⟨ cong (λ csa' → k ((csa' ∷+ (ka - n)) [ ρ /x]ₐ)) (zipWith-replicate₂ _-_ csa (+ 0)) ⟩
-        k ((Vec.map (_- (+ 0)) csa ∷+ (ka - n)) [ ρ /x]ₐ)
-          ≡⟨ refl ⟩
-        k ((Vec.map (_+ (+ 0)) csa ∷+ (ka - n)) [ ρ /x]ₐ)
-          ≡⟨ cong (λ csa' → k ((csa' ∷+ (ka - n)) [ ρ /x]ₐ)) (map-cong +-identityʳ csa) ⟩
-        k ((Vec.map id csa ∷+ (ka - n)) [ ρ /x]ₐ)
-          ≡⟨ cong (λ csa' → k ((csa' ∷+ (ka - n)) [ ρ /x]ₐ)) (map-id csa) ⟩
-        k ((csa ∷+ (ka + - n)) [ ρ /x]ₐ)
-          ≤⟨ {!!} ⟩
-        k ((csa ∷+ ka) [ ρ /x]ₐ)
-          ∎
-      
-  aβ≤αβx≤αb : ∀ {i} → (l u : Affine (suc i)) → List (Affine (suc i))
-  aβ≤αβx≤αb l u with a≤αx l | βx≤b u
-  aβ≤αβx≤αb l u | α , a     | β , b = ((α * β) x+∅) ⊝ (β ⊛ ⇑1 a)
-                                    ∷ (α ⊛ ⇑1 b) ⊝ ((α * β) x+∅)
-                                    ∷ []
+        foo : (m : ℤ) (n : ℕ) → m - + n Int.≤ m
+        foo m zero = ≤-reflexive (+-identityʳ m)
+        foo m (suc n) = begin 
+          m + - + suc n
+            ≤⟨ {!!} ⟩
+          m
+            ∎
+        
+        bar : ∀ {i} → (a : Affine i) (n : ℤ) (pn : (+ 0) Int.≤ n) (ρ : Env i) → ⊨ₐ₀ (a ⊝ (# n) [ ρ /x]ₐ) → ⊨ₐ₀ (a [ ρ /x]ₐ)
+        bar (csa ∷+ ka) n pn ρ p = begin 
+          + 1
+            ≤⟨ p ⟩
+          k (((csa ∷+ ka) ⊝ (# n)) [ ρ /x]ₐ)
+            ≡⟨ refl ⟩
+          k ((Vec.zipWith _-_ csa (Vec.replicate (+ 0)) ∷+ (ka - n)) [ ρ /x]ₐ)
+            ≡⟨ cong (λ csa' → k ((csa' ∷+ (ka - n)) [ ρ /x]ₐ)) (zipWith-replicate₂ _-_ csa (+ 0)) ⟩
+          k ((Vec.map (_- (+ 0)) csa ∷+ (ka - n)) [ ρ /x]ₐ)
+            ≡⟨ refl ⟩
+          k ((Vec.map (_+ (+ 0)) csa ∷+ (ka - n)) [ ρ /x]ₐ)
+            ≡⟨ cong (λ csa' → k ((csa' ∷+ (ka - n)) [ ρ /x]ₐ)) (map-cong +-identityʳ csa) ⟩
+          k ((Vec.map id csa ∷+ (ka - n)) [ ρ /x]ₐ)
+            ≡⟨ cong (λ csa' → k ((csa' ∷+ (ka - n)) [ ρ /x]ₐ)) (map-id csa) ⟩
+          k ((csa ∷+ (ka + - n)) [ ρ /x]ₐ)
+            ≤⟨ {!!} ⟩
+          k ((csa ∷+ ka) [ ρ /x]ₐ)
+            ∎
+        
+    aβ≤αβx≤αb : List (Affine (suc i))
+    aβ≤αβx≤αb with a≤αx l | βx≤b u
+    aβ≤αβx≤αb | a , α     | β , b = ((α * β) x+∅) ⊝ (β ⊛ ⇑1 a)
+                                  ∷ (α ⊛ ⇑1 b) ⊝ ((α * β) x+∅)
+                                  ∷ []
 
-  ⊭aβ≤αβx≤αb : ∀ {i} → (l u : Affine (suc i)) → lower-bound l → upper-bound u → ⊭ (l ∷ u ∷ []) → ⊭ (aβ≤αβx≤αb l u)
-  ⊭aβ≤αβx≤αb (-[1+ α ] x+ a +ℤ ka) u () ubu ⊭l∧u ρ (pl ∷ pu ∷ [])
-  ⊭aβ≤αβx≤αb (+_ α x+ a +ℤ ka) (+_ β x+ b +ℤ kb) lbl () ⊭l∧u ρ (pl ∷ pu ∷ [])
-  ⊭aβ≤αβx≤αb (+_ α x+ -a +ℤ -ka) (-[1+ β-1 ] x+ b +ℤ kb) lbl tt ⊭l∧u ρ (pl ∷ pu ∷ []) = ⊭l∧u ρ ((begin 
-    + 1
-      ≤⟨ pl ⟩
-    {!((α * β-1) x+∅) ⊝ (β ⊛ ⇑1 a)!}
-      ≡⟨ {!!} ⟩
-    k (((+ α) x+ -a +ℤ -ka) [ ρ /x]ₐ)
-      ∎) ∷ (begin {!!}) ∷ [])
-    where open IntProp.≤-Reasoning
-      
+    ⊭aβ≤αβx≤αb : ⊭ (l ∷ u ∷ []) → ⊭ aβ≤αβx≤αb
+    ⊭aβ≤αβx≤αb ⊭l∧u ρ (pl ∷ pu ∷ []) with a≤αx l | βx≤b u
+    ... | (a , α) | (β , b) = ⊭l∧u ρ (foo ∷ bar ∷ [])
+      where
+        open IntProp.≤-Reasoning
+        open IntProp using (*-+-right-mono)
+        foo = begin 
+          + 1
+            ≤⟨ *-+-right-mono {!!} {!!} ⟩
+          k ((α x+ (⊝ a)) [ ρ /x]ₐ)
+            ≡⟨ {!!} ⟩
+          k (l [ ρ /x]ₐ)
+            ∎
+
+        bar = begin {!!}
+        
+    αβi<aβ≤αb<αβ[i+1] : ℕ → List (Affine (suc i))
+    αβi<aβ≤αb<αβ[i+1] = {!!}
+
+    ⊨αβi<aβ≤αb<αβ[i+1] : ⊭ aβ≤αβx≤αb → (i : ℕ) → ⊨ (αβi<aβ≤αb<αβ[i+1] i)
+    ⊨αβi<aβ≤αb<αβ[i+1] = {!!}
+  
 
   Ω-Correct : ∀ {i} (as : List (Affine i)) → Set
   Ω-Correct as with ⟦ as ⟧Ω
