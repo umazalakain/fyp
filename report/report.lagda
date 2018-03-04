@@ -1334,6 +1334,9 @@ arithmetic. They are primarily distinguished by the domain of their
 formulas. The validity of these Presburger formulas gets carried onto
 superset domains; the non-validity gets carried onto subset domains.
 
+\todo{Cite}
+\cite{Janicic1997a}
+
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[node distance=4cm,line width=1pt]
@@ -1464,8 +1467,11 @@ outlines in a later talk. \cite{Norrish2006}
   ø : ∀ {i} → Affine i
   ø = Vec.replicate (+ 0) ∷+ (+ 0)
   
-  _x+ø : ∀ {i} → ℤ → Affine (suc i)
-  n x+ø = (n ∷ Vec.replicate (+ 0)) ∷+ (+ 0)
+  _x+∅ : ∀ {i} → ℤ → Affine (suc i)
+  n x+∅ = (n ∷ Vec.replicate (+ 0)) ∷+ (+ 0)
+  
+  ⇑1 : ∀ {i} → Affine i → Affine (suc i)
+  ⇑1 (cs ∷+ k) = ((+ 0) ∷ cs) ∷+ k
   
   _⊛_ : ∀ {i} → ℤ → Affine i → Affine i
   z ⊛ (cs ∷+ k) = Vec.map (z *_) cs ∷+ (z * k)
@@ -1659,7 +1665,7 @@ outlines in a later talk. \cite{Norrish2006}
   norm-atom (num' n) = # n
   norm-atom (x +' y) = (norm-atom x) ⊕ (norm-atom y)
   norm-atom (n *' x) = n ⊛ (norm-atom x)
-  norm-atom (var' zero) = (+ 1) x+ø
+  norm-atom (var' zero) = (+ 1) x+∅
   norm-atom (var' (suc n)) with norm-atom (var' n)
   ...                     | cs ∷+ k = (+ 0) x+ cs +ℤ k
     
@@ -1737,11 +1743,6 @@ outlines in a later talk. \cite{Norrish2006}
   ...           | yes p = true
   ...           | no ¬p = false
   ⟦_⟧Ω {suc i} a = ⟦ omega a ⟧Ω
-
-  Ω-Correct : ∀ {i} (as : List (Affine i)) → Set
-  Ω-Correct as with ⟦ as ⟧Ω
-  Ω-Correct as | false = ⊤
-  Ω-Correct as | true  = ⊨ as
   
   
   -- (α - 1)(β - 1) ≤ αb - aβ
@@ -1754,10 +1755,10 @@ outlines in a later talk. \cite{Norrish2006}
   βa≤αb l u with a≤αx l | βx≤b u
   βa≤αb l u | α , a     | β , b = (α ⊛ b) ⊝ (β ⊛ a)
 
-  bounds : ∀ {i} → (l u : Affine (suc i)) → lower-bound l → upper-bound u → ⊨ₐ (dark-shadow l u) → ⊨ₐ (βa≤αb l u)
-  bounds (-[1+ α ] x+ -a +ℤ -ka) u () ubu pds
-  bounds (+_ α x+ -a +ℤ -ka) (+_ -β x+ b +ℤ kb) lbl () pds
-  bounds (+_ α x+ -a +ℤ -ka) (-[1+ β-1 ] x+ b +ℤ kb) lbl ubu (ρ , pds) = ρ , (bar (((+ α) ⊛ (b ∷+ kb)) ⊝ ((+ suc β-1) ⊛ (⊝ (-a ∷+ -ka)))) ((+ α - + 1) * + β-1) {!!} ρ pds)
+  ⊨βa≤αb : ∀ {i} → (l u : Affine (suc i)) → lower-bound l → upper-bound u → ⊨ₐ (dark-shadow l u) → ⊨ₐ (βa≤αb l u)
+  ⊨βa≤αb (-[1+ α ] x+ -a +ℤ -ka) u () ubu pds
+  ⊨βa≤αb (+_ α x+ -a +ℤ -ka) (+_ -β x+ b +ℤ kb) lbl () pds
+  ⊨βa≤αb (+_ α x+ -a +ℤ -ka) (-[1+ β-1 ] x+ b +ℤ kb) lbl tt (ρ , pds) = ρ , (bar (((+ α) ⊛ (b ∷+ kb)) ⊝ ((+ suc β-1) ⊛ (⊝ (-a ∷+ -ka)))) ((+ α - + 1) * + β-1) {!!} ρ pds)
     where
       open IntProp.≤-Reasoning
       open import Data.Vec.Properties using (map-id ; map-cong ; zipWith-replicate₂)
@@ -1790,200 +1791,194 @@ outlines in a later talk. \cite{Norrish2006}
         k ((csa ∷+ ka) [ ρ /x]ₐ)
           ∎
       
+  aβ≤αβx≤αb : ∀ {i} → (l u : Affine (suc i)) → List (Affine (suc i))
+  aβ≤αβx≤αb l u with a≤αx l | βx≤b u
+  aβ≤αβx≤αb l u | α , a     | β , b = ((α * β) x+∅) ⊝ (β ⊛ ⇑1 a)
+                                    ∷ (α ⊛ ⇑1 b) ⊝ ((α * β) x+∅)
+                                    ∷ []
+
+  ⊭aβ≤αβx≤αb : ∀ {i} → (l u : Affine (suc i)) → lower-bound l → upper-bound u → ⊭ (l ∷ u ∷ []) → ⊭ (aβ≤αβx≤αb l u)
+  ⊭aβ≤αβx≤αb (-[1+ α ] x+ a +ℤ ka) u () ubu ⊭l∧u ρ (pl ∷ pu ∷ [])
+  ⊭aβ≤αβx≤αb (+_ α x+ a +ℤ ka) (+_ β x+ b +ℤ kb) lbl () ⊭l∧u ρ (pl ∷ pu ∷ [])
+  ⊭aβ≤αβx≤αb (+_ α x+ -a +ℤ -ka) (-[1+ β-1 ] x+ b +ℤ kb) lbl tt ⊭l∧u ρ (pl ∷ pu ∷ []) = ⊭l∧u ρ ((begin 
+    + 1
+      ≤⟨ pl ⟩
+    {!((α * β-1) x+∅) ⊝ (β ⊛ ⇑1 a)!}
+      ≡⟨ {!!} ⟩
+    k (((+ α) x+ -a +ℤ -ka) [ ρ /x]ₐ)
+      ∎) ∷ (begin {!!}) ∷ [])
+    where open IntProp.≤-Reasoning
       
-  
-  ds-contradiction : ∀ {i} → (l u : Affine (suc i)) → (pl : lower-bound l) → (pu : upper-bound u)
-                     → ⊨ (dark-shadow l u ∷ [])
-                     → ⊭ (l ∷ u ∷ [])
-                     → ⊥
-  ds-contradiction l u lbl ubu ⊨ds ⊭l∧u = {!!}
-  
-  ds-sound : ∀ {i} (l u : Affine (suc i)) → ⊨ ({!!}) → ⊨ (l ∷ u ∷ [])
-  ds-sound l u (ρ , pds) = {!!}
 
--- {-
-  
---   correct : ∀ {i} (p : List (Affine (suc i))) → Correct p
---   correct p with ⟦ p ⇓⟧
---   correct p | partial ()
---   correct p | false = tt
---   correct p | true = inner {!!}
---     where
---     inner : true ≡ ⟦ p ⇓⟧ → (ρ : Env) → true ≡ ⟦ p ⟧ ρ
---     inner ep ρ with ⟦ p ⟧ ρ
---     inner ep ρ | true = refl
---     inner ep ρ | false = {!!}
---     inner ep ρ | partial ()
+  Ω-Correct : ∀ {i} (as : List (Affine i)) → Set
+  Ω-Correct as with ⟦ as ⟧Ω
+  Ω-Correct as | false = ⊤
+  Ω-Correct as | true  = ⊨ as
 
---     ind-⟦_⇓⟧ : ∀ {i} → (p : List (Affine (suc i))) → ⟦ omega p ⇓⟧ ≡ ⟦ p ⇓⟧
---     ind-⟦_⇓⟧ = {!!}
--- -}
+  Ω-correct : ∀ {i} (p : List (Affine (suc i))) → Ω-Correct p
+  Ω-correct p with true ≡ ⟦ p ⟧Ω | ⟦ p ⟧Ω
+  Ω-correct p | z | false = tt
+  Ω-correct p | z | true = {!!}
+    where
+    inner : T ⟦ p ⟧Ω → ⊨ p
+    inner ep = {!!} 
 
             
--- \end{code}
-
--- \begin{code}
---   example : List (Affine 2)
---   -- 3x + 2y ≤ 18 ∧ 3y ≤ 4x ∧ 3x ≤ 2y + 1
---   -- 0≤ - 3x - 2y + 18 ∧ 0≤ 4x - 3y ∧ 0≤ - 3x + 2y + 1
---   -- 0< - 3x - 2y + 19 ∧ 0< 4x - 3y + 1 ∧ 0< -3x + 2y + 2
---   example = ((Int.- + 3 ∷ Int.- + 2 ∷ []) ∷+ (+ 19))
---           ∷ ((+ 4 ∷ Int.- + 3 ∷ []) ∷+ (+ 1))
---           ∷ ((Int.- + 3 ∷ + 2 ∷ []) ∷+ (+ 2)) ∷ []
--- \end{code}
-
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--- \subsubsection{Verification}
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\end{code}
 
 
--- Divides term elimination procedure
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Verification}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
--- \begin{align*}
---     ∃x . (d₁ ∣ a₁x + e₁) ∧ (d₂ ∣ a₂x + e₂) ∧ (a₃x + e₃)
---     \intertext{Introduce existential for first term}
---     ∃x . ∃y . (d₁y = a₁x + e₁) ∧ (d₂ ∣ a₂x + e₂) ∧ (a₃x + e₃)
---     \intertext{Rearrange first term}
---     ∃x . ∃y . (a₁x = d₁y - e₁) ∧ (d₂ ∣ a₂x + e₂) ∧ (a₃x + e₃)
---     \intertext{Multiply all outer coefficients to a common LCM}
---     ∃x . ∃y . (mx = n₁d₁y - n₁e₁) ∧ (n₂d₂ ∣ mx + n₂e₂) ∧ (mx + n₃e₃)
---     \intertext{Substitute mx}
---     ∃y . (m ∣ n₁d₁y - n₁e₁) ∧ (n₂d₂ ∣ n₁d₁y - n₁e₁ + n₂e₂) ∧ (n₁d₁y - n₁e₁ + n₃e₃)
--- \end{align*}
 
--- Because $m < d₁$, this will eventually end. It might get
--- shortcircuited if $d₁ ∣ a₁$ and $d₁ ∣ e₁$.
+Divides term elimination procedure
 
--- \todo{How does it work with multiple divide terms?}
+\begin{align*}
+    ∃x . (d₁ ∣ a₁x + e₁) ∧ (d₂ ∣ a₂x + e₂) ∧ (a₃x + e₃)
+    \intertext{Introduce existential for first term}
+    ∃x . ∃y . (d₁y = a₁x + e₁) ∧ (d₂ ∣ a₂x + e₂) ∧ (a₃x + e₃)
+    \intertext{Rearrange first term}
+    ∃x . ∃y . (a₁x = d₁y - e₁) ∧ (d₂ ∣ a₂x + e₂) ∧ (a₃x + e₃)
+    \intertext{Multiply all outer coefficients to a common LCM}
+    ∃x . ∃y . (mx = n₁d₁y - n₁e₁) ∧ (n₂d₂ ∣ mx + n₂e₂) ∧ (mx + n₃e₃)
+    \intertext{Substitute mx}
+    ∃y . (m ∣ n₁d₁y - n₁e₁) ∧ (n₂d₂ ∣ n₁d₁y - n₁e₁ + n₂e₂) ∧ (n₁d₁y - n₁e₁ + n₃e₃)
+\end{align*}
 
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--- \subsection{Cooper's Algorithm}
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Because $m < d₁$, this will eventually end. It might get
+shortcircuited if $d₁ ∣ a₁$ and $d₁ ∣ e₁$.
 
--- \cite{Cooper1972}
--- \cite{Chaieb2003}
+\todo{How does it work with multiple divide terms?}
 
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--- \subsubsection{Overview}
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Cooper's Algorithm}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--- \subsubsection{Implementation}
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\cite{Cooper1972}
+\cite{Chaieb2003}
 
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--- \subsubsection{Verification}
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Overview}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--- \chapter{Verification and validation}
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Implementation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
--- \todo{Dependent types, higher standards, no tests, we formally describe what correct is}
--- \todo{This report is type-checked}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Verification}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
--- %   Verification and Validation In this section you should outline the
--- %   verification and validation procedures that you've adopted throughout the
--- %   project to ensure that the final product satisfies its specification. In
--- %   particular, you should outline the test procedures that you adopted during
--- %   and after implementation. Your aim here is to convince the reader that the
--- %   product has been thoroughly and appropriately verified. Detailed test
--- %   results should, however, form a separate appendix at the end of the report.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Verification and validation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
--- - Why is this absolutely correct, Agda?
+\todo{Dependent types, higher standards, no tests, we formally describe what correct is}
+\todo{This report is type-checked}
 
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--- \chapter{Results and evaluation}
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%   Verification and Validation In this section you should outline the
+%   verification and validation procedures that you've adopted throughout the
+%   project to ensure that the final product satisfies its specification. In
+%   particular, you should outline the test procedures that you adopted during
+%   and after implementation. Your aim here is to convince the reader that the
+%   product has been thoroughly and appropriately verified. Detailed test
+%   results should, however, form a separate appendix at the end of the report.
 
--- %   Results and Evaluation The aim of this chapter is twofold. On one hand, it
--- %   aims to present the final outcome of the project – i.e., the system
--- %   developed – in an appropriate way so that readers of your report can form a
--- %   clear picture of the system operation and provided functionality without the
--- %   need for a live demo. This would normally require the inclusion of
--- %   screenshots and/or images of the system in operation, and indicative results
--- %   generated by the system. On the other hand, this chapter also aims to
--- %   present an appropriate evaluation of the project as whole, both in terms of
--- %   the outcome and in terms of the process followed.
+- Why is this absolutely correct, Agda?
 
--- %   The evaluation of the outcome is expected to be primarily evidence-based,
--- %   i.e., the result of either an experimental process, like usability tests and
--- %   evaluations, performance-related measurements, etc., or a formal analysis,
--- %   such as algorithmic and mathematical analysis of system properties, etc. The
--- %   precise nature of the evaluation will depend on the project requirements.
--- %   Please note that if you intend to carry out usability tests, you will need
--- %   to first obtain approval from the Department's Ethics Committee - the
--- %   section on Evaluation and Ethics Approval provides further detail.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Results and evaluation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
--- %   The evaluation of the process is expected to be primarily a reflective
--- %   examination of the planning, organisation, implementation and evaluation of
--- %   the project. This will normally include the lessons learnt and explanations
--- %   of any significant deviations from the original project plan.
+%   Results and Evaluation The aim of this chapter is twofold. On one hand, it
+%   aims to present the final outcome of the project – i.e., the system
+%   developed – in an appropriate way so that readers of your report can form a
+%   clear picture of the system operation and provided functionality without the
+%   need for a live demo. This would normally require the inclusion of
+%   screenshots and/or images of the system in operation, and indicative results
+%   generated by the system. On the other hand, this chapter also aims to
+%   present an appropriate evaluation of the project as whole, both in terms of
+%   the outcome and in terms of the process followed.
 
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--- % \chapter{Related work}
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%   The evaluation of the outcome is expected to be primarily evidence-based,
+%   i.e., the result of either an experimental process, like usability tests and
+%   evaluations, performance-related measurements, etc., or a formal analysis,
+%   such as algorithmic and mathematical analysis of system properties, etc. The
+%   precise nature of the evaluation will depend on the project requirements.
+%   Please note that if you intend to carry out usability tests, you will need
+%   to first obtain approval from the Department's Ethics Committee - the
+%   section on Evaluation and Ethics Approval provides further detail.
 
--- %   Related Work You should survey and critically evaluate other work which you
--- %   have read or otherwise considered in the general area of the project topic.
--- %   The aim here is to place your project work in the context of the related
--- %   work.
+%   The evaluation of the process is expected to be primarily a reflective
+%   examination of the planning, organisation, implementation and evaluation of
+%   the project. This will normally include the lessons learnt and explanations
+%   of any significant deviations from the original project plan.
 
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--- \chapter{Summary and conclusions}
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \chapter{Related work}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
--- %   Summary and Conclusions In the final chapter of your report, you should
--- %   summarise how successful you were in achieving the original project
--- %   objectives, what problems arose in the course of the project which could not
--- %   be readily solved in the time available, and how your work could be
--- %   developed in future to enhance its utility. It is OK to be upbeat,
--- %   especially if you are pleased with what you have achieved!
+%   Related Work You should survey and critically evaluate other work which you
+%   have read or otherwise considered in the general area of the project topic.
+%   The aim here is to place your project work in the context of the related
+%   work.
 
--- \bibliographystyle{apalike}
--- \bibliography{bibliography}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Summary and conclusions}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
--- %   References/Bibliography The references should consist of a list of papers
--- %   and books referred to in the body of your report. These should be formatted
--- %   as for scholarly computer science publications. Most text- and word-
--- %   processors provide useful assistance with referencing - for example latex
--- %   uses bibtex. As you know, there are two principal reference schemes.
+%   Summary and Conclusions In the final chapter of your report, you should
+%   summarise how successful you were in achieving the original project
+%   objectives, what problems arose in the course of the project which could not
+%   be readily solved in the time available, and how your work could be
+%   developed in future to enhance its utility. It is OK to be upbeat,
+%   especially if you are pleased with what you have achieved!
 
--- %       In one, the list is ordered alphabetically on author's surname and
--- %       within the text references take the form (Surname, Date). For example, a
--- %       reference to a 2014 work by Zobel would be written (Zobel, 2014).
+\bibliographystyle{apalike}
+\bibliography{bibliography}
 
--- %       In the other, the list is ordered in the sequence in which a reference
--- %       first appears in the report.
+%   References/Bibliography The references should consist of a list of papers
+%   and books referred to in the body of your report. These should be formatted
+%   as for scholarly computer science publications. Most text- and word-
+%   processors provide useful assistance with referencing - for example latex
+%   uses bibtex. As you know, there are two principal reference schemes.
 
--- %   For both schemes, each reference in the reference list should contain the
--- %   following information: author, title, journal or publisher (if book), volume
--- %   and part, and date. Depending of the style of references you use, Zobel's
--- %   2014 book might be listed in the references of your report as follows:
+%       In one, the list is ordered alphabetically on author's surname and
+%       within the text references take the form (Surname, Date). For example, a
+%       reference to a 2014 work by Zobel would be written (Zobel, 2014).
 
--- %   Justin Zobel. Writing for Computer Science. Springer-Verlag, 2014.
+%       In the other, the list is ordered in the sequence in which a reference
+%       first appears in the report.
 
--- %   For more examples of the first style, see the way in which references are
--- %   laid out in "Software Engineering: A Practitioner's Approach" by Roger
--- %   Pressman. Note carefully that your references should not just be a list of
--- %   URLs! Web pages are not scholarly publications. In particular, they are not
--- %   peer reviewed, and so could contain erroneous or inaccurate information.
+%   For both schemes, each reference in the reference list should contain the
+%   following information: author, title, journal or publisher (if book), volume
+%   and part, and date. Depending of the style of references you use, Zobel's
+%   2014 book might be listed in the references of your report as follows:
 
--- \appendix
+%   Justin Zobel. Writing for Computer Science. Springer-Verlag, 2014.
 
--- % \chapter{Detailed Specification and Design}
--- %   Appendix A - Detailed Specification and Design This appendix should contain
--- %   the details of your project specification that were not included in the main
--- %   body of your report.
+%   For more examples of the first style, see the way in which references are
+%   laid out in "Software Engineering: A Practitioner's Approach" by Roger
+%   Pressman. Note carefully that your references should not just be a list of
+%   URLs! Web pages are not scholarly publications. In particular, they are not
+%   peer reviewed, and so could contain erroneous or inaccurate information.
 
--- % \chapter{Detailed Test Strategy and Test Cases}
--- %   Appendix B - Detailed Test Strategy and Test Cases This appendix should
--- %   contain the details of the strategy you used to test your software, together
--- %   with your tabulated and commented test results.
+\appendix
 
--- % \chapter{User Guide}
--- %   Appendix C - User Guide This appendix should provide a detailed description
--- %   of how to use your system. In some cases, it may also be appropriate to
--- %   include a second guide dealing with maintenance and updating issues.
+% \chapter{Detailed Specification and Design}
+%   Appendix A - Detailed Specification and Design This appendix should contain
+%   the details of your project specification that were not included in the main
+%   body of your report.
 
--- \end{document}
+% \chapter{Detailed Test Strategy and Test Cases}
+%   Appendix B - Detailed Test Strategy and Test Cases This appendix should
+%   contain the details of the strategy you used to test your software, together
+%   with your tabulated and commented test results.
+
+% \chapter{User Guide}
+%   Appendix C - User Guide This appendix should provide a detailed description
+%   of how to use your system. In some cases, it may also be appropriate to
+%   include a second guide dealing with maintenance and updating issues.
+
+\end{document}
