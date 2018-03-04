@@ -1269,6 +1269,7 @@ module Presburger where
   open import Data.Unit using (⊤ ; tt)
   open import Data.Bool using (Bool ; true ; false ; T ; not ; _∨_)
   open import Data.Empty using (⊥)
+  open import Data.Nat.DivMod using (_div_)
 
   open import Prologue using (_<?_ ; ×-list)
 \end{code}
@@ -1354,70 +1355,164 @@ superset domains; the non-validity gets carried onto subset domains.
 \caption{Decidability across domains}
 \end{figure}
 
-There exist Presburger formulas that are valid on integers but invalid
-on natural numbers: $∃x.\:x+1=0$. Or some formulas that are valid on
-rational numbers but invalid on integers: $∃x.\:2x=1$. \todo{cite
-intro} When considering which decision procedures to explore, we
-immediately discarted the ones acting on real numbers — irrational
-numbers are not straightforward to handle in constructive
-mathematics. The most well-documented procedures are on integers, and
-the usage of integer Presburger arithmetic is common enough for an
-automated solver to be of value. To solve a problem on natural
-numbers, we just need add a condition $0 < x + 1$ to every existential
-quantifier.
+Some Presburger formulas are valid on integers but invalid on natural
+numbers: $∃x.\:x+1=0$. Others are valid on rational numbers but
+invalid on integers: $∃x.\:2x=1$. \todo{cite intro} When considering
+which decision procedures to explore, we immediately discarted the
+ones acting on real numbers — irrational numbers are not
+straightforward to handle in constructive mathematics. The most
+well-documented procedures are on integers, and the usage of integer
+Presburger arithmetic is common enough for an automated solver to be
+of value. To solve a problem on natural numbers, we just need add a
+condition $0 ≤ x$ to every existential quantifier.
 
-We have choosen the Omega Test and Cooper's Algorithm as
-the two decision procedures to explore. Both algorithms follow a
-common high-level structure: they normalise their input formula
-eliminating all universal quantifiers, then repeatedly select and
-eliminate any innermost existential quantifiers until there are none
-left. The elimination of universal quantifiers is carried out relying
-on the following equivalence:
+We have choosen the Omega Test and Cooper's Algorithm as two decision
+procedures on integers of interest to explore. Michael Norrish depicts
+in \cite{Norrish2003} the state of affairs of the implementation of
+Presburger arithmetic deciding procedures by proof assistants. He then
+continues describing the Omega Test and Cooper's Algorithm and
+proposes implementations for both of them for the proof assistant
+HOL. Our attempt to implement both procedures in Agda is significantly
+based on his work, which he also briefly outlines in a later
+talk. \cite{Norrish2006}
+
+\subsubsection{Common ideas}
+
+Both algorithms have certain aspects in common. As part of their
+normalisation process, they require the elimination of universal
+quantifiers. This is carried out resorting to the following
+equivalence:
 
 \begin{equation*}
 ∀x.\:P(x) \equiv ¬∃x.\:¬P(x)
 \end{equation*}
 
-Additionally, by limiting our domain to the integers we are able to
-use a canonical form for relations on ~\AgdaDatatype{Atom}s.
+Existential quantifiers are distributed over disjunctions:
 
-\begin{align*}
-a < b &\equiv 0 < b - a     \\
-a > b &\equiv 0 < a - b     \\
-a ≤ b &\equiv 0 < b - a + 1 \\
-a ≥ b &\equiv 0 < a - b + 1 \\
-a = b &\equiv 0 < a - b + 1 ∧ 0 < b - a + 1
-\end{align*}
+\begin{equation*}
+∃x.\:P(x) \lor Q(x) \equiv (∃x.\:P(x)) \lor (∃x.\:Q(x))
+\end{equation*}
 
-Both procedures need to have negation pushed to inside:
+Negation needs to be pushed inside conjunctions and disjunctions and
+double negation eliminated:
 
 \begin{align*}
 \neg (P(x) \land Q(x)) &\equiv \neg P(x) \lor  \neg Q(x) \\
 \neg (P(x) \lor  Q(x)) &\equiv \neg P(x) \land \neg Q(x) \\
-\neg \neg P(x)         &\equiv P(x)                      \\
-\neg (0 < a)           &\equiv 0 < - a + 1
+\neg \neg P(x)         &\equiv P(x) 
 \end{align*}
 
-And implication can be decomposed:
+By limiting their domain to the integers, they can both translate all
+relations on ~\AgdaDatatype{Atom}s into a canonical form: $0 ≤ ax + by
++ \ldots + cz + k$. Operations on ~\AgdaDatatype{Atom}s can be
+evaluated into linear transformations of the form $ax + by + \ldots +
+cz + k$. We use a single type to represent both and keep record of the
+number of variables in the linear inequation, so that we can push this
+requirement onto the vector of coefficients. Here, each coefficient's
+index indicates the distance to where that variable was introduced.
 
-\begin{equation*}
-P(x) \implies Q(x) \equiv \neg P(x) \lor Q(x)
-\end{equation*}
+\begin{code}
+  record Linear (i : ℕ) : Set where
+    constructor _∷+_
+    field
+      cs : Vec ℤ i
+      k : ℤ
+\end{code}
 
-Additionally, while Cooper's Algorithm deals with formulas in negation
-normal form, the Omega Test requires formulas to be in disjunctive
-normal form. Formulas have to be normalised through the existential
-quantifier elimination process too, which often results in terms that
-blow up in size, making the Omega Test considerably slower than
-Cooper's Algorithm.
+\AgdaHide{
+\begin{code}
+  open Linear
+  pattern _x+_+ℤ_ c cs k = (c ∷ cs) ∷+ k
+  
+  infixl 20 _⊕_
+  infixl 20 _⊝_
 
+  #_ : ∀ {i} → ℤ → Linear i
+  # k = Vec.replicate (+ 0) ∷+ k
+  
+  ø : ∀ {i} → Linear i
+  ø = Vec.replicate (+ 0) ∷+ (+ 0)
+  
+  _x+∅ : ∀ {i} → ℤ → Linear (suc i)
+  n x+∅ = (n ∷ Vec.replicate (+ 0)) ∷+ (+ 0)
+  
+  _x+_ : ∀ {i} → ℤ → Linear i → Linear (suc i)
+  n x+ (cs ∷+ k) = (n ∷ cs) ∷+ k
+
+  _≤_x : ∀ {i} → Linear i → ℤ → Linear (suc i)
+  (cs ∷+ k) ≤ α x = (α ∷ (Vec.map -_ cs)) ∷+ (- k)
+
+  _x≤_ : ∀ {i} → ℤ → Linear i → Linear (suc i)
+  β x≤ (cs ∷+ k) = ((- β) ∷ cs) ∷+ k
+  
+  ⇑1 : ∀ {i} → Linear i → Linear (suc i)
+  ⇑1 (cs ∷+ k) = ((+ 0) ∷ cs) ∷+ k
+  
+  _⊛_ : ∀ {i} → ℤ → Linear i → Linear i
+  z ⊛ (cs ∷+ k) = Vec.map (z *_) cs ∷+ (z * k)
+ 
+  _⊕_ : ∀ {i} → Linear i → Linear i → Linear i
+  (cs₁ ∷+ k₁) ⊕ (cs₂ ∷+ k₂) = Vec.zipWith _+_ cs₁ cs₂ ∷+ (k₁ + k₂)
+ 
+  ⊝_ : ∀ {i} → Linear i → Linear i
+  ⊝ (cs ∷+ k) = (Vec.map -_ cs) ∷+ (- k)
+
+  _⊝_ : ∀ {i} → Linear i → Linear i → Linear i
+  a ⊝ b = a ⊕ (⊝ b)
+
+  ⊘ : ∀ {i} → Linear i → Linear i
+  ⊘ a = (# (+ 1)) ⊝ a
+  
+  head : ∀ {i} → Linear (suc i) → ℤ
+  head (c x+ cs +ℤ k) = c
+
+  tail : ∀ {i} → Linear (suc i) → Linear i
+  tail (c x+ cs +ℤ k) = cs ∷+ k
+  
+  substitute : ∀ {i} → Linear i → Linear (suc i) → Linear i
+  substitute x a = (head a ⊛ x) ⊕ tail a
+
+  irrelevant : ∀ {i} → Linear (suc i) → Set
+  irrelevant a = + 0 ≡ head a
+
+  lower-bound : ∀ {i} → Linear (suc i) → Set
+  lower-bound a = + 0 < head a
+
+  upper-bound : ∀ {i} → Linear (suc i) → Set
+  upper-bound a = + 0 > head a
+
+  classifyₐ : ∀ {i} → (a : Linear (suc i)) → Tri (lower-bound a) (irrelevant a) (upper-bound a)
+  classifyₐ = <-cmp (+ 0) ∘ head 
+      
+  classify : ∀ {i} → (as : List (Linear (suc i)))
+             → (List (Σ (Linear (suc i)) lower-bound))
+             × (List (Σ (Linear (suc i)) irrelevant))
+             × (List (Σ (Linear (suc i)) upper-bound))
+  classify [] = [] , [] , []
+  classify (a ∷ as) with classifyₐ a | classify as
+  classify (a ∷ as) | Tri.tri< p _ _ | ls , is , us = (a , p) ∷ ls , is , us
+  classify (a ∷ as) | Tri.tri≈ _ p _ | ls , is , us = ls , (a , p) ∷ is , us
+  classify (a ∷ as) | Tri.tri> _ _ p | ls , is , us = ls , is , (a , p) ∷ us
+\end{code}
+}
+
+Relations can then be normalised as follows:
+
+\begin{align*}
+p < q &\equiv 0 ≤ q - p + 1 \\
+p > q &\equiv 0 ≤ p - q + 1 \\
+p ≤ q &\equiv 0 ≤ q - p     \\
+p ≥ q &\equiv 0 ≤ p - q     \\
+p = q &\equiv 0 ≤ q - p \land 0 ≤ p - q
+\end{align*}
+  
 As part of their existential quantifier elimination step, both
-algorithms require to have the coefficients of the variable to
-eliminate set to $1$ or $-1$. First, the lowest common multiplier $ℓ$
-of all coefficients on $x$ is computed, then all atoms are multiplied
-appropriately so that their coefficient on $x$ becomes equal to the
-LCM $ℓ$. Finally, all coefficients are divided by $ℓ$ in accordance to
-the following equivalence:
+algorithms require to have variable coefficients set to $1$ or
+$-1$. First, the lowest common multiplier $ℓ$ of all coefficients on
+$x$ is computed, then all atoms are multiplied appropriately so that
+their coefficient on $x$ becomes equal to the LCM $ℓ$. Finally, all
+coefficients are divided by $ℓ$ in accordance to the following
+equivalence:
 
 \begin{equation*}
 P(ℓx) \equiv P(x) \land ℓ | x
@@ -1431,233 +1526,134 @@ negations can be eliminated by introducing existential quantifiers,
 which is often not desirable.
 
 \begin{align*}
-n ∣ a     &\equiv ∃x.\:nx = a \\
+n ∣ a &\equiv ∃x.\:nx = a \\
 n ∤ a &\equiv ∃x.\:\bigvee_{i ∈ 1 \ldots n - 1} nx = (a + i)
 \end{align*}
 
-Michael Norrish depicts in \cite{Norrish2003} the state of affairs of
-the implementation of Presburger arithmetic deciding procedures by
-proof assistants. He then continues describing the Omega Test and
-Cooper's Algorithm and proposes implementations for both of them for
-the proof assistant HOL. Our attempt to implement both procedures in
-Agda is significantly based on his work, which he also briefly
-outlines in a later talk. \cite{Norrish2006}
+Finally, the heart of both decision procedures are equivalence
+theorems that eliminate a single innermost existential quantifier. Let
+~\AgdaDatatype{NormalForm}~\AgdaBound{i}~ represent a normal form
+containing no quantifiers and where ~\AgdaBound{i}~ variables are
+available. Then both decision procedures will return an equivalent
+form with the variable referring to the most recent binding
+eliminated:
 
-%%%%%%%%%%%%%
-% COMMON
-%%%%%%%%%%%%%
-
-\AgdaHide{
 \begin{code}
-  record Affine (i : ℕ) : Set where
-    constructor _∷+_
-    field
-      cs : Vec ℤ i
-      k : ℤ
-
-  open Affine
-  pattern _x+_+ℤ_ c cs k = (c ∷ cs) ∷+ k
-  
-  infixl 20 _⊕_
-  infixl 20 _⊝_
-
-  #_ : ∀ {i} → ℤ → Affine i
-  # k = Vec.replicate (+ 0) ∷+ k
-  
-  ø : ∀ {i} → Affine i
-  ø = Vec.replicate (+ 0) ∷+ (+ 0)
-  
-  _x+∅ : ∀ {i} → ℤ → Affine (suc i)
-  n x+∅ = (n ∷ Vec.replicate (+ 0)) ∷+ (+ 0)
-  
-  _x+_ : ∀ {i} → ℤ → Affine i → Affine (suc i)
-  n x+ (cs ∷+ k) = (n ∷ cs) ∷+ k
-
-  _≤_x : ∀ {i} → Affine i → ℤ → Affine (suc i)
-  (cs ∷+ k) ≤ α x = (α ∷ (Vec.map -_ cs)) ∷+ (- k)
-
-  _x≤_ : ∀ {i} → ℤ → Affine i → Affine (suc i)
-  β x≤ (cs ∷+ k) = ((- β) ∷ cs) ∷+ k
-  
-  ⇑1 : ∀ {i} → Affine i → Affine (suc i)
-  ⇑1 (cs ∷+ k) = ((+ 0) ∷ cs) ∷+ k
-  
-  _⊛_ : ∀ {i} → ℤ → Affine i → Affine i
-  z ⊛ (cs ∷+ k) = Vec.map (z *_) cs ∷+ (z * k)
- 
-  _⊕_ : ∀ {i} → Affine i → Affine i → Affine i
-  (cs₁ ∷+ k₁) ⊕ (cs₂ ∷+ k₂) = Vec.zipWith _+_ cs₁ cs₂ ∷+ (k₁ + k₂)
- 
-  _⊝_ : ∀ {i} → Affine i → Affine i → Affine i
-  (cs₁ ∷+ k₁) ⊝ (cs₂ ∷+ k₂) = Vec.zipWith _-_ cs₁ cs₂ ∷+ (k₁ - k₂)
-
-  ⊝_ : ∀ {i} → Affine i → Affine i
-  ⊝ (cs ∷+ k) = (Vec.map -_ cs) ∷+ (- k)
-
-  ⊘ : ∀ {i} → Affine i → Affine i
-  ⊘ a = (# (+ 1)) ⊝ a
-  
-  head : ∀ {i} → Affine (suc i) → ℤ
-  head (c x+ cs +ℤ k) = c
-
-  tail : ∀ {i} → Affine (suc i) → Affine i
-  tail (c x+ cs +ℤ k) = cs ∷+ k
-  
-  substitute : ∀ {i} → Affine i → Affine (suc i) → Affine i
-  substitute x a = (head a ⊛ x) ⊕ tail a
-
-  irrelevant : ∀ {i} → Affine (suc i) → Set
-  irrelevant a = + 0 ≡ head a
-
-  lower-bound : ∀ {i} → Affine (suc i) → Set
-  lower-bound a = + 0 < head a
-
-  upper-bound : ∀ {i} → Affine (suc i) → Set
-  upper-bound a = + 0 > head a
-
-  classifyₐ : ∀ {i} → (a : Affine (suc i)) → Tri (lower-bound a) (irrelevant a) (upper-bound a)
-  classifyₐ = <-cmp (+ 0) ∘ head 
-      
-  classify : ∀ {i} → (as : List (Affine (suc i)))
-             → (List (Σ (Affine (suc i)) lower-bound))
-             × (List (Σ (Affine (suc i)) irrelevant))
-             × (List (Σ (Affine (suc i)) upper-bound))
-  classify [] = [] , [] , []
-  classify (a ∷ as) with classifyₐ a | classify as
-  classify (a ∷ as) | Tri.tri< p _ _ | ls , is , us = (a , p) ∷ ls , is , us
-  classify (a ∷ as) | Tri.tri≈ _ p _ | ls , is , us = ls , (a , p) ∷ is , us
-  classify (a ∷ as) | Tri.tri> _ _ p | ls , is , us = ls , is , (a , p) ∷ us
-    
-  -- module Constraint where
-  --   data Constraint (i : ℕ) : Set where
-  --     0<_ :           (e : Affine i) → Constraint i
-  --     _∣_ : (d : ℕ) → (e : Affine i) → Constraint i
-  --     _∤_ : (d : ℕ) → (e : Affine i) → Constraint i
-  --   
-  --   affine : ∀ {i} → Constraint i → Affine i
-  --   affine (0< e)  = e
-  --   affine (d ∣ e) = e
-  --   affine (d ∤ e) = e
-  --   
-  --   on-affine : ∀ {i j} (f : Affine i → Affine j) → (Constraint i → Constraint j)
-  --   on-affine f (0< e)  = 0< f e
-  --   on-affine f (d ∣ e) = d ∣ f e
-  --   on-affine f (d ∤ e) = d ∤ f e
-  --   
-  --   on-coefficient : ∀ {i} → (ℤ → ℤ) → (Affine (suc i) → Affine (suc i))
-  --   on-coefficient f ((c ∷ cs) ∷+ k) = ((f c) ∷ cs) ∷+ k
-  --   
-  --   coefficient : ∀ {i} → Constraint (suc i) → ℤ
-  --   coefficient = Aff.head ∘ affine
-
-  --   divisor : ∀ {i} → Constraint i → Maybe ℕ
-  --   divisor (0< e)  = nothing
-  --   divisor (d ∣ e) = just d
-  --   divisor (d ∤ e) = just d
-  -- 
-  --   ¬_ : ∀ {i} → Constraint i → Constraint i
-  --   ¬ (0< e) = 0< (Aff.¬ e)
-  --   ¬ (d ∣ e) = d ∤ e
-  --   ¬ (d ∤ e) = d ∣ e
-  --   
-  -- open Constraint using (Constraint ; 0<_ ; _∣_ ; _∤_)
+  Elimination : (ℕ → Set) → ℕ → Set
+  Elimination NormalForm i = NormalForm (suc i) → NormalForm i
 \end{code}
-}
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{The Omega Test}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\cite{Pugh1991}
+The Omega Test was first introduced as a Presburger arithmetic
+deciding procedure in \cite{Pugh1991}. It adapts Fourier-Motzkin
+elimination — which acts on real numbers — to integers.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Overview}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Normalisation}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Implementation}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The Omega Test requires input formulas to be put into disjunctive
+normal form. This makes normalisation an expensive exponential
+step, as can be seen when cojunctions are normalised over
+disjunctions:
 
-\begin{code}
-  module NormalForm (P : ℕ → Set) where
-  
-    mutual
-      data Existential (i : ℕ) : Set where
-        ¬∃ : Conjunction (suc i) → Existential i
-        ∃  : Conjunction (suc i) → Existential i
-  
-      record Conjunction (i : ℕ) : Set where
-        inductive
-        constructor ∧_∧_∧
-        field
-          constraints : List (P i)
-          existentials : List (Existential i)
-  
-    open Existential public
-    open Conjunction public
-    
-    DNF : (i : ℕ) → Set
-    DNF i = List (Conjunction i)
+\begin{equation*}
+(P \lor Q) \land (R \lor S) \equiv (P \land R) \lor (P \land S) \lor
+(Q \land R) \lor (Q \land S)
+\end{equation*}
 
-  open NormalForm
-\end{code}
+The result of normalisation has to be a structure where:
+
+\begin{itemize}[noitemsep]
+  \item the upper layer is a disjunction;
+  \item a disjunction only contains conjunctions;
+  \item a conjunction only contains conjunctions, existential
+        quantifiers, negated existential quantifiers, or
+        ~\AgdaDatatype{Linear}s;
+\end{itemize}
+
+The following tree structure discerns, inside of each conjunction,
+those substructures that contain existentials from those that do
+not. This helps identify conjunctions on which the elimination step
+can be performed — those with ~\AgdaField{existentials}~ empty. An
+alternative is to expand the list ~\AgdaField{existentials}~ into two
+lists: one containing conjunctions inside existentials, the other
+containing conjunctions inside negated existentials. The proposed
+implementation makes it easier to handle both
+~\AgdaInductiveConstructor{∃}~ and ~\AgdaInductiveConstructor{¬∃}~
+uniformly.
+
+As with ~\AgdaDatatype{Formula}s, note that the information about the
+number of available variables is pushed inside the structure —
+~\AgdaDatatype{DNF}~\AgdaBound{n} can only contain
+~\AgdaDatatype{Conjunction}~\AgdaBound{n}~ and so forth. The
+constructors ~\AgdaInductiveConstructor{∃}~ and
+\AgdaInductiveConstructor{¬∃} make one variable more available.
 
 \begin{code}
   mutual
-    traverse-binding : ∀ {i}{P Q : ℕ → Set} (f : ∀ {j} → P j → Q j) → Existential P i → Existential Q i
-    traverse-binding f (¬∃ c) = ¬∃ (traverse-conjunction f c)
-    traverse-binding f (∃ c) = ∃ (traverse-conjunction f c)
-      
-    traverse-conjunction : ∀ {i}{P Q : ℕ → Set} (f : ∀ {j} → P j → Q j) → Conjunction P i → Conjunction Q i
-    traverse-conjunction f ∧ cs ∧ es ∧ = ∧ List.map f cs ∧ traverse-bindings f es ∧
-      where
-      -- Because sometimes Agda can't see it
-      traverse-bindings : ∀ {i}{P Q : ℕ → Set} (f : ∀ {j} → P j → Q j) → List (Existential P i) → List (Existential Q i)
-      traverse-bindings f [] = []
-      traverse-bindings f (e ∷ es) = traverse-binding f e ∷ traverse-bindings f es
-      
-  traverse-dnf : ∀ {i}{P Q : ℕ → Set} (f : ∀ {j} → P j → Q j) → DNF P i → DNF Q i
-  traverse-dnf f = List.foldr (λ p q → traverse-conjunction f p ∷ q) []
+    data Existential (i : ℕ) : Set where
+      ¬∃ : Conjunction (suc i) → Existential i
+      ∃  : Conjunction (suc i) → Existential i
+  
+    record Conjunction (i : ℕ) : Set where
+      inductive
+      constructor 0≤_∧_E
+      field
+        constraints : List (Linear i)
+        existentials : List (Existential i)
+  
+  DNF : (i : ℕ) → Set
+  DNF i = List (Conjunction i)
 \end{code}
 
+Normalisation proceeds recursively, eliminating universal quantifiers,
+pushing conjunction and negation inward, normalising implication,
+evaluating operations on atoms and normalising relations between them.
+
+\todo{Add anex}
+\AgdaHide{
 \begin{code}
-  ¬-existential : ∀ {i P} → Existential P i → Existential P i
+  open Existential public
+  open Conjunction public
+  
+  ¬-existential : ∀ {i} → Existential i → Existential i
   ¬-existential (¬∃ x) = ∃ x
   ¬-existential (∃ x) = ¬∃ x
     
-  ¬-conjunction : ∀ {i} → Conjunction Affine i → DNF Affine i
-  ¬-conjunction ∧ cs ∧ bs ∧ = List.map (λ c → ∧ ⊘ c ∷ [] ∧                   [] ∧) cs
-                           ++ List.map (λ b → ∧       [] ∧ ¬-existential b ∷ [] ∧) bs
+  ¬-conjunction : ∀ {i} → Conjunction i → DNF i
+  ¬-conjunction 0≤ cs ∧ bs E = List.map (λ c → 0≤ ⊘ c ∷ [] ∧                   [] E) cs
+                            ++ List.map (λ b → 0≤       [] ∧ ¬-existential b ∷ [] E) bs
                                                                                                
-  _∧-dnf_ : ∀ {i} → DNF Affine i → DNF Affine i → DNF Affine i
+  _∧-dnf_ : ∀ {i} → DNF i → DNF i → DNF i
   xs ∧-dnf ys = List.map 
-     (λ {((∧ cx ∧ bx ∧) , (∧ cy ∧ by ∧)) → ∧ cx ++ cy ∧ bx ++ by ∧})
+     (λ {((0≤ cx ∧ bx E) , (0≤ cy ∧ by E)) → 0≤ cx ++ cy ∧ bx ++ by E})
      (×-list xs ys)
   
-  _∨-dnf_ : ∀ {i P} → DNF P i → DNF P i → DNF P i
+  _∨-dnf_ : ∀ {i} → DNF i → DNF i → DNF i
   _∨-dnf_ = _++_
   
-  ¬-dnf_ : ∀ {i} → DNF Affine i → DNF Affine i
+  ¬-dnf_ : ∀ {i} → DNF i → DNF i
   ¬-dnf_ = List.foldl (λ dnf conj → dnf ∧-dnf ¬-conjunction conj) []
   
-  _⇒-dnf_ : ∀ {i} → DNF Affine i → DNF Affine i → DNF Affine i
+  _⇒-dnf_ : ∀ {i} → DNF i → DNF i → DNF i
   xs ⇒-dnf ys = (¬-dnf xs) ∨-dnf (xs ∧-dnf ys)
   
-  ∃-dnf_ : ∀ {i} → DNF Affine (suc i) → DNF Affine i
-  ∃-dnf_ = List.map λ conj → ∧ [] ∧ (∃ conj ∷ []) ∧
+  ∃-dnf_ : ∀ {i} → DNF (suc i) → DNF i
+  ∃-dnf_ = List.map λ conj → 0≤ [] ∧ (∃ conj ∷ []) E
                                                      
-  ∀-dnf : ∀ {i} → DNF Affine (suc i) → DNF Affine i
+  ∀-dnf : ∀ {i} → DNF (suc i) → DNF i
   ∀-dnf = ¬-dnf_ ∘ ∃-dnf_ ∘ ¬-dnf_
   
-  norm-rel : ∀ {i} → Rel → Affine i → Affine i → List (Affine i)
-  norm-rel <' a₁ a₂ = (a₂ ⊝ a₁) ⊕ (# (+ 1)) ∷ []
-  norm-rel >' a₁ a₂ = (a₁ ⊝ a₂) ⊕ (# (+ 1)) ∷ []
-  norm-rel ≤' a₁ a₂ = a₂ ⊝ a₁ ∷ []
-  norm-rel ≥' a₁ a₂ = a₁ ⊝ a₂ ∷ []
-  norm-rel =' a₁ a₂ = a₂ ⊝ a₁ ∷ a₁ ⊝ a₂ ∷ []
-  
-  norm-atom : ∀ {i} → Atom i → Affine i
+  norm-rel : ∀ {i} → Rel → Linear i → Linear i → List (Linear i)
+  norm-rel <' l₁ l₂ = (l₂ ⊝ l₁) ⊕ (# (+ 1)) ∷ []
+  norm-rel >' l₁ l₂ = (l₁ ⊝ l₂) ⊕ (# (+ 1)) ∷ []
+  norm-rel ≤' l₁ l₂ = l₂ ⊝ l₁ ∷ []
+  norm-rel ≥' l₁ l₂ = l₁ ⊝ l₂ ∷ []
+  norm-rel =' l₁ l₂ = l₂ ⊝ l₁ ∷ l₁ ⊝ l₂ ∷ []
+
+  norm-atom : ∀ {i} → Atom i → Linear i
   norm-atom (num' n) = # n
   norm-atom (x +' y) = (norm-atom x) ⊕ (norm-atom y)
   norm-atom (n *' x) = n ⊛ (norm-atom x)
@@ -1665,96 +1661,133 @@ outlines in a later talk. \cite{Norrish2006}
   norm-atom (var' (suc n)) with norm-atom (var' n)
   ...                     | cs ∷+ k = (+ 0) x+ cs +ℤ k
     
-  norm-form : {i : ℕ} → Formula i → DNF Affine i
+  norm-form : {i : ℕ} → Formula i → DNF i
   norm-form (x ∧' y) = (norm-form x) ∧-dnf (norm-form y)
   norm-form (x ∨' y) = (norm-form x) ∨-dnf (norm-form y)
   norm-form (x ⇒' y) = (norm-form x) ⇒-dnf (norm-form y)
   norm-form (¬' x) = ¬-dnf (norm-form x)
   norm-form (∃' x) = ∃-dnf (norm-form x)
   norm-form (∀' x) = ∀-dnf (norm-form x)
-  norm-form (d ∣' x) = ∧ {!!} ∧ [] ∧ ∷ []
-  norm-form (x [ r ] y) = ∧ norm-rel r (norm-atom x) (norm-atom y) ∧ [] ∧ ∷ []
+  norm-form (d ∣' x) = 0≤ {!!} ∧ [] E ∷ []
+  norm-form (x [ r ] y) = 0≤ norm-rel r (norm-atom x) (norm-atom y) ∧ [] E ∷ []
 \end{code}
+}
 
+
+\subsubsection{Elimination}
+
+\subsubsection{Verification}
+
+\todo{Many things:}
+Main theorem, what it acts upon
+Explain how divides terms created by splinters need to be handled
+Why we don't handle divide terms
+Why just dark-shadow
+What solving the dark-shadow implies
+What the proof looks like
+Mention splitting linears into three cats
+Mention why it is easier to handle irrelevant linears like this
+
+
+Pugh's main theorem acts on conjuntions with the following form:
 
 \begin{code}
-  a≤αx : ∀ {i} → Affine (suc i) → Affine i × ℤ
-  a≤αx (α x+ -a +ℤ -ka) = ⊝ (-a ∷+ -ka) , α
-
-  ≡a≤αx : ∀ {i} → (c : Affine (suc i)) → lower-bound c → c ≡ (uncurry _≤_x (a≤αx c))
-  ≡a≤αx ((x ∷ cs₁) ∷+ k₁) p = {!!}
-
-  βx≤b : ∀ {i} → Affine (suc i) → ℤ × Affine i
-  βx≤b (-β x+ b +ℤ kb) = (- -β) , (b ∷+ kb)
-
-  ≡βx≤b : ∀ {i} → (c : Affine (suc i)) → upper-bound c → c ≡ (uncurry _x≤_ (βx≤b c))
-  ≡βx≤b ((x ∷ cs₁) ∷+ k₁) p = {!!}
-
-  dark-shadow : ∀ {i} → Affine (suc i) → Affine (suc i) → Affine i
-  dark-shadow l u with a≤αx l | βx≤b u
-  ...             | (a , α)   | (β , b) = (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# ((α - + 1) * (β - + 1)))
+  dark-shadow : ∀ {i} → Linear (suc i) → Linear (suc i) → Linear i
+  dark-shadow l u with head l | ⊝ (tail l) | - (head u) | tail u
+  ...             | α | a | β | b = (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# ((α - + 1) * (β - + 1)))
       
-  omega : ∀ {i} → List (Affine (suc i)) → List (Affine i)
+  omega : ∀ {i} → List (Linear (suc i)) → List (Linear i)
   omega as with classify as
   omega as | ls , is , us = List.map (λ { ((l , _) , (u , _)) → dark-shadow l u}) (×-list ls us)
                          ++ List.map (tail ∘ proj₁) is
 
   Env : ℕ → Set
   Env i = Vec ℤ i
-  
-  _[_/x]ₐ : ∀ {i} → Affine i → Env i → Affine 0
-  a [ [] /x]ₐ = a
-  a [ (x ∷ xs) /x]ₐ = (substitute (# x) a) [ xs /x]ₐ
-  
-  _[_/x] : ∀ {i} → List (Affine i) → Env i → List (Affine 0)
-  as [ xs /x] = List.map _[ xs /x]ₐ as
-  
-  ⊨ₐ₀ : Affine 0 → Set
-  ⊨ₐ₀ a = (+ 0) Int.< (Affine.k a)
 
-  ⊨₀ : List (Affine 0) → Set
-  ⊨₀ = All ⊨ₐ₀
+  _[_/x]ₗ : ∀ {i} → Linear i → Env i → Linear 0
+  a [ [] /x]ₗ = a
+  a [ (x ∷ xs) /x]ₗ = (substitute (# x) a) [ xs /x]ₗ
+  
+  _[_/x] : ∀ {i} → List (Linear i) → Env i → List (Linear 0)
+  as [ xs /x] = List.map _[ xs /x]ₗ as
 
-  ⊨ₐ : ∀ {i} → Affine i → Set
-  ⊨ₐ {i} a = Σ (Env i) λ ρ → ⊨ₐ₀ (a [ ρ /x]ₐ)
+  ⊨ₗ₀ : Linear 0 → Set
+  ⊨ₗ₀ a = (+ 0) < (Linear.k a)
 
-  ⊨ : ∀ {i} → List (Affine i) → Set
+  ⊨₀ : List (Linear 0) → Set
+  ⊨₀ = All ⊨ₗ₀
+
+  ⊨ₗ : ∀ {i} → Linear i → Set
+  ⊨ₗ {i} a = Σ (Env i) λ ρ → ⊨ₗ₀ (a [ ρ /x]ₗ)
+
+  ⊨ : ∀ {i} → List (Linear i) → Set
   ⊨ {i} as = Σ (Env i) λ ρ → ⊨₀ (as [ ρ /x])
 
-  ⊭ : ∀ {i} → List (Affine i) → Set
+  ⊭ : ∀ {i} → List (Linear i) → Set
   ⊭ {i} as = (ρ : Env i) → ⊨₀ (as [ ρ /x]) → ⊥
   
-  ¬⊭→⊨ : (as : List (Affine 0)) → (⊭ as → ⊥) → ⊨ as
+  ¬⊭→⊨ : (as : List (Linear 0)) → (⊭ as → ⊥) → ⊨ as
   ¬⊭→⊨ = {!!}
   
-  ⟦_⟧ₐ₀ : (a : Affine 0) → Dec (⊨ₐ₀ a)
-  ⟦ [] ∷+ n ⟧ₐ₀ = (+ 0) <? n
   
-  ⟦_⟧₀ : (as : List (Affine 0)) → Dec (⊨₀ as)
+  ⟦_⟧ₗ₀ : (a : Linear 0) → Dec (⊨ₗ₀ a)
+  ⟦ a ⟧ₗ₀ = (+ 0) <? (Linear.k a)
+
+  ⟦_⟧₀ : (as : List (Linear 0)) → Dec (⊨₀ as)
   ⟦ [] ⟧₀ = yes []
-  ⟦ a ∷ as ⟧₀ with ⟦ a ⟧ₐ₀ | ⟦ as ⟧₀
+  ⟦ a ∷ as ⟧₀ with ⟦ a ⟧ₗ₀ | ⟦ as ⟧₀
   ⟦ a ∷ as ⟧₀ | no ¬pa | _       = no λ { (pa ∷ pas) → ¬pa pa}
   ⟦ a ∷ as ⟧₀ | yes _  | no ¬pas = no λ { (_ ∷ pas) → ¬pas pas}
   ⟦ a ∷ as ⟧₀ | yes pa | yes pas = yes (pa ∷ pas)
 
-  ⟦_⟧ : ∀ {i} → (as : List (Affine i)) → (xs : Env i) → Dec (⊨₀ (as [ xs /x]))
+  ⟦_⟧ : ∀ {i} → (as : List (Linear i)) → (xs : Env i) → Dec (⊨₀ (as [ xs /x]))
   ⟦ as ⟧ xs = ⟦ as [ xs /x] ⟧₀
 
-  ⟦_⟧Ω : ∀ {i} → List (Affine i) → Bool
+  ⟦_⟧Ω : ∀ {i} → List (Linear i) → Bool
   ⟦_⟧Ω {zero} a with ⟦ a ⟧₀
   ...           | yes p = true
   ...           | no ¬p = false
   ⟦_⟧Ω {suc i} a = ⟦ omega a ⟧Ω
   
   
-  module Ω-Inner (i : ℕ) (l u : Affine (suc i)) (0<α : lower-bound l) (0<β : upper-bound u) where
-    βa≤αb : Affine i
-    βa≤αb with a≤αx l | βx≤b u
-    βa≤αb | a , α     | β , b = (α ⊛ b) ⊝ (β ⊛ a)
+  module Ω-Inner (i : ℕ) (l u : Linear (suc i)) (lbl : lower-bound l) (ubu : upper-bound u) where
+    α = head l
+    a = ⊝ (tail l)
+    0<α : (+ 0) < α
+    0<α = {!!}
+    β = - (head u)
+    b = tail u
+    0<β : (+ 0) < β
+    0<β = {!!}
+    
+    [α-1][β-1]≤αb-aβ : Linear i
+    [α-1][β-1]≤αb-aβ = (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# ((α - + 1) * (β - + 1)))
+    
+    aβ≤αb : Linear i
+    aβ≤αb = ((α ⊛ b) ⊝ (β ⊛ a))
 
-    ⊨βa≤αb : ⊨ₐ (dark-shadow l u) → ⊨ₐ βa≤αb
-    ⊨βa≤αb (ρ , pds) with a≤αx l | βx≤b u
-    ... | (a , α) | (β , b) = ρ , bar ((α ⊛ b) ⊝ (β ⊛ a)) ((α - + 1) * (β - + 1)) {!!} ρ pds 
+    aβ≤αβx≤αb : List (Linear (suc i))
+    aβ≤αβx≤αb = ((α * β) x+∅) ⊝ (β ⊛ ⇑1 a)
+              ∷ (α ⊛ ⇑1 b) ⊝ ((α * β) x+∅)
+              ∷ []
+
+    αβn<aβ≤αb<αβ[n+1] : ℕ → List (Linear i)
+    αβn<aβ≤αb<αβ[n+1] n = ((β ⊛ a) ⊝ (# (α * β * + n)) ⊝ (# (+ 1)))
+                        ∷ (α ⊛ b) ⊝ (β ⊛ a)
+                        ∷ ((# (α * β * + (suc n))) ⊝ (α ⊛ b) ⊝ (# (+ 1)))
+                        ∷ []
+  
+    α≤αβ[n+1]-αb : ℕ → Linear i
+    α≤αβ[n+1]-αb n = (# (α * β * + (suc n))) ⊝ (α ⊛ b) ⊝ (# α)
+
+    β≤aβ-αβn : ℕ → Linear i
+    β≤aβ-αβn n = (β ⊛ a) ⊝ (# (α * β * + n)) ⊝ (# β)
+
+    αb-aβ<[α-1][β-1] : Linear i
+    αb-aβ<[α-1][β-1] = (# ((α - + 1) * (β - + 1))) ⊝ (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# (+ 1))
+
+    ⊨βa≤αb : ⊨ₗ (dark-shadow l u) → ⊨ₗ aβ≤αb
+    ⊨βa≤αb (ρ , pds) = ρ , bar ((α ⊛ b) ⊝ (β ⊛ a)) ((α - + 1) * (β - + 1)) {!!} ρ pds 
       where
         open IntProp.≤-Reasoning
         open import Data.Vec.Properties using (map-id ; map-cong ; zipWith-replicate₂)
@@ -1768,60 +1801,79 @@ outlines in a later talk. \cite{Norrish2006}
           m
             ∎
         
-        bar : ∀ {i} → (a : Affine i) (n : ℤ) (pn : (+ 0) Int.≤ n) (ρ : Env i) → ⊨ₐ₀ (a ⊝ (# n) [ ρ /x]ₐ) → ⊨ₐ₀ (a [ ρ /x]ₐ)
+        bar : ∀ {i} → (a : Linear i) (n : ℤ) (pn : (+ 0) Int.≤ n) (ρ : Env i) → ⊨ₗ₀ (a ⊝ (# n) [ ρ /x]ₗ) → ⊨ₗ₀ (a [ ρ /x]ₗ)
         bar (csa ∷+ ka) n pn ρ p = begin 
           + 1
             ≤⟨ p ⟩
-          k (((csa ∷+ ka) ⊝ (# n)) [ ρ /x]ₐ)
+          k (((csa ∷+ ka) ⊝ (# n)) [ ρ /x]ₗ)
             ≡⟨ refl ⟩
-          k ((Vec.zipWith _-_ csa (Vec.replicate (+ 0)) ∷+ (ka - n)) [ ρ /x]ₐ)
-            ≡⟨ cong (λ csa' → k ((csa' ∷+ (ka - n)) [ ρ /x]ₐ)) (zipWith-replicate₂ _-_ csa (+ 0)) ⟩
-          k ((Vec.map (_- (+ 0)) csa ∷+ (ka - n)) [ ρ /x]ₐ)
-            ≡⟨ refl ⟩
-          k ((Vec.map (_+ (+ 0)) csa ∷+ (ka - n)) [ ρ /x]ₐ)
-            ≡⟨ cong (λ csa' → k ((csa' ∷+ (ka - n)) [ ρ /x]ₐ)) (map-cong +-identityʳ csa) ⟩
-          k ((Vec.map id csa ∷+ (ka - n)) [ ρ /x]ₐ)
-            ≡⟨ cong (λ csa' → k ((csa' ∷+ (ka - n)) [ ρ /x]ₐ)) (map-id csa) ⟩
-          k ((csa ∷+ (ka + - n)) [ ρ /x]ₐ)
-            ≤⟨ {!!} ⟩
-          k ((csa ∷+ ka) [ ρ /x]ₐ)
-            ∎
-        
-    aβ≤αβx≤αb : List (Affine (suc i))
-    aβ≤αβx≤αb with a≤αx l | βx≤b u
-    aβ≤αβx≤αb | a , α     | β , b = ((α * β) x+∅) ⊝ (β ⊛ ⇑1 a)
-                                  ∷ (α ⊛ ⇑1 b) ⊝ ((α * β) x+∅)
-                                  ∷ []
-
-    ⊭aβ≤αβx≤αb : ⊭ (l ∷ u ∷ []) → ⊭ aβ≤αβx≤αb
-    ⊭aβ≤αβx≤αb ⊭l∧u ρ (pl ∷ pu ∷ []) with a≤αx l | βx≤b u
-    ... | (a , α) | (β , b) = ⊭l∧u ρ (foo ∷ bar ∷ [])
-      where
-        open IntProp.≤-Reasoning
-        open IntProp using (*-+-right-mono)
-        foo = begin 
-          + 1
-            ≤⟨ *-+-right-mono {!!} {!!} ⟩
-          k ((α x+ (⊝ a)) [ ρ /x]ₐ)
+          k ((Vec.zipWith _+_ csa (Vec.map -_ (Vec.replicate (+ 0))) ∷+ (ka + - n)) [ ρ /x]ₗ)
             ≡⟨ {!!} ⟩
-          k (l [ ρ /x]ₐ)
+          {!!}
+            ≡⟨ {!!} ⟩
+          k ((csa ∷+ (ka + - n)) [ ρ /x]ₗ)
+            ≤⟨ {!!} ⟩
+          k ((csa ∷+ ka) [ ρ /x]ₗ)
             ∎
-
-        bar = begin {!!}
         
-    αβi<aβ≤αb<αβ[i+1] : ℕ → List (Affine (suc i))
-    αβi<aβ≤αb<αβ[i+1] = {!!}
+    ⊨αβn<aβ≤αb<αβ[n+1] : ⊨ₗ aβ≤αb → ⊭ (l ∷ u ∷ []) → Σ ℕ λ n → ⊨ (αβn<aβ≤αb<αβ[n+1] n)
+    ⊨αβn<aβ≤αb<αβ[n+1] (ρ , ⊨p₁) ⊭p₂ = n , ρ , r₁ ∷ r₂ ∷ r₃ ∷ []
+      where
+        -- How to compute n?
+        open IntProp.≤-Reasoning
+        n = {!!}
+        ⊭aβ≤αβx≤αb : ⊭ ((α * β) x+∅ ⊝ ⇑1 (β ⊛ a) ∷ ⇑1 (α ⊛ b) ⊝ ((α * β) x+∅) ∷ [])
+        ⊭aβ≤αβx≤αb ρ' (⊨p₃ ∷ ⊨p₄ ∷ []) = ⊭p₂ ρ' ({!!} ∷ {!!} ∷ [])
+        
+        r₁ = begin
+          + 1
+            ≤⟨ {!!} ⟩
+          k (((β ⊛ a) ⊝ (# (α * β * + n)) ⊝ (# (+ 1))) [ ρ /x]ₗ)
+            ∎
+        r₂ = begin
+          + 1
+            ≤⟨ {!!} ⟩
+          k (((α ⊛ b) ⊝ (β ⊛ a)) [ ρ /x]ₗ)
+            ∎
+        r₃ = begin
+          + 1
+            ≤⟨ {!!} ⟩
+          k (((# (α * β * + suc n)) ⊝ (α ⊛ b) ⊝ (# (+ 1))) [ ρ /x]ₗ)
+            ∎
+    
+    ⊨α≤αβ[n+1]-αb : (n : ℕ) →  ⊨ (αβn<aβ≤αb<αβ[n+1] n) → ⊨ₗ (α≤αβ[n+1]-αb n)
+    ⊨α≤αβ[n+1]-αb n (ρ , (⊨p₁ ∷ ⊨p₂ ∷ ⊨p₃ ∷ [])) = ρ , (begin 
+      + 1
+        ≤⟨ {!!} ⟩
+      k (α≤αβ[n+1]-αb n [ ρ /x]ₗ)
+        ∎)
+      where open IntProp.≤-Reasoning
+    
+    ⊨β≤aβ-αβn : (n : ℕ) →  ⊨ (αβn<aβ≤αb<αβ[n+1] n) → ⊨ₗ (β≤aβ-αβn n)
+    ⊨β≤aβ-αβn n (ρ , (⊨p₁ ∷ ⊨p₂ ∷ ⊨p₃ ∷ [])) = ρ , (begin 
+      + 1
+        ≤⟨ {!!} ⟩
+      k (β≤aβ-αβn n [ ρ /x]ₗ)
+        ∎)
+      where open IntProp.≤-Reasoning
 
-    ⊨αβi<aβ≤αb<αβ[i+1] : ⊭ aβ≤αβx≤αb → (i : ℕ) → ⊨ (αβi<aβ≤αb<αβ[i+1] i)
-    ⊨αβi<aβ≤αb<αβ[i+1] = {!!}
-  
+    ⊨αb-aβ<[α-1][β-1] : {n : ℕ} → ⊨ (α≤αβ[n+1]-αb n ∷ β≤aβ-αβn n ∷ []) → ⊨ₗ αb-aβ<[α-1][β-1]
+    ⊨αb-aβ<[α-1][β-1] (ρ , (⊨p₁ ∷ ⊨p₂ ∷ [])) = ρ , (begin 
+      + 1
+        ≤⟨ {!!} ⟩
+      k (αb-aβ<[α-1][β-1] [ ρ /x]ₗ)
+        ∎)
+      where open IntProp.≤-Reasoning
 
-  Ω-Correct : ∀ {i} (as : List (Affine i)) → Set
+    ⊨⊥ : ⊨ ([α-1][β-1]≤αb-aβ ∷ αb-aβ<[α-1][β-1] ∷ []) → ⊥
+    ⊨⊥ (ρ , (⊨p ∷ ⊭p ∷ [])) = {!!}
+
+  Ω-Correct : ∀ {i} (as : List (Linear i)) → Set
   Ω-Correct as with ⟦ as ⟧Ω
   Ω-Correct as | false = ⊤
   Ω-Correct as | true  = ⊨ as
 
-  Ω-correct : ∀ {i} (p : List (Affine (suc i))) → Ω-Correct p
+  Ω-correct : ∀ {i} (p : List (Linear (suc i))) → Ω-Correct p
   Ω-correct p with true ≡ ⟦ p ⟧Ω | ⟦ p ⟧Ω
   Ω-correct p | z | false = tt
   Ω-correct p | z | true = {!!}
@@ -1831,11 +1883,6 @@ outlines in a later talk. \cite{Norrish2006}
 
             
 \end{code}
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Verification}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 Divides term elimination procedure
@@ -1864,17 +1911,53 @@ shortcircuited if $d₁ ∣ a₁$ and $d₁ ∣ e₁$.
 \cite{Cooper1972}
 \cite{Chaieb2003}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Overview}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\AgdaHide{
+\begin{code}
+    
+  -- module Constraint where
+  --   data Constraint (i : ℕ) : Set where
+  --     0<_ :           (e : Linear i) → Constraint i
+  --     _∣_ : (d : ℕ) → (e : Linear i) → Constraint i
+  --     _∤_ : (d : ℕ) → (e : Linear i) → Constraint i
+  --   
+  --   affine : ∀ {i} → Constraint i → Linear i
+  --   affine (0< e)  = e
+  --   affine (d ∣ e) = e
+  --   affine (d ∤ e) = e
+  --   
+  --   on-affine : ∀ {i j} (f : Linear i → Linear j) → (Constraint i → Constraint j)
+  --   on-affine f (0< e)  = 0< f e
+  --   on-affine f (d ∣ e) = d ∣ f e
+  --   on-affine f (d ∤ e) = d ∤ f e
+  --   
+  --   on-coefficient : ∀ {i} → (ℤ → ℤ) → (Linear (suc i) → Linear (suc i))
+  --   on-coefficient f ((c ∷ cs) ∷+ k) = ((f c) ∷ cs) ∷+ k
+  --   
+  --   coefficient : ∀ {i} → Constraint (suc i) → ℤ
+  --   coefficient = Aff.head ∘ affine
+
+  --   divisor : ∀ {i} → Constraint i → Maybe ℕ
+  --   divisor (0< e)  = nothing
+  --   divisor (d ∣ e) = just d
+  --   divisor (d ∤ e) = just d
+  -- 
+  --   ¬_ : ∀ {i} → Constraint i → Constraint i
+  --   ¬ (0< e) = 0< (Aff.¬ e)
+  --   ¬ (d ∣ e) = d ∤ e
+  --   ¬ (d ∤ e) = d ∣ e
+  --   
+  -- open Constraint using (Constraint ; 0<_ ; _∣_ ; _∤_)
+\end{code}
+}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Implementation}
+\subsection{Future work}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Verification}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Omega:
+  Evaluation
+  Splinters
+  Adapt stdlib
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Verification and validation}
