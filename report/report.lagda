@@ -5,6 +5,10 @@
 % Equations
 \usepackage{amsmath}
 
+% Theorems
+\usepackage{amsthm}
+\newtheorem{theorem}{Theorem}
+
 % Links and their colors
 \usepackage[
   colorlinks=true,
@@ -55,6 +59,10 @@
 % Diagrams
 \usepackage{tikz}
 \usetikzlibrary{positioning}
+
+% Inline lists
+\usepackage[inline]{enumitem}
+
 
 \begin{document}
 
@@ -1261,7 +1269,7 @@ module Presburger where
   open import Data.List as List using (List ; [] ; _∷_ ; _++_)
   open import Data.Maybe using (Maybe ; nothing ; just)
   open import Data.Product using (Σ ; _×_ ; _,_ ; proj₁ ; proj₂ ; uncurry)
-  open import Relation.Binary.PropositionalEquality using (_≡_ ; refl; cong ; sym ; _≢_)
+  open import Relation.Binary.PropositionalEquality using (_≡_ ; refl; cong ; sym ; _≢_ ; inspect)
   open import Relation.Nullary using (Dec ; yes ; no)
   open import Data.Integer.Properties as IntProp
   open import Relation.Binary using (Tri)
@@ -1378,29 +1386,17 @@ talk. \cite{Norrish2006}
 
 \subsubsection{Common ideas}
 
-Both algorithms have certain aspects in common. As part of their
-normalisation process, they require the elimination of universal
-quantifiers. This is carried out resorting to the following
-equivalence:
+The heart of both decision procedures are equivalence theorems that
+eliminate a single innermost existential quantifier. Let $P$ and $Q$
+be quantifier-free formulas, then both theorems are of form:
 
 \begin{equation*}
-∀x.\:P(x) \equiv ¬∃x.\:¬P(x)
+∃x.\:P(x) \equiv Q
 \end{equation*}
 
-Existential quantifiers are distributed over disjunctions:
-
-\begin{equation*}
-∃x.\:P(x) \lor Q(x) \equiv (∃x.\:P(x)) \lor (∃x.\:Q(x))
-\end{equation*}
-
-Negation needs to be pushed inside conjunctions and disjunctions and
-double negation eliminated:
-
-\begin{align*}
-\neg (P(x) \land Q(x)) &\equiv \neg P(x) \lor  \neg Q(x) \\
-\neg (P(x) \lor  Q(x)) &\equiv \neg P(x) \land \neg Q(x) \\
-\neg \neg P(x)         &\equiv P(x) 
-\end{align*}
+This elimination process has to be ran recursively from the bottom
+up. The result, a formula with no variables, can then be trivially
+evaluated. 
 
 By limiting their domain to the integers, they can both translate all
 relations on ~\AgdaDatatype{Atom}s into a canonical form: $0 ≤ ax + by
@@ -1410,6 +1406,8 @@ cz + k$. We use a single type to represent both and keep record of the
 number of variables in the linear inequation, so that we can push this
 requirement onto the vector of coefficients. Here, each coefficient's
 index indicates the distance to where that variable was introduced.
+The goal of any decision procedure is thus to return an equivalent
+structure containing only ~\AgdaDatatype{Linear}~\AgdaNumber{0}.
 
 \begin{code}
   record Linear (i : ℕ) : Set where
@@ -1430,8 +1428,8 @@ index indicates the distance to where that variable was introduced.
   #_ : ∀ {i} → ℤ → Linear i
   # k = Vec.replicate (+ 0) ∷+ k
   
-  ø : ∀ {i} → Linear i
-  ø = Vec.replicate (+ 0) ∷+ (+ 0)
+  ∅ : ∀ {i} → Linear i
+  ∅ = Vec.replicate (+ 0) ∷+ (+ 0)
   
   _x+∅ : ∀ {i} → ℤ → Linear (suc i)
   n x+∅ = (n ∷ Vec.replicate (+ 0)) ∷+ (+ 0)
@@ -1496,6 +1494,29 @@ index indicates the distance to where that variable was introduced.
 \end{code}
 }
 
+Universal quantifiers need to be eliminated as part of their
+normalisation process. This is carried out resorting to the following
+equivalence:
+
+\begin{equation*}
+∀x.\:P(x) \equiv ¬∃x.\:¬P(x)
+\end{equation*}
+
+Existential quantifiers are distributed over disjunctions:
+
+\begin{equation*}
+∃x.\:P(x) \lor Q(x) \equiv (∃x.\:P(x)) \lor (∃x.\:Q(x))
+\end{equation*}
+
+Negation needs to be pushed inside conjunctions and disjunctions and
+double negation eliminated:
+
+\begin{align*}
+\neg (P(x) \land Q(x)) &\equiv \neg P(x) \lor  \neg Q(x) \\
+\neg (P(x) \lor  Q(x)) &\equiv \neg P(x) \land \neg Q(x) \\
+\neg \neg P(x)         &\equiv P(x) 
+\end{align*}
+
 Relations can then be normalised as follows:
 
 \begin{align*}
@@ -1506,22 +1527,10 @@ p ≥ q &\equiv 0 ≤ p - q     \\
 p = q &\equiv 0 ≤ q - p \land 0 ≤ p - q
 \end{align*}
   
-As part of their existential quantifier elimination step, both
-algorithms require to have variable coefficients set to $1$ or
-$-1$. First, the lowest common multiplier $ℓ$ of all coefficients on
-$x$ is computed, then all atoms are multiplied appropriately so that
-their coefficient on $x$ becomes equal to the LCM $ℓ$. Finally, all
-coefficients are divided by $ℓ$ in accordance to the following
-equivalence:
-
-\begin{equation*}
-P(ℓx) \equiv P(x) \land ℓ | x
-\end{equation*}
-
 Divide terms are a special case where a natural number and an
 \AgdaDatatype{Atom} are related. The Omega Test and Cooper's Algorithm
 handle divide terms differently, and we will therefore analyse their
-use separately. It suffices to say that divide terms and their
+use separately. Here it suffices to say that divide terms and their
 negations can be eliminated by introducing existential quantifiers,
 which is often not desirable.
 
@@ -1530,32 +1539,19 @@ n ∣ a &\equiv ∃x.\:nx = a \\
 n ∤ a &\equiv ∃x.\:\bigvee_{i ∈ 1 \ldots n - 1} nx = (a + i)
 \end{align*}
 
-Finally, the heart of both decision procedures are equivalence
-theorems that eliminate a single innermost existential quantifier. Let
-~\AgdaDatatype{NormalForm}~\AgdaBound{i}~ represent a normal form
-containing no quantifiers and where ~\AgdaBound{i}~ variables are
-available. Then both decision procedures will return an equivalent
-form with the variable referring to the most recent binding
-eliminated:
-
-\begin{code}
-  Elimination : (ℕ → Set) → ℕ → Set
-  Elimination NormalForm i = NormalForm (suc i) → NormalForm i
-\end{code}
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{The Omega Test}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The Omega Test was first introduced as a Presburger arithmetic
-deciding procedure in \cite{Pugh1991}. It adapts Fourier-Motzkin
-elimination — which acts on real numbers — to integers.
+The Omega Test was first introduced as procedure deciding Presburger
+arithmetic in \cite{Pugh1991}. It adapts Fourier-Motzkin elimination —
+which acts on real numbers — to integers.
 
 \subsubsection{Normalisation}
 
 The Omega Test requires input formulas to be put into disjunctive
 normal form. This makes normalisation an expensive exponential
-step, as can be seen when cojunctions are normalised over
+step, as can be clearly seen when cojunctions are normalised over
 disjunctions:
 
 \begin{equation*}
@@ -1564,27 +1560,20 @@ disjunctions:
 \end{equation*}
 
 The result of normalisation has to be a structure where:
-
-\begin{itemize}[noitemsep]
+\begin{enumerate*}[label=(\roman*)]
   \item the upper layer is a disjunction;
-  \item a disjunction only contains conjunctions;
+  \item a disjunction only contains conjunctions; and
   \item a conjunction only contains conjunctions, existential
-        quantifiers, negated existential quantifiers, or
-        ~\AgdaDatatype{Linear}s;
-\end{itemize}
+        quantifiers, negated existential quantifiers, or atoms.
+\end{enumerate*}
 
-The following tree structure discerns, inside of each conjunction,
-those substructures that contain existentials from those that do
-not. This helps identify conjunctions on which the elimination step
-can be performed — those with ~\AgdaField{existentials}~ empty. An
-alternative is to expand the list ~\AgdaField{existentials}~ into two
-lists: one containing conjunctions inside existentials, the other
-containing conjunctions inside negated existentials. The proposed
-implementation makes it easier to handle both
-~\AgdaInductiveConstructor{∃}~ and ~\AgdaInductiveConstructor{¬∃}~
-uniformly.
+The following tree-like structure contains ~\AgdaDatatype{Linear}s as
+leafs and, within each conjunction, distinguishes leafs from further
+subtrees containing existential quantifiers — making it clear which
+conjunctions to perform elimination on: on those with no further
+subtrees.
 
-As with ~\AgdaDatatype{Formula}s, note that the information about the
+As with ~\AgdaDatatype{Formula}s, note that the restriction on the
 number of available variables is pushed inside the structure —
 ~\AgdaDatatype{DNF}~\AgdaBound{n} can only contain
 ~\AgdaDatatype{Conjunction}~\AgdaBound{n}~ and so forth. The
@@ -1673,13 +1662,19 @@ evaluating operations on atoms and normalising relations between them.
 \end{code}
 }
 
-
 \subsubsection{Elimination}
 
-\subsubsection{Verification}
+\begin{theorem}[Pugh, 1991]
+\begin{align*}
+(∃x.L(x) ∧ U(x)) &\equiv
+(\bigwedge_{i,j} (\alpha_i - 1)(\beta_j - 1) ≤ (\alpha_i b_j - a_i \beta_j)) \\
+&\qquad {} \qquad {} \qquad {} \qquad {} \qquad {} \lor \\
+&\qquad {} \bigvee_i \bigvee^{\left\lfloor \alpha_i - \frac{\alpha_i}{m} - 1 \right\rfloor}_{k=0}
+∃x. (\alpha_i x = a_i + k) \land L(x) \land U(x)
+\end{align*}
+\end{theorem}
 
-\todo{Many things:}
-Main theorem, what it acts upon
+What the input to the main theorem is, what the output looks like
 Explain how divides terms created by splinters need to be handled
 Why we don't handle divide terms
 Why just dark-shadow
@@ -1687,6 +1682,26 @@ What solving the dark-shadow implies
 What the proof looks like
 Mention splitting linears into three cats
 Mention why it is easier to handle irrelevant linears like this
+
+
+Divides term elimination procedure
+
+\begin{align*}
+    ∃x . (d₁ ∣ a₁x + e₁) ∧ (d₂ ∣ a₂x + e₂) ∧ (a₃x + e₃)
+    \intertext{Introduce existential for first term}
+    ∃x . ∃y . (d₁y = a₁x + e₁) ∧ (d₂ ∣ a₂x + e₂) ∧ (a₃x + e₃)
+    \intertext{Rearrange first term}
+    ∃x . ∃y . (a₁x = d₁y - e₁) ∧ (d₂ ∣ a₂x + e₂) ∧ (a₃x + e₃)
+    \intertext{Multiply all outer coefficients to a common LCM}
+    ∃x . ∃y . (mx = n₁d₁y - n₁e₁) ∧ (n₂d₂ ∣ mx + n₂e₂) ∧ (mx + n₃e₃)
+    \intertext{Substitute mx}
+    ∃y . (m ∣ n₁d₁y - n₁e₁) ∧ (n₂d₂ ∣ n₁d₁y - n₁e₁ + n₂e₂) ∧ (n₁d₁y - n₁e₁ + n₃e₃)
+\end{align*}
+
+Because $m < d₁$, this will eventually end. It might get
+shortcircuited if $d₁ ∣ a₁$ and $d₁ ∣ e₁$.
+
+\todo{How does it work with multiple divide terms?}
 
 
 Pugh's main theorem acts on conjuntions with the following form:
@@ -1700,7 +1715,11 @@ Pugh's main theorem acts on conjuntions with the following form:
   omega as with classify as
   omega as | ls , is , us = List.map (λ { ((l , _) , (u , _)) → dark-shadow l u}) (×-list ls us)
                          ++ List.map (tail ∘ proj₁) is
+\end{code}
 
+\subsubsection{Verification}
+
+\begin{code}
   Env : ℕ → Set
   Env i = Vec ℤ i
 
@@ -1726,9 +1745,7 @@ Pugh's main theorem acts on conjuntions with the following form:
   ⊭ : ∀ {i} → List (Linear i) → Set
   ⊭ {i} as = (ρ : Env i) → ⊨₀ (as [ ρ /x]) → ⊥
   
-  ¬⊭→⊨ : (as : List (Linear 0)) → (⊭ as → ⊥) → ⊨ as
-  ¬⊭→⊨ = {!!}
-  
+  postulate ¬⊭→⊨ : (as : List (Linear 0)) → (⊭ as → ⊥) → ⊨ as
   
   ⟦_⟧ₗ₀ : (a : Linear 0) → Dec (⊨ₗ₀ a)
   ⟦ a ⟧ₗ₀ = (+ 0) <? (Linear.k a)
@@ -1749,8 +1766,51 @@ Pugh's main theorem acts on conjuntions with the following form:
   ...           | no ¬p = false
   ⟦_⟧Ω {suc i} a = ⟦ omega a ⟧Ω
   
+  \end{code}
+
+  \begin{code}
+  lemma₀ : ∀ {i} (n : ℤ) (ρ : Env i) → k ((⊝ (# n)) [ ρ /x]ₗ) ≡ k ((# (- n)) [ ρ /x]ₗ)
+  lemma₀ n ρ = begin 
+    k ((⊝ (# n)) [ ρ /x]ₗ)
+      ≡⟨⟩
+    k ((Vec.map -_ (Vec.replicate (+ 0)) ∷+ (- n)) [ ρ /x]ₗ)
+      ≡⟨ cong (λ ⊚ → k (((⊚ ∷+ (- n)) [ ρ /x]ₗ))) (map-replicate -_ (+ 0) _) ⟩
+    k ((Vec.replicate (- + 0) ∷+ (- n)) [ ρ /x]ₗ)
+      ≡⟨⟩
+    k ((# (- n)) [ ρ /x]ₗ)
+      ∎
+    where
+      open Relation.Binary.PropositionalEquality.≡-Reasoning
+      open import Data.Vec.Properties using (map-replicate)
   
-  module Ω-Inner (i : ℕ) (l u : Linear (suc i)) (lbl : lower-bound l) (ubu : upper-bound u) where
+  lemma₁ : ∀ {i} (csa : Vec ℤ i) (ka n : ℤ) (ρ : Env i) → k (((csa ∷+ ka) ⊝ (# n)) [ ρ /x]ₗ) ≡ k ((csa ∷+ (ka + - n)) [ ρ /x]ₗ)
+  lemma₁ csa ka n ρ = begin 
+    k (((csa ∷+ ka) ⊝ (# n)) [ ρ /x]ₗ)
+      ≡⟨⟩
+    k (((csa ∷+ ka) ⊕ (⊝ # n)) [ ρ /x]ₗ)
+      ≡⟨⟩
+    k ((Vec.zipWith _+_ csa (cs (⊝ (# n))) ∷+ (ka + - n)) [ ρ /x]ₗ)
+      ≡⟨ cong (λ ⊚ → k {!(? [ ρ /x]ₗ)!}) (lemma₀ n ρ) ⟩
+    k ((Vec.zipWith _+_ csa (cs (# (- n))) ∷+ (ka + - n)) [ ρ /x]ₗ)
+      ≡⟨ {!!} ⟩
+    k ((Vec.zipWith _+_ csa (Vec.replicate (+ 0)) ∷+ (ka + - n)) [ ρ /x]ₗ)
+      ≡⟨ cong (λ ⊚ → k ((⊚ ∷+ (ka + - n)) [ ρ /x]ₗ) ) (zipWith-replicate₂ _+_ csa (+ 0)) ⟩
+    k ((Vec.map (_+ (+ 0)) csa ∷+ (ka + - n)) [ ρ /x]ₗ)
+      ≡⟨ cong (λ ⊚ → k ((⊚ ∷+ (ka + - n)) [ ρ /x]ₗ)) (map-cong +-identityʳ csa) ⟩
+    k ((Vec.map id csa ∷+ (ka + - n)) [ ρ /x]ₗ)
+      ≡⟨ cong (λ ⊚ → k ((⊚ ∷+ (ka + - n)) [ ρ /x]ₗ)) (map-id csa) ⟩
+    k ((csa ∷+ (ka + - n)) [ ρ /x]ₗ)
+      ∎
+    where
+      open Relation.Binary.PropositionalEquality.≡-Reasoning
+      open import Data.Vec.Properties using (map-id ; map-cong ; map-replicate ; zipWith-replicate₂)
+      open import Data.Integer.Properties using (+-identityʳ)
+  \end{code}
+        
+  \begin{code}
+  module Ω-Inner (i : ℕ) (l u : Linear (suc i))
+                 (lbl : lower-bound l) (ubu : upper-bound u)
+                 where
     α = head l
     a = ⊝ (tail l)
     0<α : (+ 0) < α
@@ -1760,6 +1820,9 @@ Pugh's main theorem acts on conjuntions with the following form:
     0<β : (+ 0) < β
     0<β = {!!}
     
+    import Relation.Binary.PartialOrderReasoning as POR
+    open POR IntProp.≤-poset renaming (_≈⟨_⟩_ to _≡⟨_⟩_ ; _≈⟨⟩_ to _≡⟨⟩_)
+
     [α-1][β-1]≤αb-aβ : Linear i
     [α-1][β-1]≤αb-aβ = (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# ((α - + 1) * (β - + 1)))
     
@@ -1786,11 +1849,10 @@ Pugh's main theorem acts on conjuntions with the following form:
     αb-aβ<[α-1][β-1] : Linear i
     αb-aβ<[α-1][β-1] = (# ((α - + 1) * (β - + 1))) ⊝ (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# (+ 1))
 
-    ⊨βa≤αb : ⊨ₗ (dark-shadow l u) → ⊨ₗ aβ≤αb
-    ⊨βa≤αb (ρ , pds) = ρ , bar ((α ⊛ b) ⊝ (β ⊛ a)) ((α - + 1) * (β - + 1)) {!!} ρ pds 
+    ⊨βa≤αb : ⊨ₗ [α-1][β-1]≤αb-aβ → ⊨ₗ aβ≤αb
+    ⊨βa≤αb (ρ , pds) = ρ , bar ((α ⊛ b) ⊝ (β ⊛ a)) ((α - + 1) * (β - + 1)) {!∅!} ρ pds 
       where
-        open IntProp.≤-Reasoning
-        open import Data.Vec.Properties using (map-id ; map-cong ; zipWith-replicate₂)
+        open import Data.Vec.Properties using (map-id ; map-cong ; map-replicate ; zipWith-replicate₂)
         open import Data.Integer.Properties using (+-identityʳ ; ≤-reflexive)
 
         foo : (m : ℤ) (n : ℕ) → m - + n Int.≤ m
@@ -1806,21 +1868,16 @@ Pugh's main theorem acts on conjuntions with the following form:
           + 1
             ≤⟨ p ⟩
           k (((csa ∷+ ka) ⊝ (# n)) [ ρ /x]ₗ)
-            ≡⟨ refl ⟩
-          k ((Vec.zipWith _+_ csa (Vec.map -_ (Vec.replicate (+ 0))) ∷+ (ka + - n)) [ ρ /x]ₗ)
-            ≡⟨ {!!} ⟩
-          {!!}
-            ≡⟨ {!!} ⟩
+            ≡⟨ lemma₁ csa ka n ρ ⟩
           k ((csa ∷+ (ka + - n)) [ ρ /x]ₗ)
             ≤⟨ {!!} ⟩
           k ((csa ∷+ ka) [ ρ /x]ₗ)
             ∎
-        
+
     ⊨αβn<aβ≤αb<αβ[n+1] : ⊨ₗ aβ≤αb → ⊭ (l ∷ u ∷ []) → Σ ℕ λ n → ⊨ (αβn<aβ≤αb<αβ[n+1] n)
     ⊨αβn<aβ≤αb<αβ[n+1] (ρ , ⊨p₁) ⊭p₂ = n , ρ , r₁ ∷ r₂ ∷ r₃ ∷ []
       where
         -- How to compute n?
-        open IntProp.≤-Reasoning
         n = {!!}
         ⊭aβ≤αβx≤αb : ⊭ ((α * β) x+∅ ⊝ ⇑1 (β ⊛ a) ∷ ⇑1 (α ⊛ b) ⊝ ((α * β) x+∅) ∷ [])
         ⊭aβ≤αβx≤αb ρ' (⊨p₃ ∷ ⊨p₄ ∷ []) = ⊭p₂ ρ' ({!!} ∷ {!!} ∷ [])
@@ -1847,7 +1904,6 @@ Pugh's main theorem acts on conjuntions with the following form:
         ≤⟨ {!!} ⟩
       k (α≤αβ[n+1]-αb n [ ρ /x]ₗ)
         ∎)
-      where open IntProp.≤-Reasoning
     
     ⊨β≤aβ-αβn : (n : ℕ) →  ⊨ (αβn<aβ≤αb<αβ[n+1] n) → ⊨ₗ (β≤aβ-αβn n)
     ⊨β≤aβ-αβn n (ρ , (⊨p₁ ∷ ⊨p₂ ∷ ⊨p₃ ∷ [])) = ρ , (begin 
@@ -1855,7 +1911,6 @@ Pugh's main theorem acts on conjuntions with the following form:
         ≤⟨ {!!} ⟩
       k (β≤aβ-αβn n [ ρ /x]ₗ)
         ∎)
-      where open IntProp.≤-Reasoning
 
     ⊨αb-aβ<[α-1][β-1] : {n : ℕ} → ⊨ (α≤αβ[n+1]-αb n ∷ β≤aβ-αβn n ∷ []) → ⊨ₗ αb-aβ<[α-1][β-1]
     ⊨αb-aβ<[α-1][β-1] (ρ , (⊨p₁ ∷ ⊨p₂ ∷ [])) = ρ , (begin 
@@ -1863,10 +1918,9 @@ Pugh's main theorem acts on conjuntions with the following form:
         ≤⟨ {!!} ⟩
       k (αb-aβ<[α-1][β-1] [ ρ /x]ₗ)
         ∎)
-      where open IntProp.≤-Reasoning
 
     ⊨⊥ : ⊨ ([α-1][β-1]≤αb-aβ ∷ αb-aβ<[α-1][β-1] ∷ []) → ⊥
-    ⊨⊥ (ρ , (⊨p ∷ ⊭p ∷ [])) = {!!}
+    ⊨⊥ (ρ , (⊨p ∷ ⊨¬p ∷ [])) = {!!}
 
   Ω-Correct : ∀ {i} (as : List (Linear i)) → Set
   Ω-Correct as with ⟦ as ⟧Ω
@@ -1874,9 +1928,9 @@ Pugh's main theorem acts on conjuntions with the following form:
   Ω-Correct as | true  = ⊨ as
 
   Ω-correct : ∀ {i} (p : List (Linear (suc i))) → Ω-Correct p
-  Ω-correct p with true ≡ ⟦ p ⟧Ω | ⟦ p ⟧Ω
-  Ω-correct p | z | false = tt
-  Ω-correct p | z | true = {!!}
+  Ω-correct p with ⟦ p ⟧Ω | inspect ⟦_⟧Ω p
+  Ω-correct p | false | j = tt
+  Ω-correct p | true | Relation.Binary.PropositionalEquality.[ eq ] = {!!}
     where
     inner : T ⟦ p ⟧Ω → ⊨ p
     inner ep = {!!} 
@@ -1884,32 +1938,35 @@ Pugh's main theorem acts on conjuntions with the following form:
             
 \end{code}
 
-
-Divides term elimination procedure
-
-\begin{align*}
-    ∃x . (d₁ ∣ a₁x + e₁) ∧ (d₂ ∣ a₂x + e₂) ∧ (a₃x + e₃)
-    \intertext{Introduce existential for first term}
-    ∃x . ∃y . (d₁y = a₁x + e₁) ∧ (d₂ ∣ a₂x + e₂) ∧ (a₃x + e₃)
-    \intertext{Rearrange first term}
-    ∃x . ∃y . (a₁x = d₁y - e₁) ∧ (d₂ ∣ a₂x + e₂) ∧ (a₃x + e₃)
-    \intertext{Multiply all outer coefficients to a common LCM}
-    ∃x . ∃y . (mx = n₁d₁y - n₁e₁) ∧ (n₂d₂ ∣ mx + n₂e₂) ∧ (mx + n₃e₃)
-    \intertext{Substitute mx}
-    ∃y . (m ∣ n₁d₁y - n₁e₁) ∧ (n₂d₂ ∣ n₁d₁y - n₁e₁ + n₂e₂) ∧ (n₁d₁y - n₁e₁ + n₃e₃)
-\end{align*}
-
-Because $m < d₁$, this will eventually end. It might get
-shortcircuited if $d₁ ∣ a₁$ and $d₁ ∣ e₁$.
-
-\todo{How does it work with multiple divide terms?}
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Cooper's Algorithm}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \cite{Cooper1972}
 \cite{Chaieb2003}
+
+As part of its existential quantifier elimination step, Cooper's
+algorithms requires to have variable coefficients set to $1$ or
+$-1$. First, the lowest common multiplier $ℓ$ of all coefficients on
+$x$ is computed, then all atoms are multiplied appropriately so that
+their coefficient on $x$ becomes equal to the LCM $ℓ$. Finally, all
+coefficients are divided by $ℓ$ in accordance to the following
+equivalence:
+
+\begin{equation*}
+P(ℓx) \equiv P(x) \land ℓ | x
+\end{equation*}
+
+\begin{theorem}[Cooper, 1972]
+\begin{align*}
+∃x.\: P(x) \equiv \bigvee_{j=1}^\delta P_{- \infty} (j) \lor
+                  \bigvee_{j=1}^\delta \bigvee_{b \in B} P (b + j)
+\end{align*}
+\begin{align*}
+∃x.\: P(x) \equiv \bigvee_{j=1}^\delta P_{+ \infty} (j) \lor
+                  \bigvee_{j=1}^\delta \bigvee_{a \in A} P (a - j)
+\end{align*}
+\end{theorem}
 
 \AgdaHide{
 \begin{code}
