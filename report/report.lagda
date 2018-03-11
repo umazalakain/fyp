@@ -163,6 +163,9 @@ Needless to say, this project, of little importance to anyone but me,
 is based on large amounts of previous science and countless hours of
 accumulated human effort — a thought that still impresses me.
 
+\todo{Special mention to my neighbour's dog}
+\todo{Dysphoria}
+
 \tableofcontents
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -329,9 +332,11 @@ case) language based on Per Martin-Löf's intuitionistic type
 theory. It was first developed by Catarina Coquand in 1999 and later
 rewriten by Ulf Norell in 2007. \cite{Norell2009} is an excellent
 introduction; more in-depth documentation can be found at
-\url{https://agda.readthedocs.io}. This section will only briefly
-cover the basics required to familiarise the reader with what theorem
-proving in Agda looks like.
+\url{https://agda.readthedocs.io}. This section will briefly cover the
+basics of what theorem proving in Agda looks like and, in the spirit
+of a tutorial, it will sometimes use the second person to avoid 
+excessive third person references like ``the user'' and ``the
+programmer''.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{The experience of programming in Agda}
@@ -339,9 +344,9 @@ proving in Agda looks like.
 
 Development in Agda happens inside Emacs, and is a two way
 conversation between the compiler and the programmer. Wherever a
-definition is required, the user may instead write $?$ and request the
+definition is required, you may instead write $?$ and request the
 type-checker to reload the file. A ``hole'' will appear where the $?$
-was. The programmer can then:
+was. You can then:
 
 \begin{itemize}[noitemsep]
   \item examine the type of the goal;
@@ -354,20 +359,19 @@ was. The programmer can then:
 \end{itemize}
 
 This interactive way of programming, often described as ``hole
-driven'', allows the programmer to work with partial definitions and
-to receive constant feedback from the type-checker.
+driven'', allows you to work with partial definitions and receive
+constant feedback from the type-checker.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Some peculiarities}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Arguments can be named, allowing subsequent arguments to depend on
-them. If an argument can be inferred by the type-checker, the
-programmer may choose to make it implicit by naming it and enclosing
-it in curly braces. Implicit arguments can later still be explicitly
-provided and pattern matched against. If the type of an argument can
-be inferred by the type-checker, the programmer may omit it and use
-$∀$:
+If an argument is named, subsequent arguments can depend on it.  If an
+argument can be inferred by the type-checker, you may choose to make
+it implicit by naming it and enclosing it in curly braces. Implicit
+arguments can later still be explicitly provided and pattern matched
+against. If the type of an argument can be inferred by the
+type-checker, you may omit it and use $∀$:
 
 \begin{code}
     -- All numbers are either even or not even
@@ -391,8 +395,8 @@ any arguments they might receive.
 \end{code}
 
 An anonymous function can be provided wherever a function is
-expected. The programmer can pattern match against its arguments by
-wrapping the arguments and body in curly brances.
+expected. You can pattern match against its arguments by wrapping the
+arguments and body in curly brances.
 
 \begin{code}
     pred : ℕ → ℕ
@@ -445,7 +449,7 @@ Parameters are forced on datatypes, but indices are a choice.
         _∷_ : ∀ {n} → A → Vec A n → Vec A (suc n)
 \end{code}
 
-Whenever a datatype is pattern matched against, it will split into
+Whenever you pattern match against a datatype, it will split into
 those constructors capable of constructing that type:
 
 \begin{code}
@@ -482,8 +486,8 @@ it further refines the types in context.
 \end{code}
 
 If the type-checker can see that a type is impossible to construct,
-pattern matching on it will render the case absurd, and thus there
-will be no need to provide a definition for it.
+pattern matching on it will render the case absurd, and thus you won't
+need to provide a definition for it.
 
 \begin{code}
     -- The successor of an even number cannot be even
@@ -495,10 +499,9 @@ will be no need to provide a definition for it.
 
 The type-checker uses dot patterns to show that pattern matching on
 one argument uniquely implies another. If a value can be inferred by
-the type checker, the user may replace it by an
-underscore. Additionally, underscores can be used as non-binded
-catch-alls outside of dot patterns on the left hand side of a
-definition.
+the type checker, you may replace it by an underscore. Additionally,
+underscores can be used as non-binded catch-alls outside of dot
+patterns on the left hand side of a definition.
 
 \begin{code}
     -- Pattern matching on xs determines n
@@ -507,12 +510,12 @@ definition.
     zipWith' .(suc _) f (x ∷ xs) (y ∷ ys) = f x y ∷ zipWith' _ f xs ys
 \end{code}
 
-With abstraction gives the programmer the ability to steer unification
-in a particular direction by allowing them to pattern match on
-arbitrary well-formed expressions on the left hand side of a
-definition. This may result in the refinement of the rest of the
-arguments. The following example is adapted from Agda-Stdlib and was
-originally presented in \cite{McBride2004}:
+``With abstraction'' gives you the ability to steer unification in a
+particular direction by allowing you to pattern match on arbitrary
+well-formed expressions on the left hand side of a definition. This
+may result in the refinement of the rest of the arguments. The
+following example is adapted from Agda-Stdlib and was originally
+presented in \cite{McBride2004}:
 
 \begin{code}
     -- Ordering n m is a proof…
@@ -533,9 +536,9 @@ originally presented in \cite{McBride2004}:
 \end{code}
 
 As a result of pattern matching
-on \AgdaFunction{compare}~\AgdaBound{m}~\AgdaBound{n} we learn
-about \AgdaBound{m} and \AgdaBound{n}. This is the difference between
-with abstraction and ordinary case splitting on the right hand
+on \AgdaFunction{compare}~\AgdaBound{m}~\AgdaBound{n} you learn about
+\AgdaBound{m} and \AgdaBound{n}. This is the difference between with
+abstraction and ordinary case splitting on the right hand
 side. \cite{Oury2008} contains other interesting examples of views.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -580,7 +583,7 @@ normalisation.
     prf₃ = refl
 \end{code}
 
-We can now start writing functions that compute proofs that involve
+You can now start writing functions that compute proofs that involve
 equality:
 
 \begin{code}
@@ -664,7 +667,7 @@ reasoning, all part of
 \end{code}
 }
 
-We can now leave a record of type rewrites and their justifications:
+You can now leave a record of type rewrites and their justifications:
 
 \begin{code}
     prf₇ : ∀ l n m → ((zero + (l + zero)) + (n + zero)) + m ≡ (l + n) + m
@@ -1262,22 +1265,23 @@ module _ where
 module Presburger where
   open import Function using (id ; _∘_)
   open import Data.Fin using (Fin ; zero ; suc)
-  open import Data.Integer as Int using (ℤ ; +_ ; -[1+_] ; _+_ ; _-_ ; -_ ; _*_ ; _<_ ; _≤_ ; _>_)
+  open import Data.Integer as Int using (ℤ ; +_ ; -[1+_] ; _+_ ; _-_ ; -_ ; _*_ ; _<_ ; _≤_ ; _>_ ; ∣_∣)
   open import Data.Nat as Nat using (ℕ ; zero ; suc)
   open import Data.Sum using (_⊎_ ; inj₁ ; inj₂)
   open import Data.Vec as Vec using (Vec ; [] ; _∷_)
   open import Data.List as List using (List ; [] ; _∷_ ; _++_)
   open import Data.Maybe using (Maybe ; nothing ; just)
   open import Data.Product using (Σ ; _×_ ; _,_ ; proj₁ ; proj₂ ; uncurry)
-  open import Relation.Binary.PropositionalEquality using (_≡_ ; refl; cong ; sym ; _≢_ ; inspect)
+  open import Relation.Binary.PropositionalEquality using (_≡_ ; refl; cong ; sym ; _≢_ ; inspect) renaming ([_] to >[_]<)
   open import Relation.Nullary using (Dec ; yes ; no)
   open import Data.Integer.Properties as IntProp
   open import Relation.Binary using (Tri)
   open import Data.List.All using (All ; [] ; _∷_)
   open import Data.Unit using (⊤ ; tt)
   open import Data.Bool using (Bool ; true ; false ; T ; not ; _∨_)
-  open import Data.Empty using (⊥)
+  open import Data.Empty using (⊥ ; ⊥-elim)
   open import Data.Nat.DivMod using (_div_)
+  open import Data.List.NonEmpty as NE using (List⁺)
 
   open import Prologue using (_<?_ ; ×-list)
 \end{code}
@@ -1382,7 +1386,7 @@ continues describing the Omega Test and Cooper's Algorithm and
 proposes implementations for both of them for the proof assistant
 HOL. Our attempt to implement both procedures in Agda is significantly
 based on his work, which he also briefly outlines in a later
-talk. \cite{Norrish2006}
+talk. \cite{2006}
 
 \subsubsection{Common ideas}
 
@@ -1479,18 +1483,32 @@ structure containing only ~\AgdaDatatype{Linear}~\AgdaNumber{0}.
   upper-bound : ∀ {i} → Linear (suc i) → Set
   upper-bound a = + 0 > head a
 
-  classifyₐ : ∀ {i} → (a : Linear (suc i)) → Tri (lower-bound a) (irrelevant a) (upper-bound a)
-  classifyₐ = <-cmp (+ 0) ∘ head 
+  LowerBound : ℕ → Set
+  LowerBound zero = ⊥
+  LowerBound (suc i) = Σ (Linear (suc i)) lower-bound
+  
+  UpperBound : ℕ → Set
+  UpperBound zero = ⊥
+  UpperBound (suc i) = Σ (Linear (suc i)) upper-bound
+
+  Irrelevant : ℕ → Set
+  Irrelevant zero = ⊥
+  Irrelevant (suc i) = Σ (Linear (suc i)) irrelevant
+
+  analyse : ∀ {i} → (a : Linear (suc i)) → Tri (lower-bound a) (irrelevant a) (upper-bound a)
+  analyse = <-cmp (+ 0) ∘ head 
       
-  classify : ∀ {i} → (as : List (Linear (suc i)))
-             → (List (Σ (Linear (suc i)) lower-bound))
-             × (List (Σ (Linear (suc i)) irrelevant))
-             × (List (Σ (Linear (suc i)) upper-bound))
-  classify [] = [] , [] , []
-  classify (a ∷ as) with classifyₐ a | classify as
-  classify (a ∷ as) | Tri.tri< p _ _ | ls , is , us = (a , p) ∷ ls , is , us
-  classify (a ∷ as) | Tri.tri≈ _ p _ | ls , is , us = ls , (a , p) ∷ is , us
-  classify (a ∷ as) | Tri.tri> _ _ p | ls , is , us = ls , is , (a , p) ∷ us
+  partition : ∀ {A : Set} {P Q R : A → Set}
+             → ((a : A) → Tri (P a) (Q a) (R a))
+             → List A
+             → List (Σ A P)
+             × List (Σ A Q)
+             × List (Σ A R)
+  partition f [] = [] , [] , []
+  partition f (a ∷ as) with f a | partition f as
+  partition f (a ∷ as) | Tri.tri< p _ _ | ps , qs , rs = (a , p) ∷ ps , qs , rs
+  partition f (a ∷ as) | Tri.tri≈ _ q _ | ps , qs , rs = ps , (a , q) ∷ qs , rs
+  partition f (a ∷ as) | Tri.tri> _ _ r | ps , qs , rs = ps , qs , (a , r) ∷ rs
 \end{code}
 }
 
@@ -1664,279 +1682,515 @@ evaluating operations on atoms and normalising relations between them.
 
 \subsubsection{Elimination}
 
+The Omega Test's quantifier elimination operates on quantifier-free
+conjunctions of constraints of the form $0 ≤ e$:
+
 \begin{theorem}[Pugh, 1991]
+Let $L(x)$ be a conjunction of lower bounds on $x$, indexed by $i$, of
+the form $a_i ≤ \alpha_i x$, with $\alpha_i$ positive and
+non-zero. Similarly, let $U(x)$ be a set of upper bounds on $x$,
+indexed by $j$, of the form $\beta_j x ≤ b_j$, with $\beta_j$ positive
+and non-zero. Let $m$ be the maximum of all $\beta_j$s. Then:
+
 \begin{align*}
 (∃x.L(x) ∧ U(x)) &\equiv
-(\bigwedge_{i,j} (\alpha_i - 1)(\beta_j - 1) ≤ (\alpha_i b_j - a_i \beta_j)) \\
+\left(\bigwedge_{i,j} (\alpha_i - 1)(\beta_j - 1) ≤ (\alpha_i b_j - a_i \beta_j)\right) \\
 &\qquad {} \qquad {} \qquad {} \qquad {} \qquad {} \lor \\
 &\qquad {} \bigvee_i \bigvee^{\left\lfloor \alpha_i - \frac{\alpha_i}{m} - 1 \right\rfloor}_{k=0}
 ∃x. (\alpha_i x = a_i + k) \land L(x) \land U(x)
 \end{align*}
 \end{theorem}
 
-What the input to the main theorem is, what the output looks like
-Explain how divides terms created by splinters need to be handled
-Why we don't handle divide terms
-Why just dark-shadow
-What solving the dark-shadow implies
-What the proof looks like
-Mention splitting linears into three cats
-Mention why it is easier to handle irrelevant linears like this
+Pugh refers to the first disjunct as the \textit{real shadow} and to
+the last as the \textit{splinters}. Each splinter introduces a new
+existential quantifier — one could ask if the quantifier elimination
+indeed happens. These quantifiers can nonetheless be eliminated by the
+following terminating method based on the Euclidean algorithm for the
+computation of greatest common divisors:
 
+\begin{align}
+  \intertext{$x$ is the variable to eliminate}
+  ∃y. ∃x. &\ldots \land ax = by + e \land \ldots \\
+  \intertext{Find the lowest common divisor $ℓ$ of coefficients of $x$
+        and multiply every constraint by an integer $n$ so that 
+        its coeffiecient on $x$ is $ℓ$}
+  ∃y. ∃x. &\ldots \land ℓx = b'y + e' \land \ldots \\
+  \intertext{Make all coeffients on $x$ be $1$ by resorting to the
+        equivalence $P(ℓx) \equiv P(x) \land ℓ ∣ x$.}
+  ∃y. ∃x. &\ldots \land (x = b'y + e') \land (ℓ ∣ x) \land \ldots \\
+  \intertext{Substitute $x$}
+  ∃y. &\ldots \land ℓ ∣ b'y + e' \land \ldots \label{eq:divides} \\
+  \intertext{Eliminate the divides term by introducing a new existential}
+  ∃y. ∃z. &\ldots \land ℓz = b'y + e' \land \ldots \\
+  \intertext{Rearrange}
+  ∃y. ∃z. &\ldots \land b'y = ℓz - e' \land \ldots
+  \intertext{$y$ is the variable to eliminate} \nonumber
+\end{align}
 
-Divides term elimination procedure
+Crucially, \ref{eq:divides} guarantees the eventual elimination of the
+divides term, as $b' < ℓ$ — and modulus if not. This recursive
+computation is however not trivial to model using structural
+recursion. Commonly, structural recursion is applied onto terms that
+have been deconstructed by pattern matching — and thus structures get
+smaller by "fixed steps". Here, on the other hand, recursion has to be
+shown to terminate by account of the divides term's coefficient
+decreasing in steps of variable size.
 
-\begin{align*}
-    ∃x . (d₁ ∣ a₁x + e₁) ∧ (d₂ ∣ a₂x + e₂) ∧ (a₃x + e₃)
-    \intertext{Introduce existential for first term}
-    ∃x . ∃y . (d₁y = a₁x + e₁) ∧ (d₂ ∣ a₂x + e₂) ∧ (a₃x + e₃)
-    \intertext{Rearrange first term}
-    ∃x . ∃y . (a₁x = d₁y - e₁) ∧ (d₂ ∣ a₂x + e₂) ∧ (a₃x + e₃)
-    \intertext{Multiply all outer coefficients to a common LCM}
-    ∃x . ∃y . (mx = n₁d₁y - n₁e₁) ∧ (n₂d₂ ∣ mx + n₂e₂) ∧ (mx + n₃e₃)
-    \intertext{Substitute mx}
-    ∃y . (m ∣ n₁d₁y - n₁e₁) ∧ (n₂d₂ ∣ n₁d₁y - n₁e₁ + n₂e₂) ∧ (n₁d₁y - n₁e₁ + n₃e₃)
-\end{align*}
+\todo{NatRec}
+\todo{Negated divides terms}
 
-Because $m < d₁$, this will eventually end. It might get
-shortcircuited if $d₁ ∣ a₁$ and $d₁ ∣ e₁$.
+However, because of time limitations and the considerable complexity
+that implementing the elimination of equalities in splinters and the
+proofs involving splinters introduce, it was decided to limit the
+extend of this chapter to implementing and verifying the soundness of
+the real shadow — the first disjunct on the RHS of Pugh's theorem.
 
-\todo{How does it work with multiple divide terms?}
+\todo{Mention this is a common thing to do}
 
+Pugh's theorem is a sound and complete decision procedure
+characterised as a disjunction. Supplying only one of the disjuncts
+renders the decision procedure incomplete but does not alter its
+soundness. That is: every formula decided true by the dark shadow can
+be proven to be true, but no claims can be made about those formulas
+that the dark shadow decided false.
 
-Pugh's main theorem acts on conjuntions with the following form:
+We implement quantifier elimination using Pugh's dark-shadow on
+quantifier-free formulas below.
+~\AgdaDatatype{List}~\AgdaSymbol(\AgdaDatatype{Linear}~\AgdaBound{i}\AgdaSymbol{)}~
+represents a conjunction over constraints with ~\AgdaBound{i}~
+variables, ~\AgdaFunction{partition}~\AgdaBound{as}~ classifies those
+constraints into three groups: the lower bounds, with coefficients $0
+< c$; the irrelevant constraints, with coefficients $0 = c$; and the
+upper bounds, with coefficients $0 > c$ — the second argument, ignored
+in this case, is the proof of such inequalities. The symbols $α, a, β,
+b$ are as per Pugh. ~\AgdaFunction{×-list}~\AgdaBound{ls}~\AgdaBound{us}~
+returns the cartesian product of ~\AgdaBound{ls}~ and ~\AgdaBound{us}.
+
+\todo{Maybe clean}
 
 \begin{code}
-  dark-shadow : ∀ {i} → Linear (suc i) → Linear (suc i) → Linear i
-  dark-shadow l u with head l | ⊝ (tail l) | - (head u) | tail u
-  ...             | α | a | β | b = (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# ((α - + 1) * (β - + 1)))
+  dark-shadow : ∀ {i} → Linear (suc i) × Linear (suc i) → Linear i
+  dark-shadow (l , u) with head l | ⊝ (tail l) | - (head u) | tail u
+  ...                 | α | a | β | b = (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# ((α - + 1) * (β - + 1)))
       
+  bound-pairs : ∀ {i} → List (Linear (suc i)) → List (Linear (suc i) × Linear (suc i))
+  bound-pairs as with partition analyse as
+  bound-pairs as | ls , is , us = ×-list (List.map proj₁ ls) (List.map proj₁ us)
+
+  irrelevants : ∀ {i} → List (Linear (suc i)) → List (Linear (suc i))
+  irrelevants as with partition analyse as
+  irrelevants as | ls , is , us = List.map proj₁ is
+
   omega : ∀ {i} → List (Linear (suc i)) → List (Linear i)
-  omega as with classify as
-  omega as | ls , is , us = List.map (λ { ((l , _) , (u , _)) → dark-shadow l u}) (×-list ls us)
-                         ++ List.map (tail ∘ proj₁) is
+  omega as = List.map dark-shadow (bound-pairs as) ++ List.map tail (irrelevants as)
 \end{code}
 
-\subsubsection{Verification}
+\subsubsection{Building blocks}
+
+To prove our quantifier elimination correct we first need to introduce
+the reader to some basic notions involving satisfiability and
+decidability of Presburger formulas.
+
+An environment in which to evaluate a formula is a map from de Bruijn
+indices to integers, where each index stands for a variable.
 
 \begin{code}
   Env : ℕ → Set
   Env i = Vec ℤ i
+\end{code}
 
-  _[_/x]ₗ : ∀ {i} → Linear i → Env i → Linear 0
-  a [ [] /x]ₗ = a
-  a [ (x ∷ xs) /x]ₗ = (substitute (# x) a) [ xs /x]ₗ
+Next, we define substitution for constraints:
+
+\todo{Comment we substitute outermost vars}
+
+\begin{code}
+  _[_/x] : ∀ {i d} → Linear (d Nat.+ i) → Env i → Linear d
+  _[_/x] {d = zero} a [] = a
+  _[_/x] {d = zero} a (x ∷ xs) = (substitute (# x) a) [ xs /x]
+  _[_/x] {d = suc d} ((c ∷ cs) ∷+ k) xs = c x+∅ ⊕ ⇑1 ((cs ∷+ k) [ xs /x])
+\end{code}
+
+The base case for satisfiability is on a single constraint with no
+variables, the rest of cases depend on an environment for
+substitution.
+
+\begin{code}
+  ⊨⇓ : Linear 0 → Set
+  ⊨⇓ a = (+ 0) < (Linear.k a)
+
+  ⊨[_/x] : ∀ {i} → Env i → Linear i → Set
+  ⊨[ ρ /x] = ⊨⇓ ∘ _[ ρ /x]
   
-  _[_/x] : ∀ {i} → List (Linear i) → Env i → List (Linear 0)
-  as [ xs /x] = List.map _[ xs /x]ₗ as
-
-  ⊨ₗ₀ : Linear 0 → Set
-  ⊨ₗ₀ a = (+ 0) < (Linear.k a)
-
-  ⊨₀ : List (Linear 0) → Set
-  ⊨₀ = All ⊨ₗ₀
-
-  ⊨ₗ : ∀ {i} → Linear i → Set
-  ⊨ₗ {i} a = Σ (Env i) λ ρ → ⊨ₗ₀ (a [ ρ /x]ₗ)
-
   ⊨ : ∀ {i} → List (Linear i) → Set
-  ⊨ {i} as = Σ (Env i) λ ρ → ⊨₀ (as [ ρ /x])
+  ⊨ {i} as = Σ (Env i) λ ρ → All ⊨[ ρ /x] as
+\end{code}
 
-  ⊭ : ∀ {i} → List (Linear i) → Set
-  ⊭ {i} as = (ρ : Env i) → ⊨₀ (as [ ρ /x]) → ⊥
-  
-  postulate ¬⊭→⊨ : (as : List (Linear 0)) → (⊭ as → ⊥) → ⊨ as
-  
-  ⟦_⟧ₗ₀ : (a : Linear 0) → Dec (⊨ₗ₀ a)
-  ⟦ a ⟧ₗ₀ = (+ 0) <? (Linear.k a)
+After substitution, satisfiability is decidable.
 
-  ⟦_⟧₀ : (as : List (Linear 0)) → Dec (⊨₀ as)
-  ⟦ [] ⟧₀ = yes []
-  ⟦ a ∷ as ⟧₀ with ⟦ a ⟧ₗ₀ | ⟦ as ⟧₀
-  ⟦ a ∷ as ⟧₀ | no ¬pa | _       = no λ { (pa ∷ pas) → ¬pa pa}
-  ⟦ a ∷ as ⟧₀ | yes _  | no ¬pas = no λ { (_ ∷ pas) → ¬pas pas}
-  ⟦ a ∷ as ⟧₀ | yes pa | yes pas = yes (pa ∷ pas)
+\begin{code}
+  ⟦_⟧⇓ : (a : Linear 0) → Dec (⊨⇓ a)
+  ⟦ a ⟧⇓ = (+ 0) <? (Linear.k a)
 
-  ⟦_⟧ : ∀ {i} → (as : List (Linear i)) → (xs : Env i) → Dec (⊨₀ (as [ xs /x]))
-  ⟦ as ⟧ xs = ⟦ as [ xs /x] ⟧₀
+  open import Data.List.All using (all)
+  ⟦_⟧ : ∀ {i} → (as : List (Linear i)) → (ρ : Env i) → Dec (All ⊨[ ρ /x] as)
+  ⟦ as ⟧ ρ = all (λ a → ⟦ a [ ρ /x] ⟧⇓) as
+\end{code}
 
+For convenience, we will add a shortcut that performs quantifier
+elimination as per our incomplete Omega Test, until there are no more
+variables left, and then decides the variable-free formula.
+
+\begin{code}
   ⟦_⟧Ω : ∀ {i} → List (Linear i) → Bool
-  ⟦_⟧Ω {zero} a with ⟦ a ⟧₀
+  ⟦_⟧Ω {zero} a with ⟦ a ⟧ []
   ...           | yes p = true
   ...           | no ¬p = false
   ⟦_⟧Ω {suc i} a = ⟦ omega a ⟧Ω
-  
-  \end{code}
-
-  \begin{code}
-  lemma₀ : ∀ {i} (n : ℤ) (ρ : Env i) → k ((⊝ (# n)) [ ρ /x]ₗ) ≡ k ((# (- n)) [ ρ /x]ₗ)
-  lemma₀ n ρ = begin 
-    k ((⊝ (# n)) [ ρ /x]ₗ)
-      ≡⟨⟩
-    k ((Vec.map -_ (Vec.replicate (+ 0)) ∷+ (- n)) [ ρ /x]ₗ)
-      ≡⟨ cong (λ ⊚ → k (((⊚ ∷+ (- n)) [ ρ /x]ₗ))) (map-replicate -_ (+ 0) _) ⟩
-    k ((Vec.replicate (- + 0) ∷+ (- n)) [ ρ /x]ₗ)
-      ≡⟨⟩
-    k ((# (- n)) [ ρ /x]ₗ)
-      ∎
-    where
-      open Relation.Binary.PropositionalEquality.≡-Reasoning
-      open import Data.Vec.Properties using (map-replicate)
-  
-  lemma₁ : ∀ {i} (csa : Vec ℤ i) (ka n : ℤ) (ρ : Env i) → k (((csa ∷+ ka) ⊝ (# n)) [ ρ /x]ₗ) ≡ k ((csa ∷+ (ka + - n)) [ ρ /x]ₗ)
-  lemma₁ csa ka n ρ = begin 
-    k (((csa ∷+ ka) ⊝ (# n)) [ ρ /x]ₗ)
-      ≡⟨⟩
-    k (((csa ∷+ ka) ⊕ (⊝ # n)) [ ρ /x]ₗ)
-      ≡⟨⟩
-    k ((Vec.zipWith _+_ csa (cs (⊝ (# n))) ∷+ (ka + - n)) [ ρ /x]ₗ)
-      ≡⟨ cong (λ ⊚ → k {!(? [ ρ /x]ₗ)!}) (lemma₀ n ρ) ⟩
-    k ((Vec.zipWith _+_ csa (cs (# (- n))) ∷+ (ka + - n)) [ ρ /x]ₗ)
-      ≡⟨ {!!} ⟩
-    k ((Vec.zipWith _+_ csa (Vec.replicate (+ 0)) ∷+ (ka + - n)) [ ρ /x]ₗ)
-      ≡⟨ cong (λ ⊚ → k ((⊚ ∷+ (ka + - n)) [ ρ /x]ₗ) ) (zipWith-replicate₂ _+_ csa (+ 0)) ⟩
-    k ((Vec.map (_+ (+ 0)) csa ∷+ (ka + - n)) [ ρ /x]ₗ)
-      ≡⟨ cong (λ ⊚ → k ((⊚ ∷+ (ka + - n)) [ ρ /x]ₗ)) (map-cong +-identityʳ csa) ⟩
-    k ((Vec.map id csa ∷+ (ka + - n)) [ ρ /x]ₗ)
-      ≡⟨ cong (λ ⊚ → k ((⊚ ∷+ (ka + - n)) [ ρ /x]ₗ)) (map-id csa) ⟩
-    k ((csa ∷+ (ka + - n)) [ ρ /x]ₗ)
-      ∎
-    where
-      open Relation.Binary.PropositionalEquality.≡-Reasoning
-      open import Data.Vec.Properties using (map-id ; map-cong ; map-replicate ; zipWith-replicate₂)
-      open import Data.Integer.Properties using (+-identityʳ)
-  \end{code}
-        
-  \begin{code}
-  module Ω-Inner (i : ℕ) (l u : Linear (suc i))
-                 (lbl : lower-bound l) (ubu : upper-bound u)
-                 where
-    α = head l
-    a = ⊝ (tail l)
-    0<α : (+ 0) < α
-    0<α = {!!}
-    β = - (head u)
-    b = tail u
-    0<β : (+ 0) < β
-    0<β = {!!}
-    
-    import Relation.Binary.PartialOrderReasoning as POR
-    open POR IntProp.≤-poset renaming (_≈⟨_⟩_ to _≡⟨_⟩_ ; _≈⟨⟩_ to _≡⟨⟩_)
-
-    [α-1][β-1]≤αb-aβ : Linear i
-    [α-1][β-1]≤αb-aβ = (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# ((α - + 1) * (β - + 1)))
-    
-    aβ≤αb : Linear i
-    aβ≤αb = ((α ⊛ b) ⊝ (β ⊛ a))
-
-    aβ≤αβx≤αb : List (Linear (suc i))
-    aβ≤αβx≤αb = ((α * β) x+∅) ⊝ (β ⊛ ⇑1 a)
-              ∷ (α ⊛ ⇑1 b) ⊝ ((α * β) x+∅)
-              ∷ []
-
-    αβn<aβ≤αb<αβ[n+1] : ℕ → List (Linear i)
-    αβn<aβ≤αb<αβ[n+1] n = ((β ⊛ a) ⊝ (# (α * β * + n)) ⊝ (# (+ 1)))
-                        ∷ (α ⊛ b) ⊝ (β ⊛ a)
-                        ∷ ((# (α * β * + (suc n))) ⊝ (α ⊛ b) ⊝ (# (+ 1)))
-                        ∷ []
-  
-    α≤αβ[n+1]-αb : ℕ → Linear i
-    α≤αβ[n+1]-αb n = (# (α * β * + (suc n))) ⊝ (α ⊛ b) ⊝ (# α)
-
-    β≤aβ-αβn : ℕ → Linear i
-    β≤aβ-αβn n = (β ⊛ a) ⊝ (# (α * β * + n)) ⊝ (# β)
-
-    αb-aβ<[α-1][β-1] : Linear i
-    αb-aβ<[α-1][β-1] = (# ((α - + 1) * (β - + 1))) ⊝ (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# (+ 1))
-
-    ⊨βa≤αb : ⊨ₗ [α-1][β-1]≤αb-aβ → ⊨ₗ aβ≤αb
-    ⊨βa≤αb (ρ , pds) = ρ , bar ((α ⊛ b) ⊝ (β ⊛ a)) ((α - + 1) * (β - + 1)) {!∅!} ρ pds 
-      where
-        open import Data.Vec.Properties using (map-id ; map-cong ; map-replicate ; zipWith-replicate₂)
-        open import Data.Integer.Properties using (+-identityʳ ; ≤-reflexive)
-
-        foo : (m : ℤ) (n : ℕ) → m - + n Int.≤ m
-        foo m zero = ≤-reflexive (+-identityʳ m)
-        foo m (suc n) = begin 
-          m + - + suc n
-            ≤⟨ {!!} ⟩
-          m
-            ∎
-        
-        bar : ∀ {i} → (a : Linear i) (n : ℤ) (pn : (+ 0) Int.≤ n) (ρ : Env i) → ⊨ₗ₀ (a ⊝ (# n) [ ρ /x]ₗ) → ⊨ₗ₀ (a [ ρ /x]ₗ)
-        bar (csa ∷+ ka) n pn ρ p = begin 
-          + 1
-            ≤⟨ p ⟩
-          k (((csa ∷+ ka) ⊝ (# n)) [ ρ /x]ₗ)
-            ≡⟨ lemma₁ csa ka n ρ ⟩
-          k ((csa ∷+ (ka + - n)) [ ρ /x]ₗ)
-            ≤⟨ {!!} ⟩
-          k ((csa ∷+ ka) [ ρ /x]ₗ)
-            ∎
-
-    ⊨αβn<aβ≤αb<αβ[n+1] : ⊨ₗ aβ≤αb → ⊭ (l ∷ u ∷ []) → Σ ℕ λ n → ⊨ (αβn<aβ≤αb<αβ[n+1] n)
-    ⊨αβn<aβ≤αb<αβ[n+1] (ρ , ⊨p₁) ⊭p₂ = n , ρ , r₁ ∷ r₂ ∷ r₃ ∷ []
-      where
-        -- How to compute n?
-        n = {!!}
-        ⊭aβ≤αβx≤αb : ⊭ ((α * β) x+∅ ⊝ ⇑1 (β ⊛ a) ∷ ⇑1 (α ⊛ b) ⊝ ((α * β) x+∅) ∷ [])
-        ⊭aβ≤αβx≤αb ρ' (⊨p₃ ∷ ⊨p₄ ∷ []) = ⊭p₂ ρ' ({!!} ∷ {!!} ∷ [])
-        
-        r₁ = begin
-          + 1
-            ≤⟨ {!!} ⟩
-          k (((β ⊛ a) ⊝ (# (α * β * + n)) ⊝ (# (+ 1))) [ ρ /x]ₗ)
-            ∎
-        r₂ = begin
-          + 1
-            ≤⟨ {!!} ⟩
-          k (((α ⊛ b) ⊝ (β ⊛ a)) [ ρ /x]ₗ)
-            ∎
-        r₃ = begin
-          + 1
-            ≤⟨ {!!} ⟩
-          k (((# (α * β * + suc n)) ⊝ (α ⊛ b) ⊝ (# (+ 1))) [ ρ /x]ₗ)
-            ∎
-    
-    ⊨α≤αβ[n+1]-αb : (n : ℕ) →  ⊨ (αβn<aβ≤αb<αβ[n+1] n) → ⊨ₗ (α≤αβ[n+1]-αb n)
-    ⊨α≤αβ[n+1]-αb n (ρ , (⊨p₁ ∷ ⊨p₂ ∷ ⊨p₃ ∷ [])) = ρ , (begin 
-      + 1
-        ≤⟨ {!!} ⟩
-      k (α≤αβ[n+1]-αb n [ ρ /x]ₗ)
-        ∎)
-    
-    ⊨β≤aβ-αβn : (n : ℕ) →  ⊨ (αβn<aβ≤αb<αβ[n+1] n) → ⊨ₗ (β≤aβ-αβn n)
-    ⊨β≤aβ-αβn n (ρ , (⊨p₁ ∷ ⊨p₂ ∷ ⊨p₃ ∷ [])) = ρ , (begin 
-      + 1
-        ≤⟨ {!!} ⟩
-      k (β≤aβ-αβn n [ ρ /x]ₗ)
-        ∎)
-
-    ⊨αb-aβ<[α-1][β-1] : {n : ℕ} → ⊨ (α≤αβ[n+1]-αb n ∷ β≤aβ-αβn n ∷ []) → ⊨ₗ αb-aβ<[α-1][β-1]
-    ⊨αb-aβ<[α-1][β-1] (ρ , (⊨p₁ ∷ ⊨p₂ ∷ [])) = ρ , (begin 
-      + 1
-        ≤⟨ {!!} ⟩
-      k (αb-aβ<[α-1][β-1] [ ρ /x]ₗ)
-        ∎)
-
-    ⊨⊥ : ⊨ ([α-1][β-1]≤αb-aβ ∷ αb-aβ<[α-1][β-1] ∷ []) → ⊥
-    ⊨⊥ (ρ , (⊨p ∷ ⊨¬p ∷ [])) = {!!}
-
-  Ω-Correct : ∀ {i} (as : List (Linear i)) → Set
-  Ω-Correct as with ⟦ as ⟧Ω
-  Ω-Correct as | false = ⊤
-  Ω-Correct as | true  = ⊨ as
-
-  Ω-correct : ∀ {i} (p : List (Linear (suc i))) → Ω-Correct p
-  Ω-correct p with ⟦ p ⟧Ω | inspect ⟦_⟧Ω p
-  Ω-correct p | false | j = tt
-  Ω-correct p | true | Relation.Binary.PropositionalEquality.[ eq ] = {!!}
-    where
-    inner : T ⟦ p ⟧Ω → ⊨ p
-    inner ep = {!!} 
-
-            
 \end{code}
+
+\subsubsection{Verification}
+
+Pugh's theorem is of form $\text{LHS} \equiv D_1 \lor D_2$. That
+shapes the proof: it first shows the soundness of both disjuncts by
+proving that $D_1 \implies LHS$ and $D_2 \implies \text{LHS}$. Then it
+shows the completeness of the theorem by proving that $\text{LHS}
+\land \neg D_1 \implies D_2$. By limiting ourselves to implementing
+$D_1$, we get a sound but incomplete decision procedure where $D_1
+\implies \text{LHS}$ is the only proof obligation:
+
+\begin{equation*}
+\bigwedge_{i,j} (\alpha_i - 1)(\beta_i - 1) ≤ \alpha_i b_j - a_i \beta_j
+\implies ∃x. L(x) \land U(x)
+\end{equation*}
+
+Or, in our terms:
+
+\begin{code}
+  ⟦_⟧Ω-Correct : ∀ {i} (as : List (Linear i)) → Set
+  ⟦_⟧Ω-Correct as with ⟦ as ⟧Ω
+  ⟦_⟧Ω-Correct as | false = ⊤
+  ⟦_⟧Ω-Correct as | true  = ⊨ as
+\end{code}
+
+The original proof uses induction on every $L(x) × U(x)$ pair to prove
+the above. The goal for each pair is thus the following:
+
+\begin{equation*}
+(\alpha - 1)(\beta - 1) ≤ \alpha b - a \beta \implies ∃x. a ≤ αx \land βx ≤ b
+\end{equation*}
+
+This obligation is fulfilled resorting on a proof by contradiction: we
+assume $¬∃x. a ≤ αx \land βx ≤ b$ and derive $∃x. a ≤ αx \land βx ≤
+b$, in contradiction with the premise which, we conclude, must have
+been wrong.  However, we cannot generally imply $P$ from $¬P → ⊥$
+in constructive mathematics: the first requires a witness $p : P$ that
+the later does not provide.
+
+Nevertheless, a proof by contradiction is still useful. If we can
+limit the elements to test for $P$ to a finite set and prove, by
+contradiction, that $P$ cannot be false for every element in the set,
+then we can supply a terminating function that finds an element
+satisfying $P$. We will thus use the proof outlined in
+\cite{Norrish2003} to assure the success of our search.
+
+\todo{Explain Σ types somewhere}
+
+Below, a generalised search function that searches for elements
+satisfying a decidable predicate within a discrete finite search
+space:
+
+\begin{code}
+  open import Relation.Binary.PropositionalEquality using (setoid)
+  open import Relation.Unary using (Decidable)
+  open import Data.List.Any.Membership renaming (_∈_ to _for_∈_)
+  open import Data.List.Any using (here ; there)
+  
+  search : {A : Set} {P : A → Set} (P? : Decidable P) (as : List A)
+         → ((∀ i → (setoid _) for i ∈ as → P i → ⊥) → ⊥)
+         → Σ A P
+
+  search P? []               raa = ⊥-elim (raa λ { i () Pi})
+  search P? (a ∷ as)         raa with P? a
+  search P? (a ∷ as)         raa | yes p = a , p
+  search P? (a ∷ [])         raa | no ¬p = ⊥-elim (raa λ { _ (here refl) → ¬p ; _ (there ())})
+  search P? (a ∷ as@(_ ∷ _)) raa | no ¬p = search P? as
+                                         λ ¬Pi → raa λ
+                                         { _ (here refl)  → ¬p
+                                         ; i (there i∈as) → ¬Pi i i∈as}
+\end{code}
+
+In the case that concerns us, the search is for some $x$ that 
+satisfies a conjunction of constraints of form $a ≤ \alpha x \land
+\beta x ≤ b$, with $\alpha$ and $\beta$ positive and non-zero. For
+every constraint, $x$ must be bound between
+$\left\lfloor\frac{a}{α}\right\rfloor$ and
+$\left\lceil\frac{b}{β}\right\rceil$; the conjunction of all
+constraints must be bound between the highest lower bound and the
+lowest upper bound.
+
+\begin{code}
+  start : List (Linear 1) → ℤ
+  start as with partition analyse as
+  ... | ls , is , us = List.foldr Int._⊔_ (+ 0) (List.map bound ls)
+    where
+    -- div requires an implicit proof showing its divisor is non-zero
+    bound : Σ (Linear 1) lower-bound → ℤ
+    bound (((+_ zero ∷ []) ∷+ -a) , (_≤_.+≤+ ()))
+    bound (((+_ (suc α-1) ∷ []) ∷+ -a) , lb) = Int.sign (- -a) Int.◃ (∣ -a ∣ div (suc α-1))
+    bound (((-[1+_] n ∷ []) ∷+ -a) , ())
+
+
+  stop : List (Linear 1) → ℤ
+  stop as with partition analyse as
+  ... | ls , is , us = List.foldr Int._⊓_ (+ 0) (List.map bound us)
+    where
+    -- div requires an implicit proof showing its divisor is non-zero
+    bound : Σ (Linear 1) upper-bound → ℤ
+    bound (((+_ n ∷ []) ∷+ b) , _≤_.+≤+ ())
+    bound (((-[1+ β-1 ] ∷ []) ∷+ b) , ub) = Int.sign b Int.◃ (∣ b ∣ div suc β-1)
+
+  search-space : List (Linear 1) → List ℤ
+  search-space as with start as - stop as
+  search-space as | + Δ = List.applyUpTo (λ i → + i + start as) Δ
+  search-space as | -[1+ Δ ] = []
+\end{code}
+
+Norrish's proof iterates over every $L(x) × U(x)$ proving $(\alpha -
+1)(\beta - 1) ≤ \alpha b - a \beta \implies ∃x. a ≤ αx \land βx ≤ b$
+for each. This is done by contradiction, assuming $(\alpha - 1)(\beta
+- 1) ≤ \alpha b - a \beta$ and $¬∃x. a ≤ αx \land βx ≤ b$.
+
+However, our search for $x$ over the conjunction $L(x) \land U(x)$
+requires a proof by contradiction for $\bigwedge_{i,j} (\alpha_i -
+1)(\beta_i - 1) ≤ \alpha_i b_j - a_i \beta_j \implies ∃x. L(x) \land
+U(x)$: assuming $\bigwedge_{i,j} (\alpha_i - 1)(\beta_i - 1) ≤
+\alpha_i b_j - a_i \beta_j$ and $¬∃x. L(x) \land U(x)$, we have to
+derive falsehood.
+
+\begin{code}
+  All-× : (P : Linear 1 × Linear 1 → Set) (Q : Linear 1 → Set) (as : List (Linear 1)) → Set
+  All-× P Q as = All P (bound-pairs as) × All Q (irrelevants as)
+
+  zipAll : {A : Set} {P : A → Set} (xs : List A) → All P xs → List (Σ A P)
+  zipAll [] [] = []
+  zipAll (x ∷ xs) (p ∷ ps) = (x , p) ∷ zipAll xs ps
+
+  unzipAll : {A : Set} {P : A → Set} → List (Σ A P) → Σ (List A) λ xs → All P xs
+  unzipAll [] = [] , []
+  unzipAll ((x , p) ∷ pxs) with unzipAll pxs
+  ...                      | xs , ps = x ∷ xs , p ∷ ps
+  
+
+  Satisfiable-1 : {is : List (Env 1)} → Linear 1 → Set
+  Satisfiable-1 {is} a = ((i : Env 1) → setoid _ for i ∈ is → ⊨[ i /x] a → ⊥) → ⊥
+
+  on : {A : Set} → (A → Set) → A × A → Set
+  on P (x , y) = P x × P y
+  
+  Satisfiable-2 : {is : List (Env 1)} → Linear 1 × Linear 1 → Set
+  Satisfiable-2 {is} (a , b) = ((i : Env 1) → setoid _ for i ∈ is → ⊨[ i /x] a × ⊨[ i /x] b → ⊥) → ⊥
+
+  All-⊨→×-⊨ : (as : List (Linear 1)) {is : List (Env 1)}
+             → ((i : Env 1) → setoid _ for i ∈ is → All ⊨[ i /x] as → ⊥)
+             → All-× Satisfiable-2 Satisfiable-1 as
+  All-⊨→×-⊨ as f = {!!}
+
+  by-contradiction : ∀ {i} → (as : List (Linear (suc i))) (⊨⇓as : ⊨ (omega as))
+                   → {xs : List ℤ} → ((x : ℤ) → setoid _ for x ∈ xs → All ⊨[ x ∷ (proj₁ ⊨⇓as) /x] as → ⊥)
+                   → ⊥
+
+  by-contradiction as (ρ , ⊨⇓as) = {!!}
+    where
+    open import Relation.Nullary using (¬_)
+    open import Data.List.Any using (Any)
+    open import Agda.Primitive using (lzero)
+    open import Function.Related using (preorder ; implication)
+    open import Relation.Binary.PreorderReasoning (preorder implication lzero)
+  
+  find-x : ∀ {i} → (as : List (Linear (suc i))) → ⊨ (omega as) → ⊨ as
+  find-x as (ρ , ⊨⇓as) with search (λ x → ⟦ as ⟧ (x ∷ ρ)) (search-space (List.map _[ ρ /x] as)) (by-contradiction as (ρ , ⊨⇓as))
+  find-x as (ρ , ⊨⇓as) | x , ⊨as = (x ∷ ρ) , ⊨as
+\end{code}
+
+\begin{code}
+  ⟦_⟧Ω-correct : ∀ {i} (as : List (Linear i)) → ⟦ as ⟧Ω-Correct
+  ⟦_⟧Ω-correct as with ⟦ as ⟧Ω | inspect ⟦_⟧Ω as
+  ⟦_⟧Ω-correct as | false | j = tt
+  ⟦_⟧Ω-correct as | true | >[ eq ]< = inner as eq
+    where
+    inner : ∀ {i} (as : List (Linear i)) → ⟦ as ⟧Ω ≡ true → ⊨ as
+    inner {zero} as ep with ⟦ as ⟧ []
+    inner {zero} as ep | yes p = [] , p
+    inner {zero} as () | no ¬p
+    inner {suc i} as ep with ⟦ omega as ⟧Ω | inspect ⟦_⟧Ω (omega as)
+    inner {suc i} as () | false | _
+    inner {suc i} as ep | true | >[ eq ]< = find-x as (inner (omega as) eq)
+\end{code}
+
+\todo{Introduce proof by contradiction}
+\todo{Explain our strategy to make it constructive: bounded search}
+
+The thing to test is aβ≤αβx≤αb
+
+\todo{Extract proof obligation}
+\todo{Go on with the proof}
+
+\begin{code}
+--   lemma₀ : ∀ {i} (n : ℤ) (ρ : Env i) → k ((⊝ (# n)) [ ρ /x]ₗ) ≡ k ((# (- n)) [ ρ /x]ₗ)
+--   lemma₀ n ρ = begin 
+--     k ((⊝ (# n)) [ ρ /x]ₗ)
+--       ≡⟨⟩
+--     k ((Vec.map -_ (Vec.replicate (+ 0)) ∷+ (- n)) [ ρ /x]ₗ)
+--       ≡⟨ cong (λ ⊚ → k (((⊚ ∷+ (- n)) [ ρ /x]ₗ))) (map-replicate -_ (+ 0) _) ⟩
+--     k ((Vec.replicate (- + 0) ∷+ (- n)) [ ρ /x]ₗ)
+--       ≡⟨⟩
+--     k ((# (- n)) [ ρ /x]ₗ)
+--       ∎
+--     where
+--       open Relation.Binary.PropositionalEquality.≡-Reasoning
+--       open import Data.Vec.Properties using (map-replicate)
+  
+--   lemma₁ : ∀ {i} (csa : Vec ℤ i) (ka n : ℤ) (ρ : Env i) → k (((csa ∷+ ka) ⊝ (# n)) [ ρ /x]ₗ) ≡ k ((csa ∷+ (ka + - n)) [ ρ /x]ₗ)
+--   lemma₁ csa ka n ρ = begin 
+--     k (((csa ∷+ ka) ⊝ (# n)) [ ρ /x]ₗ)
+--       ≡⟨⟩
+--     k (((csa ∷+ ka) ⊕ (⊝ # n)) [ ρ /x]ₗ)
+--       ≡⟨⟩
+--     k ((Vec.zipWith _+_ csa (cs (⊝ (# n))) ∷+ (ka + - n)) [ ρ /x]ₗ)
+--       ≡⟨ cong (λ ⊚ → k {!(? [ ρ /x]ₗ)!}) (lemma₀ n ρ) ⟩
+--     k ((Vec.zipWith _+_ csa (cs (# (- n))) ∷+ (ka + - n)) [ ρ /x]ₗ)
+--       ≡⟨ {!!} ⟩
+--     k ((Vec.zipWith _+_ csa (Vec.replicate (+ 0)) ∷+ (ka + - n)) [ ρ /x]ₗ)
+--       ≡⟨ cong (λ ⊚ → k ((⊚ ∷+ (ka + - n)) [ ρ /x]ₗ) ) (zipWith-replicate₂ _+_ csa (+ 0)) ⟩
+--     k ((Vec.map (_+ (+ 0)) csa ∷+ (ka + - n)) [ ρ /x]ₗ)
+--       ≡⟨ cong (λ ⊚ → k ((⊚ ∷+ (ka + - n)) [ ρ /x]ₗ)) (map-cong +-identityʳ csa) ⟩
+--     k ((Vec.map id csa ∷+ (ka + - n)) [ ρ /x]ₗ)
+--       ≡⟨ cong (λ ⊚ → k ((⊚ ∷+ (ka + - n)) [ ρ /x]ₗ)) (map-id csa) ⟩
+--     k ((csa ∷+ (ka + - n)) [ ρ /x]ₗ)
+--       ∎
+--     where
+--       open Relation.Binary.PropositionalEquality.≡-Reasoning
+--       open import Data.Vec.Properties using (map-id ; map-cong ; map-replicate ; zipWith-replicate₂)
+--       open import Data.Integer.Properties using (+-identityʳ)
+--   \end{code}
+        
+--   \begin{code}
+--   module Ω-Inner (i : ℕ) (l u : Linear (suc i))
+--                  (lbl : lower-bound l) (ubu : upper-bound u)
+--                  where
+--     α = head l
+--     a = ⊝ (tail l)
+--     0<α : (+ 0) < α
+--     0<α = {!!}
+--     β = - (head u)
+--     b = tail u
+--     0<β : (+ 0) < β
+--     0<β = {!!}
+    
+--     import Relation.Binary.PartialOrderReasoning as POR
+--     open POR IntProp.≤-poset renaming (_≈⟨_⟩_ to _≡⟨_⟩_ ; _≈⟨⟩_ to _≡⟨⟩_)
+
+--     [α-1][β-1]≤αb-aβ : Linear i
+--     [α-1][β-1]≤αb-aβ = (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# ((α - + 1) * (β - + 1)))
+    
+--     aβ≤αb : Linear i
+--     aβ≤αb = ((α ⊛ b) ⊝ (β ⊛ a))
+
+--     aβ≤αβx≤αb : List (Linear (suc i))
+--     aβ≤αβx≤αb = ((α * β) x+∅) ⊝ (β ⊛ ⇑1 a)
+--               ∷ (α ⊛ ⇑1 b) ⊝ ((α * β) x+∅)
+--               ∷ []
+
+--     αβn<aβ≤αb<αβ[n+1] : ℕ → List (Linear i)
+--     αβn<aβ≤αb<αβ[n+1] n = ((β ⊛ a) ⊝ (# (α * β * + n)) ⊝ (# (+ 1)))
+--                         ∷ (α ⊛ b) ⊝ (β ⊛ a)
+--                         ∷ ((# (α * β * + (suc n))) ⊝ (α ⊛ b) ⊝ (# (+ 1)))
+--                         ∷ []
+  
+--     α≤αβ[n+1]-αb : ℕ → Linear i
+--     α≤αβ[n+1]-αb n = (# (α * β * + (suc n))) ⊝ (α ⊛ b) ⊝ (# α)
+
+--     β≤aβ-αβn : ℕ → Linear i
+--     β≤aβ-αβn n = (β ⊛ a) ⊝ (# (α * β * + n)) ⊝ (# β)
+
+--     αb-aβ<[α-1][β-1] : Linear i
+--     αb-aβ<[α-1][β-1] = (# ((α - + 1) * (β - + 1))) ⊝ (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# (+ 1))
+
+--     ⊨βa≤αb : ⊨ₗ [α-1][β-1]≤αb-aβ → ⊨ₗ aβ≤αb
+--     ⊨βa≤αb (ρ , pds) = ρ , bar ((α ⊛ b) ⊝ (β ⊛ a)) ((α - + 1) * (β - + 1)) {!∅!} ρ pds 
+--       where
+--         open import Data.Vec.Properties using (map-id ; map-cong ; map-replicate ; zipWith-replicate₂)
+--         open import Data.Integer.Properties using (+-identityʳ ; ≤-reflexive)
+
+--         foo : (m : ℤ) (n : ℕ) → m - + n Int.≤ m
+--         foo m zero = ≤-reflexive (+-identityʳ m)
+--         foo m (suc n) = begin 
+--           m + - + suc n
+--             ≤⟨ {!!} ⟩
+--           m
+--             ∎
+        
+--         bar : ∀ {i} → (a : Linear i) (n : ℤ) (pn : (+ 0) Int.≤ n) (ρ : Env i) → ⊨ₗ₀ (a ⊝ (# n) [ ρ /x]ₗ) → ⊨ₗ₀ (a [ ρ /x]ₗ)
+--         bar (csa ∷+ ka) n pn ρ p = begin 
+--           + 1
+--             ≤⟨ p ⟩
+--           k (((csa ∷+ ka) ⊝ (# n)) [ ρ /x]ₗ)
+--             ≡⟨ lemma₁ csa ka n ρ ⟩
+--           k ((csa ∷+ (ka + - n)) [ ρ /x]ₗ)
+--             ≤⟨ {!!} ⟩
+--           k ((csa ∷+ ka) [ ρ /x]ₗ)
+--             ∎
+
+--     ⊨αβn<aβ≤αb<αβ[n+1] : ⊨ₗ aβ≤αb → ⊭ (l ∷ u ∷ []) → Σ ℕ λ n → ⊨ (αβn<aβ≤αb<αβ[n+1] n)
+--     ⊨αβn<aβ≤αb<αβ[n+1] (ρ , ⊨p₁) ⊭p₂ = n , ρ , r₁ ∷ r₂ ∷ r₃ ∷ []
+--       where
+--         -- How to compute n?
+--         n = {!!}
+--         ⊭aβ≤αβx≤αb : ⊭ ((α * β) x+∅ ⊝ ⇑1 (β ⊛ a) ∷ ⇑1 (α ⊛ b) ⊝ ((α * β) x+∅) ∷ [])
+--         ⊭aβ≤αβx≤αb ρ' (⊨p₃ ∷ ⊨p₄ ∷ []) = ⊭p₂ ρ' ({!!} ∷ {!!} ∷ [])
+        
+--         r₁ = begin
+--           + 1
+--             ≤⟨ {!!} ⟩
+--           k (((β ⊛ a) ⊝ (# (α * β * + n)) ⊝ (# (+ 1))) [ ρ /x]ₗ)
+--             ∎
+--         r₂ = begin
+--           + 1
+--             ≤⟨ {!!} ⟩
+--           k (((α ⊛ b) ⊝ (β ⊛ a)) [ ρ /x]ₗ)
+--             ∎
+--         r₃ = begin
+--           + 1
+--             ≤⟨ {!!} ⟩
+--           k (((# (α * β * + suc n)) ⊝ (α ⊛ b) ⊝ (# (+ 1))) [ ρ /x]ₗ)
+--             ∎
+    
+--     ⊨α≤αβ[n+1]-αb : (n : ℕ) →  ⊨ (αβn<aβ≤αb<αβ[n+1] n) → ⊨ₗ (α≤αβ[n+1]-αb n)
+--     ⊨α≤αβ[n+1]-αb n (ρ , (⊨p₁ ∷ ⊨p₂ ∷ ⊨p₃ ∷ [])) = ρ , (begin 
+--       + 1
+--         ≤⟨ {!!} ⟩
+--       k (α≤αβ[n+1]-αb n [ ρ /x]ₗ)
+--         ∎)
+    
+--     ⊨β≤aβ-αβn : (n : ℕ) →  ⊨ (αβn<aβ≤αb<αβ[n+1] n) → ⊨ₗ (β≤aβ-αβn n)
+--     ⊨β≤aβ-αβn n (ρ , (⊨p₁ ∷ ⊨p₂ ∷ ⊨p₃ ∷ [])) = ρ , (begin 
+--       + 1
+--         ≤⟨ {!!} ⟩
+--       k (β≤aβ-αβn n [ ρ /x]ₗ)
+--         ∎)
+
+--     ⊨αb-aβ<[α-1][β-1] : {n : ℕ} → ⊨ (α≤αβ[n+1]-αb n ∷ β≤aβ-αβn n ∷ []) → ⊨ₗ αb-aβ<[α-1][β-1]
+--     ⊨αb-aβ<[α-1][β-1] (ρ , (⊨p₁ ∷ ⊨p₂ ∷ [])) = ρ , (begin 
+--       + 1
+--         ≤⟨ {!!} ⟩
+--       k (αb-aβ<[α-1][β-1] [ ρ /x]ₗ)
+--         ∎)
+
+--     ⊨⊥ : ⊨ ([α-1][β-1]≤αb-aβ ∷ αb-aβ<[α-1][β-1] ∷ []) → ⊥
+--     ⊨⊥ (ρ , (⊨p ∷ ⊨¬p ∷ [])) = {!!}
+\end{code}
+
+\todo{Evaluation, if there is time}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Cooper's Algorithm}
@@ -1946,7 +2200,7 @@ Pugh's main theorem acts on conjuntions with the following form:
 \cite{Chaieb2003}
 
 As part of its existential quantifier elimination step, Cooper's
-algorithms requires to have variable coefficients set to $1$ or
+algorithm requires to have variable coefficients set to $1$ or
 $-1$. First, the lowest common multiplier $ℓ$ of all coefficients on
 $x$ is computed, then all atoms are multiplied appropriately so that
 their coefficient on $x$ becomes equal to the LCM $ℓ$. Finally, all

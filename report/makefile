@@ -20,5 +20,5 @@ report.pdf: report.lagda bibliography.bib agda.sty chi.png
                  mv $(SOURCE).pdf ..
 
 clean:
-	rm $(SOURCE).pdf
 	rm -r $(OUT)
+	rm $(SOURCE).pdf
