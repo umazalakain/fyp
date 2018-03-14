@@ -1769,10 +1769,13 @@ returns the cartesian product of ~\AgdaBound{ls}~ and ~\AgdaBound{us}.
 \todo{Maybe clean}
 
 \begin{code}
-  dark-shadow : ∀ {i} → Constraint (suc i) LowerBound × Constraint (suc i) UpperBound → Constraint i Unclassified
+  dark-shadow : ∀ {i} → Constraint (suc i) LowerBound × Constraint (suc i) UpperBound → Linear i
   dark-shadow ((l , _) , (u , _)) with head l | ⊝ (tail l) | - (head u) | tail u
-  ...                             | α | a | β | b = (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# ((α - + 1) * (β - + 1))) , tt
+  ...                             | α | a | β | b = (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# ((α - + 1) * (β - + 1)))
       
+  eliminate-irrelevant : ∀ {i} → Constraint (suc i) Irrelevant → Linear i
+  eliminate-irrelevant (a , _) = tail a
+  
   bound-pairs : ∀ {i} → List (Linear (suc i)) → List (Pair (suc i))
   bound-pairs as with partition analyse as
   bound-pairs as | ls , is , us = ×-list ls us
@@ -1782,7 +1785,7 @@ returns the cartesian product of ~\AgdaBound{ls}~ and ~\AgdaBound{us}.
   irrelevants as | ls , is , us = is
 
   omega : ∀ {i} → List (Linear (suc i)) → List (Linear i)
-  omega as = List.map (proj₁ ∘ dark-shadow) (bound-pairs as) ++ List.map (tail ∘ proj₁) (irrelevants as)
+  omega as = List.map dark-shadow (bound-pairs as) ++ List.map eliminate-irrelevant (irrelevants as)
 \end{code}
 
 \subsubsection{Building blocks}
@@ -1925,23 +1928,19 @@ satisfying a decidable predicate within a discrete finite search
 space:
 
 \begin{code}
-  open import Relation.Binary.PropositionalEquality using (setoid)
   open import Relation.Unary using (Decidable)
-  open import Data.List.Any.Membership renaming (_∈_ to _for_∈_)
   open import Data.List.Any using (here ; there)
+  open import Relation.Nullary using (¬_)
+  open import Data.List.Any using (Any)
 
   search : {A : Set} {P : A → Set} (P? : Decidable P) (as : List A)
-         → ((∀ i → (setoid _) for i ∈ as → P i → ⊥) → ⊥)
-         → Σ A P
+         → (All (¬_ ∘ P) as → ⊥) → Σ A P
 
-  search P? []               raa = ⊥-elim (raa λ {i () Pi})
+  search P? []               raa = ⊥-elim (raa [])
   search P? (a ∷ as)         raa with P? a
   search P? (a ∷ as)         raa | yes p = a , p
-  search P? (a ∷ [])         raa | no ¬p = ⊥-elim (raa λ { _ (here refl) → ¬p ; _ (there ())})
-  search P? (a ∷ as@(_ ∷ _)) raa | no ¬p = search P? as
-                                         λ ¬Pi → raa λ
-                                         { _ (here refl)  → ¬p
-                                         ; i (there i∈as) → ¬Pi i i∈as}
+  search P? (a ∷ [])         raa | no ¬p = ⊥-elim (raa (¬p ∷ []))
+  search P? (a ∷ as@(_ ∷ _)) raa | no ¬p = search P? as (λ ¬pas → raa (¬p ∷ ¬pas))
 \end{code}
 
 In the case that concerns us, the search is for some $x$ that 
@@ -1999,30 +1998,52 @@ Ours, where each step is implied by the next one
 \end{align*}
 
 \begin{code}
-  open import Relation.Nullary using (¬_)
-  open import Data.List.Any using (Any)
+  open import Agda.Primitive using (_⊔_)
+  open import Data.List.All using (lookup)
+  open import Data.List.All.Properties as AllProp using ()
 
-  blu : ∀ {i} (xs : List ℤ) (ρ : Env i) (lu : Pair (suc i))
-      → ¬ Any (λ x → ⊨[ x ∷ ρ /x]₂ lu) xs
-      → ¬ ⊨[ ρ /x]₁ (dark-shadow lu)
-  blu = {!!}
 
-  meh : ∀ {i} (xs : List ℤ) (ρ : Env i) (as : List (Linear (suc i)))
-      → ((x : ℤ) → setoid _ for x ∈ xs → All ⊨[ x ∷ ρ /x] as → ⊥)
-      → ((lu : Pair (suc i)) → setoid _ for lu ∈ (bound-pairs as) → Any (λ x → ⊨[ x ∷ ρ /x]₂ lu) xs → ⊥)
+  ∀[_]_ : ∀ {a p} {A : Set a} → List A → (A → Set p) → Set (p ⊔ a)
+  ∀[ xs ] P = All P xs 
+
+  ∃[_]_ : ∀ {a p} {A : Set a} → List A → (A → Set p) → Set (p ⊔ a)
+  ∃[ xs ] P = Any P xs 
+
+  norrish : ∀ {i} {xs : List ℤ} (ρ : Env i) (lu : Pair (suc i))
+          → (∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]₂ lu) → ⊥)
+          → ¬ ⊨[ ρ /x] (dark-shadow lu)
+  norrish = {!All!}
+
+  for-irrelevant : ∀ {i} {xs : List ℤ} (ρ : Env i) (as : List (Linear (suc i)))
+                 → (∀[ xs ] λ x → ¬ ∀[ as ] ⊨[ x ∷ ρ /x])
+                 → (¬ ∀[ irrelevants as ] (⊨[ ρ /x] ∘ eliminate-irrelevant))
       
-  meh {i} xs ρ as = begin
-    ((x : ℤ) → setoid _ for x ∈ xs → All ⊨[ x ∷ ρ /x] as → ⊥)
+  for-irrelevant {i} {xs} ρ as = begin
+    (∀[ xs ] λ x → ¬ ∀[ as ] ⊨[ x ∷ ρ /x])
       ∼⟨ {!!} ⟩
-    (All (λ x → ¬ All ⊨[ x ∷ ρ /x] as) xs)
+    (∀[ xs ] λ x → ¬ ∀[ irrelevants as ] ⊨[ x ∷ ρ /x]₁)
+      ∼⟨ {!!} ⟩
+    (¬ ∀[ irrelevants as ] (⊨[ ρ /x] ∘ eliminate-irrelevant))
+      ∎
+    where
+
+    open import Data.List.All.Properties using (All¬⇒¬Any)
+    open import Agda.Primitive using (lzero)
+    open import Function.Related using (preorder ; implication)
+    open import Relation.Binary.PreorderReasoning (preorder implication lzero)
+
+  for-pair : ∀ {i} {xs : List ℤ} (ρ : Env i) (as : List (Linear (suc i)))
+      → (∀[ xs ] λ x → ¬ ∀[ as ] ⊨[ x ∷ ρ /x])
+      → (∀[ bound-pairs as ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]₂ lu)
+      
+  for-pair {i} {xs} ρ as = begin
+    (∀[ xs ] λ x → ¬ ∀[ as ] ⊨[ x ∷ ρ /x])
       ∼⟨ All¬⇒¬Any ⟩
-    (¬ Any (λ x → All ⊨[ x ∷ ρ /x] as) xs)
+    (¬ ∃[ xs ] λ x → ∀[ as ] ⊨[ x ∷ ρ /x])
       ∼⟨ {!!} ⟩
-    (All (λ a → ¬ Any (λ x → ⊨[ x ∷ ρ /x] a) xs) as)
+    (∀[ as ] λ a → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x] a)
       ∼⟨ {!!} ⟩
-    (All (λ lu → ¬ Any (λ x → ⊨[ x ∷ ρ /x]₂ lu) xs) (bound-pairs as))
-      ∼⟨ {!!} ⟩
-    ((lu : Pair (suc i)) → setoid _ for lu ∈ (bound-pairs as) → Any (λ x → ⊨[ x ∷ ρ /x]₂ lu) xs → ⊥)
+    (∀[ bound-pairs as ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]₂ lu)
       ∎
     where
 
@@ -2032,15 +2053,13 @@ Ours, where each step is implied by the next one
     open import Relation.Binary.PreorderReasoning (preorder implication lzero)
 
   by-contradiction : ∀ {i} → (as : List (Linear (suc i))) (⊨Ωas : ⊨ (omega as))
-                   → {xs : List ℤ} → ((x : ℤ) → setoid _ for x ∈ xs → All ⊨[ x ∷ (proj₁ ⊨Ωas) /x] as → ⊥)
+                   → {xs : List ℤ} → (∀[ xs ] λ x → ¬ ∀[ as ] ⊨[ x ∷ (proj₁ ⊨Ωas) /x])
                    → ⊥
 
-  by-contradiction as (ρ , ⊨Ωas) {xs} f with bound-pairs as | irrelevants as | meh xs ρ as f
-  by-contradiction as (ρ , []) {[]} f | [] | [] | g = {!!}
-  by-contradiction as (ρ , []) {x ∷ xs} f | [] | [] | g = {!!}
-  by-contradiction as (ρ , (⊨irr ∷ ⊨Ωas)) {xs} f | [] | irr ∷ irrs | g = f {!!} {!!} {!!}
-  by-contradiction as (ρ , (⊨lu ∷ ⊨Ωas)) {xs} f | lu ∷ lus | irrs | g = blu xs ρ lu (g lu (here refl)) ⊨lu
-    where
+  by-contradiction as (ρ , ⊨Ωas) f with bound-pairs as | irrelevants as | for-pair ρ as f | for-irrelevant ρ as f
+  by-contradiction as (ρ , []) f | [] | [] | fp | fi = fi []
+  by-contradiction as (ρ , ⊨Ωir ∷ ⊨Ωas) f | [] | ir ∷ irs | fp | fi = fi (⊨Ωir ∷ AllProp.map-All ⊨Ωas)
+  by-contradiction as (ρ , ⊨Ωlu ∷ ⊨Ωas) f | lu ∷ lus | _ | fp | fi = norrish ρ lu (lookup fp (here refl)) ⊨Ωlu
 
   find-x : ∀ {i} → (as : List (Linear (suc i))) → ⊨ (omega as) → ⊨ as
   find-x as ⊨Ωas@(ρ , _) with search (λ x → ⟦ as ⟧ (x ∷ ρ)) (search-space (List.map _[ ρ /x] as)) (by-contradiction as ⊨Ωas)
