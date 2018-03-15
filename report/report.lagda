@@ -1262,9 +1262,9 @@ module _ where
 \AgdaHide{
 \begin{code}
 module Presburger where
-  open import Function using (id ; _∘_)
+  open import Function using (id ; _∘_ ; _⟨_⟩_)
   open import Data.Fin using (Fin ; zero ; suc)
-  open import Data.Integer as Int using (ℤ ; +_ ; -[1+_] ; _+_ ; _-_ ; -_ ; _*_ ; _<_ ; _≤_ ; _>_ ; ∣_∣)
+  open import Data.Integer hiding (suc)
   open import Data.Nat as Nat using (ℕ ; zero ; suc)
   open import Data.Sum using (_⊎_ ; inj₁ ; inj₂)
   open import Data.Vec as Vec using (Vec ; [] ; _∷_)
@@ -1281,8 +1281,19 @@ module Presburger where
   open import Data.Empty using (⊥ ; ⊥-elim)
   open import Data.Nat.DivMod using (_div_)
   open import Data.List.NonEmpty as NE using (List⁺)
+  open import Relation.Unary using (Decidable)
+  open import Data.List.Any using (here ; there)
+  open import Relation.Nullary using (¬_)
+  open import Data.List.Any using (Any)
 
-  open import Prologue using (_<?_ ; ×-list)
+
+  ×-list : {X Y : Set}(xs : List X)(ys : List Y) → List (X × Y)
+  ×-list xs = List.concat ∘ List.map (λ y → List.map (_, y) xs)
+  
+  _<?_ : (x y : ℤ) → Dec (x < y)
+  x <? y with (+ 1 + x) ≤? y
+  x <? y | yes p = yes p
+  x <? y | no ¬p = no ¬p
 \end{code}
 }
 
@@ -1420,98 +1431,6 @@ structure containing only ~\AgdaDatatype{Linear}~\AgdaNumber{0}.
       k : ℤ
 \end{code}
 
-\AgdaHide{
-\begin{code}
-  open Linear
-  pattern _x+_+ℤ_ c cs k = (c ∷ cs) ∷+ k
-  
-  infixl 20 _⊕_
-  infixl 20 _⊝_
-
-  #_ : ∀ {i} → ℤ → Linear i
-  # k = Vec.replicate (+ 0) ∷+ k
-  
-  ∅ : ∀ {i} → Linear i
-  ∅ = Vec.replicate (+ 0) ∷+ (+ 0)
-  
-  _x+∅ : ∀ {i} → ℤ → Linear (suc i)
-  n x+∅ = (n ∷ Vec.replicate (+ 0)) ∷+ (+ 0)
-  
-  _x+_ : ∀ {i} → ℤ → Linear i → Linear (suc i)
-  n x+ (cs ∷+ k) = (n ∷ cs) ∷+ k
-
-  _≤_x : ∀ {i} → Linear i → ℤ → Linear (suc i)
-  (cs ∷+ k) ≤ α x = (α ∷ (Vec.map -_ cs)) ∷+ (- k)
-
-  _x≤_ : ∀ {i} → ℤ → Linear i → Linear (suc i)
-  β x≤ (cs ∷+ k) = ((- β) ∷ cs) ∷+ k
-  
-  0x+_ : ∀ {i} → Linear i → Linear (suc i)
-  0x+_ (cs ∷+ k) = ((+ 0) ∷ cs) ∷+ k
-  
-  _⊛_ : ∀ {i} → ℤ → Linear i → Linear i
-  z ⊛ (cs ∷+ k) = Vec.map (z *_) cs ∷+ (z * k)
- 
-  _⊕_ : ∀ {i} → Linear i → Linear i → Linear i
-  (cs₁ ∷+ k₁) ⊕ (cs₂ ∷+ k₂) = Vec.zipWith _+_ cs₁ cs₂ ∷+ (k₁ + k₂)
- 
-  ⊝_ : ∀ {i} → Linear i → Linear i
-  ⊝ (cs ∷+ k) = (Vec.map -_ cs) ∷+ (- k)
-
-  _⊝_ : ∀ {i} → Linear i → Linear i → Linear i
-  a ⊝ b = a ⊕ (⊝ b)
-
-  ⊘ : ∀ {i} → Linear i → Linear i
-  ⊘ a = (# (+ 1)) ⊝ a
-  
-  head : ∀ {i} → Linear (suc i) → ℤ
-  head (c x+ cs +ℤ k) = c
-
-  tail : ∀ {i} → Linear (suc i) → Linear i
-  tail (c x+ cs +ℤ k) = cs ∷+ k
-  
-  substitute : ∀ {i} → Linear i → Linear (suc i) → Linear i
-  substitute x a = (head a ⊛ x) ⊕ tail a
-
-  Irrelevant : ∀ {i} → Linear i → Set
-  Irrelevant {zero} a = ⊥
-  Irrelevant {suc n} a = + 0 ≡ head a
-
-  LowerBound : ∀ {i} → Linear i → Set
-  LowerBound {zero} a = ⊥
-  LowerBound {suc n} a = + 0 < head a
-
-  UpperBound : ∀ {i} → Linear i → Set
-  UpperBound {zero} a = ⊥
-  UpperBound {suc n} a = + 0 > head a
-
-  Unclassified : ∀ {i} → Linear i → Set
-  Unclassified a = ⊤
-
-  Constraint : (i : ℕ) (P : Linear i → Set) → Set
-  Constraint i P = Σ (Linear i) P
-
-  Pair : (i : ℕ) → Set
-  Pair i = Constraint i LowerBound × Constraint i UpperBound
-  
-  analyse : ∀ {i} → (a : Linear i) → Tri (LowerBound a) (Irrelevant a) (UpperBound a)
-  analyse {zero} = {!!}
-  analyse {suc n} = <-cmp (+ 0) ∘ head 
-      
-  partition : ∀ {A : Set} {P Q R : A → Set}
-             → ((a : A) → Tri (P a) (Q a) (R a))
-             → List A
-             → List (Σ A P)
-             × List (Σ A Q)
-             × List (Σ A R)
-  partition f [] = [] , [] , []
-  partition f (a ∷ as) with f a | partition f as
-  partition f (a ∷ as) | Tri.tri< p _ _ | ps , qs , rs = (a , p) ∷ ps , qs , rs
-  partition f (a ∷ as) | Tri.tri≈ _ q _ | ps , qs , rs = ps , (a , q) ∷ qs , rs
-  partition f (a ∷ as) | Tri.tri> _ _ r | ps , qs , rs = ps , qs , (a , r) ∷ rs
-\end{code}
-}
-
 Universal quantifiers need to be eliminated as part of their
 normalisation process. This is carried out resorting to the following
 equivalence:
@@ -1564,6 +1483,159 @@ n ∤ a &\equiv ∃x.\:\bigvee_{i ∈ 1 \ldots n - 1} nx = (a + i)
 The Omega Test was first introduced as procedure deciding Presburger
 arithmetic in \cite{Pugh1991}. It adapts Fourier-Motzkin elimination —
 which acts on real numbers — to integers.
+
+\subsubsection{Building blocks}
+
+\todo{Add annex}
+
+\begin{code}
+  open Linear
+  pattern _x+_+ℤ_ c cs k = (c ∷ cs) ∷+ k
+  
+  infixl 20 _⊕_
+  infixl 20 _⊝_
+
+  #_ : ∀ {i} → ℤ → Linear i
+  # k = Vec.replicate (+ 0) ∷+ k
+  
+  ∅ : ∀ {i} → Linear i
+  ∅ = Vec.replicate (+ 0) ∷+ (+ 0)
+  
+  _x+∅ : ∀ {i} → ℤ → Linear (suc i)
+  n x+∅ = (n ∷ Vec.replicate (+ 0)) ∷+ (+ 0)
+  
+  _x+_ : ∀ {i} → ℤ → Linear i → Linear (suc i)
+  n x+ (cs ∷+ k) = (n ∷ cs) ∷+ k
+
+  _≤_x : ∀ {i} → Linear i → ℤ → Linear (suc i)
+  (cs ∷+ k) ≤ α x = (α ∷ (Vec.map -_ cs)) ∷+ (- k)
+
+  _x≤_ : ∀ {i} → ℤ → Linear i → Linear (suc i)
+  β x≤ (cs ∷+ k) = ((- β) ∷ cs) ∷+ k
+  
+  0x+_ : ∀ {i} → Linear i → Linear (suc i)
+  0x+_ (cs ∷+ k) = ((+ 0) ∷ cs) ∷+ k
+  
+  _⊛_ : ∀ {i} → ℤ → Linear i → Linear i
+  z ⊛ (cs ∷+ k) = Vec.map (z *_) cs ∷+ (z * k)
+ 
+  _⊕_ : ∀ {i} → Linear i → Linear i → Linear i
+  (cs₁ ∷+ k₁) ⊕ (cs₂ ∷+ k₂) = Vec.zipWith _+_ cs₁ cs₂ ∷+ (k₁ + k₂)
+ 
+  ⊝_ : ∀ {i} → Linear i → Linear i
+  ⊝ (cs ∷+ k) = (Vec.map -_ cs) ∷+ (- k)
+
+  _⊝_ : ∀ {i} → Linear i → Linear i → Linear i
+  a ⊝ b = a ⊕ (⊝ b)
+
+  ⊘ : ∀ {i} → Linear i → Linear i
+  ⊘ a = (# (+ 1)) ⊝ a
+\end{code}
+
+\begin{code}
+  head : ∀ {i} → Linear (suc i) → ℤ
+  head (c x+ cs +ℤ k) = c
+
+  tail : ∀ {i} → Linear (suc i) → Linear i
+  tail (c x+ cs +ℤ k) = cs ∷+ k
+  
+  substitute : ∀ {i} → Linear i → Linear (suc i) → Linear i
+  substitute x a = (head a ⊛ x) ⊕ tail a
+
+  Irrelevant : ∀ {i} → Linear i → Set
+  Irrelevant {zero} a = ⊥
+  Irrelevant {suc n} a = + 0 ≡ head a
+
+  LowerBound : ∀ {i} → Linear i → Set
+  LowerBound {zero} a = ⊥
+  LowerBound {suc n} a = + 0 < head a
+
+  UpperBound : ∀ {i} → Linear i → Set
+  UpperBound {zero} a = ⊥
+  UpperBound {suc n} a = + 0 > head a
+
+  Unclassified : ∀ {i} → Linear i → Set
+  Unclassified a = ⊤
+
+  Constraint : (i : ℕ) (P : Linear i → Set) → Set
+  Constraint i P = Σ (Linear i) P
+
+  Pair : (i : ℕ) → Set
+  Pair i = Constraint i LowerBound × Constraint i UpperBound
+  
+  partition : ∀ {i} → List (Linear (suc i))
+             → List (Constraint (suc i) LowerBound)
+             × List (Constraint (suc i) Irrelevant)
+             × List (Constraint (suc i) UpperBound)
+  partition [] = [] , [] , []
+  partition (a ∷ as) with <-cmp (+ 0) (head a) | partition as
+  partition (a ∷ as) | Tri.tri< 0>c _ _ | ls , is , us = (a , 0>c) ∷ ls , is , us
+  partition (a ∷ as) | Tri.tri≈ _ 0=c _ | ls , is , us = ls , (a , 0=c) ∷ is , us
+  partition (a ∷ as) | Tri.tri> _ _ 0<c | ls , is , us = ls , is , (a , 0<c) ∷ us
+\end{code}
+
+
+To prove our quantifier elimination correct we first need to introduce
+the reader to some basic notions involving satisfiability and
+decidability of Presburger formulas.
+
+An environment in which to evaluate a formula is a map from de Bruijn
+indices to integers, where each index stands for a variable.
+
+\begin{code}
+  Env : ℕ → Set
+  Env i = Vec ℤ i
+\end{code}
+
+Next, we define substitution for constraints:
+
+\todo{Comment we substitute outermost vars}
+
+\begin{code}
+  [_/x]_ : ∀ {i d} → Env i → Linear (d Nat.+ i) → Linear d
+  [_/x]_ {d = zero} [] a = a
+  [_/x]_ {d = zero} (x ∷ xs) a = [ xs /x] (substitute (# x) a)
+  [_/x]_ {d = suc d} xs ((c ∷ cs) ∷+ k) = c x+∅ ⊕ (0x+ ([ xs /x] (cs ∷+ k)))
+
+  ⇓[_/x]_ : ∀ {i} → Env i → Linear i → ℤ
+  ⇓[ ρ /x] a = k {zero} ([ ρ /x] a)
+\end{code}
+
+The base case for satisfiability is on a single constraint with no
+variables, the rest of cases depend on an environment for
+substitution.
+
+\begin{code}
+  ⊨⇓ : Linear 0 → Set
+  ⊨⇓ a = (+ 0) < (Linear.k a)
+
+  ⊨[_/x] : ∀ {i} → Env i → Linear i → Set
+  ⊨[ ρ /x] a = ⊨⇓ ([ ρ /x] a)
+
+  ⊨[_/x]ᵢ : ∀ {i} {P : Linear i → Set} → Env i → Constraint i P → Set
+  ⊨[ ρ /x]ᵢ (a , _) = ⊨[ ρ /x] a
+
+  ⊨[_/x]ₚ : ∀ {i} → Env i → Pair i → Set
+  ⊨[ ρ /x]ₚ ((l , _) , (u , _)) = ⊨[ ρ /x] l × ⊨[ ρ /x] u
+  
+  ⊨ : ∀ {i} → List (Linear i) → Set
+  ⊨ {i} as = Σ (Env i) λ ρ → All ⊨[ ρ /x] as
+\end{code}
+
+After substitution, satisfiability is decidable.
+
+\begin{code}
+  ⟦_⟧⇓ : (a : Linear 0) → Dec (⊨⇓ a)
+  ⟦ a ⟧⇓ = (+ 0) <? (Linear.k a)
+
+  open import Data.List.All using (all)
+
+  ⟦_⟧[_/x] : ∀ {i} → (a : Linear i) → (ρ : Env i) → Dec (⊨[ ρ /x] a)
+  ⟦ a ⟧[ ρ /x] = ⟦ [ ρ /x] a ⟧⇓
+
+  ⟦_⟧ : ∀ {i} → (as : List (Linear i)) → (ρ : Env i) → Dec (All ⊨[ ρ /x] as)
+  ⟦ as ⟧ ρ = all ⟦_⟧[ ρ /x] as
+\end{code}
 
 \subsubsection{Normalisation}
 
@@ -1741,21 +1813,21 @@ decreasing in steps of variable size.
 
 However, because of time limitations and the considerable complexity
 that implementing the elimination of equalities in splinters and the
-proofs involving splinters introduce, it was decided to limit the
-extend of this chapter to implementing and verifying the soundness of
-the real shadow — the first disjunct on the RHS of Pugh's theorem.
+proofs involving splinters introduce, we decided to limit the extend
+of this chapter to implementing and verifying the soundness of the
+real shadow — the first disjunct on the RHS of Pugh's theorem.
 
 \todo{Mention this is a common thing to do}
 
 Pugh's theorem is a sound and complete decision procedure
 characterised as a disjunction. Supplying only one of the disjuncts
-renders the decision procedure incomplete but does not alter its
+renders the decision procedure incomplete but does not affect its
 soundness. That is: every formula decided true by the dark shadow can
 be proven to be true, but no claims can be made about those formulas
 that the dark shadow decided false.
 
-We implement quantifier elimination using Pugh's dark-shadow on
-quantifier-free formulas below.
+Below, we implement quantifier elimination using Pugh's dark-shadow on
+quantifier-free formulas.
 ~\AgdaDatatype{List}~\AgdaSymbol(\AgdaDatatype{Linear}~\AgdaBound{i}\AgdaSymbol{)}~
 represents a conjunction over constraints with ~\AgdaBound{i}~
 variables, ~\AgdaFunction{partition}~\AgdaBound{as}~ classifies those
@@ -1769,99 +1841,23 @@ returns the cartesian product of ~\AgdaBound{ls}~ and ~\AgdaBound{us}.
 \todo{Maybe clean}
 
 \begin{code}
-  dark-shadow : ∀ {i} → Constraint (suc i) LowerBound × Constraint (suc i) UpperBound → Linear i
+  dark-shadow : ∀ {i} → Pair (suc i) → Linear i
   dark-shadow ((l , _) , (u , _)) with head l | ⊝ (tail l) | - (head u) | tail u
   ...                             | α | a | β | b = (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# ((α - + 1) * (β - + 1)))
       
   eliminate-irrelevant : ∀ {i} → Constraint (suc i) Irrelevant → Linear i
-  eliminate-irrelevant (a , _) = tail a
+  eliminate-irrelevant = tail ∘ proj₁
   
   bound-pairs : ∀ {i} → List (Linear (suc i)) → List (Pair (suc i))
-  bound-pairs as with partition analyse as
+  bound-pairs as with partition as
   bound-pairs as | ls , is , us = ×-list ls us
 
   irrelevants : ∀ {i} → List (Linear (suc i)) → List (Constraint (suc i) Irrelevant)
-  irrelevants as with partition analyse as
+  irrelevants as with partition as
   irrelevants as | ls , is , us = is
 
   omega : ∀ {i} → List (Linear (suc i)) → List (Linear i)
   omega as = List.map dark-shadow (bound-pairs as) ++ List.map eliminate-irrelevant (irrelevants as)
-\end{code}
-
-\subsubsection{Building blocks}
-
-To prove our quantifier elimination correct we first need to introduce
-the reader to some basic notions involving satisfiability and
-decidability of Presburger formulas.
-
-An environment in which to evaluate a formula is a map from de Bruijn
-indices to integers, where each index stands for a variable.
-
-\begin{code}
-  Env : ℕ → Set
-  Env i = Vec ℤ i
-\end{code}
-
-Next, we define substitution for constraints:
-
-\todo{Comment we substitute outermost vars}
-
-\begin{code}
-  _[_/x] : ∀ {i d} → Linear (d Nat.+ i) → Env i → Linear d
-  _[_/x] {d = zero} a [] = a
-  _[_/x] {d = zero} a (x ∷ xs) = (substitute (# x) a) [ xs /x]
-  _[_/x] {d = suc d} ((c ∷ cs) ∷+ k) xs = c x+∅ ⊕ (0x+ ((cs ∷+ k) [ xs /x]))
-\end{code}
-
-The base case for satisfiability is on a single constraint with no
-variables, the rest of cases depend on an environment for
-substitution.
-
-\begin{code}
-  ⊨⇓ : Linear 0 → Set
-  ⊨⇓ a = (+ 0) < (Linear.k a)
-
-  ⊨[_/x] : ∀ {i} → Env i → Linear i → Set
-  ⊨[ ρ /x] a = ⊨⇓ (a [ ρ /x])
-
-  ⊨[_/x]₁ : ∀ {i} {P : Linear i → Set} → Env i → Constraint i P → Set
-  ⊨[ ρ /x]₁ (a , _) = ⊨[ ρ /x] a
-
-  ⊨[_/x]₂ : ∀ {i} → Env i → Pair i → Set
-  ⊨[ ρ /x]₂ ((l , _) , (u , _)) = ⊨[ ρ /x] l × ⊨[ ρ /x] u
-  
-  ⊨ : ∀ {i} → List (Linear i) → Set
-  ⊨ {i} as = Σ (Env i) λ ρ → All ⊨[ ρ /x] as
-
-  ⊨₁ : ∀ {i} {P : Linear i → Set} → List (Constraint i P) → Set
-  ⊨₁ {i} cs = Σ (Env i) λ ρ → All ⊨[ ρ /x]₁ cs
-
-  ⊨₂ : ∀ {i} → List (Pair i) → Set
-  ⊨₂ {i} lus = Σ (Env i) λ ρ → All ⊨[ ρ /x]₂ lus
-\end{code}
-
-After substitution, satisfiability is decidable.
-
-\begin{code}
-  ⟦_⟧⇓ : (a : Linear 0) → Dec (⊨⇓ a)
-  ⟦ a ⟧⇓ = (+ 0) <? (Linear.k a)
-
-  open import Data.List.All using (all)
-
-  ⟦_⟧[_/x] : ∀ {i} → (a : Linear i) → (ρ : Env i) → Dec (⊨[ ρ /x] a)
-  ⟦ a ⟧[ ρ /x] = ⟦ a [ ρ /x] ⟧⇓
-
-  ⟦_⟧₂[_/x] : ∀ {i} → (lu : Pair i) → (ρ : Env i) → Dec (⊨[ ρ /x]₂ lu)
-  ⟦ (l , _) , (u , _) ⟧₂[ ρ /x] with ⟦ l [ ρ /x] ⟧⇓ | ⟦ u [ ρ /x] ⟧⇓
-  ⟦ (l , _) , u , _ ⟧₂[ ρ /x] | yes p | yes p₁ = yes (p , p₁)
-  ⟦ (l , _) , u , _ ⟧₂[ ρ /x] | _ | no ¬p = no λ { (proj₃ , proj₄) → ¬p proj₄}
-  ⟦ (l , _) , u , _ ⟧₂[ ρ /x] | no ¬p | _ = no λ { (proj₃ , proj₄) → ¬p proj₃}
-
-  ⟦_⟧ : ∀ {i} → (as : List (Linear i)) → (ρ : Env i) → Dec (All ⊨[ ρ /x] as)
-  ⟦ as ⟧ ρ = all ⟦_⟧[ ρ /x] as
-
-  ⟦_⟧₂ : ∀ {i} → (lus : List (Pair i)) → (ρ : Env i) → Dec (All ⊨[ ρ /x]₂ lus)
-  ⟦ lus ⟧₂ ρ = all ⟦_⟧₂[ ρ /x] lus
 \end{code}
 
 For convenience, we will add a shortcut that performs quantifier
@@ -1924,23 +1920,20 @@ satisfying $P$. We will thus use the proof outlined in
 \todo{Explain Σ types somewhere}
 
 Below, a generalised search function that searches for elements
-satisfying a decidable predicate within a discrete finite search
-space:
+satisfying a decidable predicate within a discrete finite non-empty
+search space:
 
 \begin{code}
-  open import Relation.Unary using (Decidable)
-  open import Data.List.Any using (here ; there)
-  open import Relation.Nullary using (¬_)
-  open import Data.List.Any using (Any)
+  search : {A : Set} {P : A → Set} (P? : Decidable P)
+         → (as : List A) (¬Ø : as ≢ [])
+         → (as ≢ [] → All (¬_ ∘ P) as → ⊥)
+         → Σ A P
 
-  search : {A : Set} {P : A → Set} (P? : Decidable P) (as : List A)
-         → (All (¬_ ∘ P) as → ⊥) → Σ A P
-
-  search P? []               raa = ⊥-elim (raa [])
-  search P? (a ∷ as)         raa with P? a
-  search P? (a ∷ as)         raa | yes p = a , p
-  search P? (a ∷ [])         raa | no ¬p = ⊥-elim (raa (¬p ∷ []))
-  search P? (a ∷ as@(_ ∷ _)) raa | no ¬p = search P? as (λ ¬pas → raa (¬p ∷ ¬pas))
+  search P? []               ¬Ø raa = ⊥-elim (¬Ø refl)
+  search P? (a ∷ as)         ¬Ø raa with P? a
+  search P? (a ∷ as)         ¬Ø raa | yes p = a , p
+  search P? (a ∷ [])         ¬Ø raa | no ¬p = ⊥-elim (raa ¬Ø (¬p ∷ []))
+  search P? (a ∷ as@(_ ∷ _)) ¬Ø raa | no ¬p = search P? as (λ ()) (λ _ ¬pas → raa ¬Ø (¬p ∷ ¬pas))
 \end{code}
 
 In the case that concerns us, the search is for some $x$ that 
@@ -1954,28 +1947,28 @@ lowest upper bound.
 
 \begin{code}
   start : List (Constraint 1 LowerBound) → ℤ
-  start ls = List.foldr Int._⊔_ (+ 0) (List.map bound ls)
+  start ls = List.foldr _⊔_ (+ 0) (List.map bound ls)
     where
     -- div requires an implicit proof showing its divisor is non-zero
     bound : Constraint 1 LowerBound → ℤ
     bound (((+_ zero ∷ []) ∷+ -a) , (_≤_.+≤+ ()))
-    bound (((+_ (suc α-1) ∷ []) ∷+ -a) , lb) = Int.sign (- -a) Int.◃ (∣ -a ∣ div (suc α-1))
+    bound (((+_ (suc α-1) ∷ []) ∷+ -a) , lb) = sign (- -a) ◃ (∣ -a ∣ div (suc α-1))
     bound (((-[1+_] n ∷ []) ∷+ -a) , ())
 
 
   stop : List (Constraint 1 UpperBound) → ℤ
-  stop us = List.foldr Int._⊓_ (+ 0) (List.map bound us)
+  stop us = List.foldr _⊓_ (+ 0) (List.map bound us)
     where
     -- div requires an implicit proof showing its divisor is non-zero
     bound : Constraint 1 UpperBound → ℤ
     bound (((+_ n ∷ []) ∷+ b) , _≤_.+≤+ ())
-    bound (((-[1+ β-1 ] ∷ []) ∷+ b) , ub) = Int.sign b Int.◃ (∣ b ∣ div suc β-1)
+    bound (((-[1+ β-1 ] ∷ []) ∷+ b) , ub) = sign b ◃ (∣ b ∣ div suc β-1)
 
-  search-space : List (Linear 1) → List ℤ
-  search-space as with partition analyse as
-  search-space as | ls , is , us with start ls - stop us
-  search-space as | ls , is , us | + Δ = List.applyUpTo (λ i → + i + start ls) Δ
-  search-space as | ls , is , us | -[1+ Δ ] = []
+  search-space : ∀ {i} (as : List (Linear (suc i))) → ⊨ (omega as) → Σ (List ℤ) (_≢ [])
+  search-space as (ρ , ⊨Ωas) with partition (List.map [ ρ /x]_ as)
+  search-space as (ρ , ⊨Ωas) | ls , is , us with start ls - stop us
+  search-space as (ρ , ⊨Ωas) | ls , is , us | + Δ = List.applyUpTo (λ i → + i + start ls) Δ , {!!}
+  search-space as (ρ , ⊨Ωas) | ls , is , us | -[1+ Δ ] = ⊥-elim {!!}
 \end{code}
 
 Norrish, where each step is implied by the next one
@@ -1998,72 +1991,93 @@ Ours, where each step is implied by the next one
 \end{align*}
 
 \begin{code}
-  open import Agda.Primitive using (_⊔_)
-  open import Data.List.All using (lookup)
+  open import Agda.Primitive renaming (_⊔_ to _ℓ⊔_)
   open import Data.List.All.Properties as AllProp using ()
 
 
-  ∀[_]_ : ∀ {a p} {A : Set a} → List A → (A → Set p) → Set (p ⊔ a)
+  ∀[_]_ : ∀ {a p} {A : Set a} → List A → (A → Set p) → Set (p ℓ⊔ a)
   ∀[ xs ] P = All P xs 
 
-  ∃[_]_ : ∀ {a p} {A : Set a} → List A → (A → Set p) → Set (p ⊔ a)
+  ∃[_]_ : ∀ {a p} {A : Set a} → List A → (A → Set p) → Set (p ℓ⊔ a)
   ∃[ xs ] P = Any P xs 
 
   norrish : ∀ {i} {xs : List ℤ} (ρ : Env i) (lu : Pair (suc i))
-          → (∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]₂ lu) → ⊥)
-          → ¬ ⊨[ ρ /x] (dark-shadow lu)
-  norrish = {!All!}
+          → ¬ ∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]ₚ lu)          → ¬ ⊨[ ρ /x] (dark-shadow lu)
 
-  for-irrelevant : ∀ {i} {xs : List ℤ} (ρ : Env i) (as : List (Linear (suc i)))
+  module _ {i : ℕ} (ρ : Env i) (as : List (Linear (suc i))) (xs : List ℤ) where
+  
+    ⊭irrelevants : (xs ≢ [])
                  → (∀[ xs ] λ x → ¬ ∀[ as ] ⊨[ x ∷ ρ /x])
                  → (¬ ∀[ irrelevants as ] (⊨[ ρ /x] ∘ eliminate-irrelevant))
-      
-  for-irrelevant {i} {xs} ρ as = begin
-    (∀[ xs ] λ x → ¬ ∀[ as ] ⊨[ x ∷ ρ /x])
-      ∼⟨ {!!} ⟩
-    (∀[ xs ] λ x → ¬ ∀[ irrelevants as ] ⊨[ x ∷ ρ /x]₁)
-      ∼⟨ {!!} ⟩
-    (¬ ∀[ irrelevants as ] (⊨[ ρ /x] ∘ eliminate-irrelevant))
-      ∎
-    where
+        
+    ⊭irrelevants ¬Ø = begin
+      (∀[ xs ] λ x → ¬ ∀[ as ] ⊨[ x ∷ ρ /x])
+        ∼⟨ {!!} ⟩
+      (∀[ xs ] λ x → ¬ ∀[ irrelevants as ] ⊨[ x ∷ ρ /x]ᵢ)
+        ∼⟨ (λ { [] → ⊥-elim (¬Ø refl) ; (px ∷ xs) → λ x → px {!!}}) ⟩
+      (¬ ∀[ irrelevants as ] (⊨[ ρ /x] ∘ eliminate-irrelevant))
+        ∎
+      where
+      open import Data.List.All using (map)
+      open import Data.List.All.Properties using (All¬⇒¬Any)
+      open import Agda.Primitive using (lzero)
+      open import Function.Related using (preorder ; implication)
+      open import Relation.Binary.PreorderReasoning (preorder implication lzero)
 
-    open import Data.List.All.Properties using (All¬⇒¬Any)
-    open import Agda.Primitive using (lzero)
-    open import Function.Related using (preorder ; implication)
-    open import Relation.Binary.PreorderReasoning (preorder implication lzero)
+      ⊨[ρ]ᵢ→⊨[x∷ρ]ᵢ : (a : Constraint (suc i) Irrelevant) (x : ℤ)
+                     → ⊨[ ρ /x] (eliminate-irrelevant a) → ⊨[ x ∷ ρ /x]ᵢ a
+      ⊨[ρ]ᵢ→⊨[x∷ρ]ᵢ a x ⊨a = {!!}
+            
 
-  for-pair : ∀ {i} {xs : List ℤ} (ρ : Env i) (as : List (Linear (suc i)))
-      → (∀[ xs ] λ x → ¬ ∀[ as ] ⊨[ x ∷ ρ /x])
-      → (∀[ bound-pairs as ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]₂ lu)
-      
-  for-pair {i} {xs} ρ as = begin
-    (∀[ xs ] λ x → ¬ ∀[ as ] ⊨[ x ∷ ρ /x])
-      ∼⟨ All¬⇒¬Any ⟩
-    (¬ ∃[ xs ] λ x → ∀[ as ] ⊨[ x ∷ ρ /x])
-      ∼⟨ {!!} ⟩
-    (∀[ as ] λ a → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x] a)
-      ∼⟨ {!!} ⟩
-    (∀[ bound-pairs as ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]₂ lu)
-      ∎
-    where
+      ⊨irrelevants : ∀ {i} {ρ : Env (suc i)} (as : List (Linear (suc i)))
+                   → ¬ ∀[ as ] ⊨[ ρ /x]
+                   → ¬ ∀[ irrelevants as ] ⊨[ ρ /x]ᵢ
+      ⊨irrelevants as ⊨as = {!!}
 
-    open import Data.List.All.Properties using (All¬⇒¬Any)
-    open import Agda.Primitive using (lzero)
-    open import Function.Related using (preorder ; implication)
-    open import Relation.Binary.PreorderReasoning (preorder implication lzero)
 
-  by-contradiction : ∀ {i} → (as : List (Linear (suc i))) (⊨Ωas : ⊨ (omega as))
-                   → {xs : List ℤ} → (∀[ xs ] λ x → ¬ ∀[ as ] ⊨[ x ∷ (proj₁ ⊨Ωas) /x])
-                   → ⊥
+    ¬∃x→∀lus⇒∀lus→¬∃x : (∀[ xs ] λ x → ¬ ∀[ bound-pairs as ] ⊨[ x ∷ ρ /x]ₚ)
+                     → (∀[ bound-pairs as ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
+    ¬∃x→∀lus⇒∀lus→¬∃x = {!!} 
 
-  by-contradiction as (ρ , ⊨Ωas) f with bound-pairs as | irrelevants as | for-pair ρ as f | for-irrelevant ρ as f
-  by-contradiction as (ρ , []) f | [] | [] | fp | fi = fi []
-  by-contradiction as (ρ , ⊨Ωir ∷ ⊨Ωas) f | [] | ir ∷ irs | fp | fi = fi (⊨Ωir ∷ AllProp.map-All ⊨Ωas)
-  by-contradiction as (ρ , ⊨Ωlu ∷ ⊨Ωas) f | lu ∷ lus | _ | fp | fi = norrish ρ lu (lookup fp (here refl)) ⊨Ωlu
+    ∀x⊨[x∷ρ]ᵢ : All (⊨[ ρ /x] ∘ eliminate-irrelevant) (irrelevants as)
+              → ∀[ xs ] λ x → ∀[ irrelevants as ] ⊨[ x ∷ ρ /x]ᵢ
+    ∀x⊨[x∷ρ]ᵢ = ?
+                     
+    ⊭pairs : (∀[ xs ] λ x → ¬ ∀[ as ] ⊨[ x ∷ ρ /x])
+           → (∀[ bound-pairs as ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
+        
+    ⊭pairs = begin
+      (∀[ xs ] λ x → ¬ ∀[ as ] ⊨[ x ∷ ρ /x])
+        ∼⟨ All¬⇒¬Any ⟩
+      (¬ ∃[ xs ] λ x → ∀[ as ] ⊨[ x ∷ ρ /x])
+        ∼⟨ {!!} ⟩
+      (∀[ as ] λ a → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x] a)
+        ∼⟨ {!!} ⟩
+      (∀[ bound-pairs as ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
+        ∎
+      where
+
+      open import Data.List.All.Properties using (All¬⇒¬Any)
+      open import Agda.Primitive using (lzero)
+      open import Function.Related using (preorder ; implication)
+      open import Relation.Binary.PreorderReasoning (preorder implication lzero)
+      ⊨pairs : ∀ {i} {xs : List ℤ} {ρ : Env (suc i)} (as : List (Linear (suc i)))
+             → (∀[ as ] λ a → ¬ ∃[ xs ] λ x → ⊨[ ρ /x] a)
+             → (∀[ bound-pairs as ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ ρ /x]ₚ lu)
+      ⊨pairs as ⊨as = {!!}
+
+    by-contradiction : (⊨Ωas : All ⊨[ ρ /x] (omega as))
+                     → (xs ≢ []) → (∀[ xs ] λ x → ¬ ∀[ as ] ⊨[ x ∷ ρ /x])
+                     → ⊥
+    by-contradiction ⊨Ωas          ¬Ø ∀xs¬∀as with bound-pairs as | irrelevants as | ⊭pairs ∀xs¬∀as | ⊭irrelevants ¬Ø ∀xs¬∀as
+    by-contradiction []            ¬Ø _ | []       | []       | ⊭lus       | ⊭irs = ⊭irs []
+    by-contradiction (⊨Ωir ∷ ⊨Ωas) ¬Ø _ | []       | ir ∷ irs | ⊭lus       | ⊭irs = ⊭irs (⊨Ωir ∷ (AllProp.map-All ⊨Ωas))
+    by-contradiction (⊨Ωlu ∷ ⊨Ωas) ¬Ø _ | lu ∷ lus | irs      | ⊭lu ∷ ⊭lus | ⊭irs = (norrish ρ lu ⊭lu) ⊨Ωlu
 
   find-x : ∀ {i} → (as : List (Linear (suc i))) → ⊨ (omega as) → ⊨ as
-  find-x as ⊨Ωas@(ρ , _) with search (λ x → ⟦ as ⟧ (x ∷ ρ)) (search-space (List.map _[ ρ /x] as)) (by-contradiction as ⊨Ωas)
-  find-x as ⊨Ωas@(ρ , _) | x , ⊨as = (x ∷ ρ) , ⊨as
+  find-x as (ρ , ⊨Ωas) with search-space as (ρ , ⊨Ωas)
+  find-x as (ρ , ⊨Ωas) | xs , ¬Ø with search (λ x → ⟦ as ⟧ (x ∷ ρ)) xs ¬Ø (by-contradiction ρ as xs ⊨Ωas)
+  find-x as (ρ , ⊨Ωas) | xs , ¬Ø | x , ⊨as = (x ∷ ρ) , ⊨as
 \end{code}
 
 \begin{code}
@@ -2081,358 +2095,380 @@ Ours, where each step is implied by the next one
     inner {suc i} as ep | true | >[ eq ]< = find-x as (inner (omega as) eq)
 \end{code}
 
--- \todo{Introduce proof by contradiction}
--- \todo{Explain our strategy to make it constructive: bounded search}
+\todo{Introduce proof by contradiction}
+\todo{Explain our strategy to make it constructive: bounded search}
+\todo{Extract proof obligation}
+\todo{Go on with the proof}
 
--- The thing to test is aβ≤αβx≤αb
+\begin{code}
+  lemma₀ : ∀ {i} (n : ℤ) → ⊝ (#_ {i} n) ≡ #_ {i} (- n)
+  lemma₀ {i} n = begin
+    (⊝ (# n))
+      ≡⟨⟩
+    (Vec.map -_ (Vec.replicate (+ 0)) ∷+ (- n))
+      ≡⟨ cong (λ ⊚ → ((⊚ ∷+ (- n)))) (map-replicate -_ (+ 0) _) ⟩
+    (Vec.replicate (- + 0) ∷+ (- n))
+      ≡⟨⟩
+    (# (- n))
+      ∎
+    where
+      open Relation.Binary.PropositionalEquality.≡-Reasoning
+      open import Data.Vec.Properties using (map-replicate)
 
--- \todo{Extract proof obligation}
--- \todo{Go on with the proof}
+  lemma₁ : ∀ {i} (csa : Vec ℤ i) (ka n : ℤ) → (csa ∷+ ka) ⊕ (# n) ≡ (csa ∷+ (ka + n))
+  lemma₁ csa ka n = begin 
+    (csa ∷+ ka) ⊕ (# n)
+      ≡⟨⟩
+    Vec.zipWith _+_ csa (cs (# n)) ∷+ (ka + n)
+      ≡⟨⟩
+    Vec.zipWith _+_ csa (Vec.replicate (+ 0)) ∷+ (ka + n)
+      ≡⟨ cong (_∷+ (ka + n)) (zipWith-replicate₂ _+_ csa (+ 0)) ⟩
+    Vec.map (_+ (+ 0)) csa ∷+ (ka + n)
+      ≡⟨ cong (_∷+ (ka + n)) (map-cong +-identityʳ csa) ⟩
+    Vec.map id csa ∷+ (ka + n)
+      ≡⟨ cong (_∷+ (ka + n)) (map-id csa) ⟩
+    csa ∷+ (ka + n)
+      ∎
+    where
+      open Relation.Binary.PropositionalEquality.≡-Reasoning
+      open import Data.Vec.Properties using (map-id ; map-cong ; zipWith-replicate₂)
+      open import Data.Integer.Properties using (+-identityʳ)
 
--- \begin{code}
--- --   lemma₀ : ∀ {i} (n : ℤ) (ρ : Env i) → k ((⊝ (# n)) [ ρ /x]ₗ) ≡ k ((# (- n)) [ ρ /x]ₗ)
--- --   lemma₀ n ρ = begin 
--- --     k ((⊝ (# n)) [ ρ /x]ₗ)
--- --       ≡⟨⟩
--- --     k ((Vec.map -_ (Vec.replicate (+ 0)) ∷+ (- n)) [ ρ /x]ₗ)
--- --       ≡⟨ cong (λ ⊚ → k (((⊚ ∷+ (- n)) [ ρ /x]ₗ))) (map-replicate -_ (+ 0) _) ⟩
--- --     k ((Vec.replicate (- + 0) ∷+ (- n)) [ ρ /x]ₗ)
--- --       ≡⟨⟩
--- --     k ((# (- n)) [ ρ /x]ₗ)
--- --       ∎
--- --     where
--- --       open Relation.Binary.PropositionalEquality.≡-Reasoning
--- --       open import Data.Vec.Properties using (map-replicate)
+  lemma₂ : ∀ {i} → (n : ℤ) → ⊝_ {i} (# n) ≡ # (- n)
+  lemma₂ n = begin 
+    ⊝ (# n)
+      ≡⟨⟩
+    (Vec.map -_ (Vec.replicate (+ 0)) ∷+ (- n))
+      ≡⟨ cong (_∷+ (- n)) (map-replicate -_ (+ 0) _) ⟩
+    # (- n)
+      ∎
+    where
+      open Relation.Binary.PropositionalEquality.≡-Reasoning
+      open import Data.Vec.Properties using (map-replicate)
+
+  lemma₃ : (m : ℤ) (n : ℤ) → (+ 0) ≤ n → m - n ≤ m
+  lemma₃ m n 0≤n = {!!}
   
--- --   lemma₁ : ∀ {i} (csa : Vec ℤ i) (ka n : ℤ) (ρ : Env i) → k (((csa ∷+ ka) ⊝ (# n)) [ ρ /x]ₗ) ≡ k ((csa ∷+ (ka + - n)) [ ρ /x]ₗ)
--- --   lemma₁ csa ka n ρ = begin 
--- --     k (((csa ∷+ ka) ⊝ (# n)) [ ρ /x]ₗ)
--- --       ≡⟨⟩
--- --     k (((csa ∷+ ka) ⊕ (⊝ # n)) [ ρ /x]ₗ)
--- --       ≡⟨⟩
--- --     k ((Vec.zipWith _+_ csa (cs (⊝ (# n))) ∷+ (ka + - n)) [ ρ /x]ₗ)
--- --       ≡⟨ cong (λ ⊚ → k {!(? [ ρ /x]ₗ)!}) (lemma₀ n ρ) ⟩
--- --     k ((Vec.zipWith _+_ csa (cs (# (- n))) ∷+ (ka + - n)) [ ρ /x]ₗ)
--- --       ≡⟨ {!!} ⟩
--- --     k ((Vec.zipWith _+_ csa (Vec.replicate (+ 0)) ∷+ (ka + - n)) [ ρ /x]ₗ)
--- --       ≡⟨ cong (λ ⊚ → k ((⊚ ∷+ (ka + - n)) [ ρ /x]ₗ) ) (zipWith-replicate₂ _+_ csa (+ 0)) ⟩
--- --     k ((Vec.map (_+ (+ 0)) csa ∷+ (ka + - n)) [ ρ /x]ₗ)
--- --       ≡⟨ cong (λ ⊚ → k ((⊚ ∷+ (ka + - n)) [ ρ /x]ₗ)) (map-cong +-identityʳ csa) ⟩
--- --     k ((Vec.map id csa ∷+ (ka + - n)) [ ρ /x]ₗ)
--- --       ≡⟨ cong (λ ⊚ → k ((⊚ ∷+ (ka + - n)) [ ρ /x]ₗ)) (map-id csa) ⟩
--- --     k ((csa ∷+ (ka + - n)) [ ρ /x]ₗ)
--- --       ∎
--- --     where
--- --       open Relation.Binary.PropositionalEquality.≡-Reasoning
--- --       open import Data.Vec.Properties using (map-id ; map-cong ; map-replicate ; zipWith-replicate₂)
--- --       open import Data.Integer.Properties using (+-identityʳ)
--- --   \end{code}
-        
--- --   \begin{code}
--- --   module Ω-Inner (i : ℕ) (l u : Linear (suc i))
--- --                  (lbl : lower-bound l) (ubu : upper-bound u)
--- --                  where
--- --     α = head l
--- --     a = ⊝ (tail l)
--- --     0<α : (+ 0) < α
--- --     0<α = {!!}
--- --     β = - (head u)
--- --     b = tail u
--- --     0<β : (+ 0) < β
--- --     0<β = {!!}
-    
--- --     import Relation.Binary.PartialOrderReasoning as POR
--- --     open POR IntProp.≤-poset renaming (_≈⟨_⟩_ to _≡⟨_⟩_ ; _≈⟨⟩_ to _≡⟨⟩_)
+  lemma₄ : ∀ {i} (ρ : Env i) (csa : Vec ℤ i) (ka : ℤ)
+         → ⇓[ ρ /x] (csa ∷+ ka) ≡ (⇓[ ρ /x] (csa ∷+ (+ 0))) + ka
+  lemma₄ ρ csa ka = {!!}
+\end{code}
+     
+\begin{code}
+  module norrish-inner (i : ℕ) (ρ : Env i) (xs : List ℤ)
+                 (l : Constraint (suc i) LowerBound)
+                 (u : Constraint (suc i) UpperBound)
+                 where
+    α = head (proj₁ l)
+    a = ⊝ (tail (proj₁ l))
+    0<α = proj₂ l
+    β = - (head (proj₁ u))
+    b = tail (proj₁ u)
+    0<β = proj₂ u
 
--- --     [α-1][β-1]≤αb-aβ : Linear i
--- --     [α-1][β-1]≤αb-aβ = (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# ((α - + 1) * (β - + 1)))
-    
--- --     aβ≤αb : Linear i
--- --     aβ≤αb = ((α ⊛ b) ⊝ (β ⊛ a))
+    0≤[α-1][β-1] : (+ 0) ≤ (α - + 1) * (β - + 1)
+    0≤[α-1][β-1] = {!!}
 
--- --     aβ≤αβx≤αb : List (Linear (suc i))
--- --     aβ≤αβx≤αb = ((α * β) x+∅) ⊝ (β ⊛ ⇑1 a)
--- --               ∷ (α ⊛ ⇑1 b) ⊝ ((α * β) x+∅)
--- --               ∷ []
 
--- --     αβn<aβ≤αb<αβ[n+1] : ℕ → List (Linear i)
--- --     αβn<aβ≤αb<αβ[n+1] n = ((β ⊛ a) ⊝ (# (α * β * + n)) ⊝ (# (+ 1)))
--- --                         ∷ (α ⊛ b) ⊝ (β ⊛ a)
--- --                         ∷ ((# (α * β * + (suc n))) ⊝ (α ⊛ b) ⊝ (# (+ 1)))
--- --                         ∷ []
+    import Relation.Binary.PartialOrderReasoning as POR
+    open POR IntProp.≤-poset renaming (_≈⟨_⟩_ to _≡⟨_⟩_ ; _≈⟨⟩_ to _≡⟨⟩_)
+
+    [α-1][β-1]≤αb-aβ : Linear i
+    [α-1][β-1]≤αb-aβ = (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# ((α - + 1) * (β - + 1)))
+
+    aβ≤αb : Linear i
+    aβ≤αb = ((α ⊛ b) ⊝ (β ⊛ a))
+
+    aβ≤αβx≤αb : List (Linear (suc i))
+    aβ≤αβx≤αb = ((α * β) x+∅) ⊝ (β ⊛ (0x+ a))
+              ∷ (α ⊛ (0x+ b)) ⊝ ((α * β) x+∅)
+              ∷ []
+
+    αβn<aβ≤αb<αβ[n+1] : ℕ → List (Linear i)
+    αβn<aβ≤αb<αβ[n+1] n = ((β ⊛ a) ⊝ (# (α * β * + n)) ⊝ (# (+ 1)))
+                        ∷ (α ⊛ b) ⊝ (β ⊛ a)
+                        ∷ ((# (α * β * + (suc n))) ⊝ (α ⊛ b) ⊝ (# (+ 1)))
+                        ∷ []
+
+    α≤αβ[n+1]-αb : ℕ → Linear i
+    α≤αβ[n+1]-αb n = (# (α * β * + (suc n))) ⊝ (α ⊛ b) ⊝ (# α)
+
+    β≤aβ-αβn : ℕ → Linear i
+    β≤aβ-αβn n = (β ⊛ a) ⊝ (# (α * β * + n)) ⊝ (# β)
+
+    αb-aβ<[α-1][β-1] : Linear i
+    αb-aβ<[α-1][β-1] = (# ((α - + 1) * (β - + 1))) ⊝ (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# (+ 1))
+
+    ⊨βa≤αb : ⊨[ ρ /x] [α-1][β-1]≤αb-aβ → ⊨[ ρ /x] aβ≤αb
+    ⊨βa≤αb ⊨ds with (α ⊛ b) ⊝ (β ⊛ a) | inspect (_⊝_ (α ⊛ b)) (β ⊛ a)
+    ... | (csa ∷+ ka) | >[ eq ]< = begin
+      + 1
+        ≤⟨ ⊨ds ⟩
+      ⇓[ ρ /x] ((α ⊛ b) ⊝ (β ⊛ a) ⊝ (# ((α - + 1) * (β - + 1))))
+        ≡⟨ cong (λ ⊚ → ⇓[ ρ /x] (⊚ ⊝ (# ((α - + 1) * (β - + 1))))) eq ⟩
+      ⇓[ ρ /x] ((csa ∷+ ka) ⊝ (# ((α - + 1) * (β - + 1))))
+        ≡⟨ cong (λ ⊚ → ⇓[ ρ /x] ((csa ∷+ ka) ⊕ ⊚)) (lemma₂ ((α - + 1) * (β - + 1))) ⟩
+      ⇓[ ρ /x] ((csa ∷+ ka) ⊕ (# (- ((α - + 1) * (β - + 1)))))
+        ≡⟨ cong ⇓[ ρ /x]_ (lemma₁ csa ka (- ((α - + 1) * (β - + 1)))) ⟩
+      ⇓[ ρ /x] (csa ∷+ (ka - (α - + 1) * (β - + 1)))
+        ≡⟨ lemma₄ ρ csa _ ⟩
+      ⇓[ ρ /x] (csa ∷+ (+ 0)) + (ka - (α - + 1) * (β - + 1))
+        ≡⟨ sym (+-assoc (⇓[ ρ /x] (csa ∷+ (+ 0))) ka (- ((α - + 1) * (β - + 1)))) ⟩
+      (⇓[ ρ /x] (csa ∷+ (+ 0)) + ka) - (α - + 1) * (β - + 1)
+        ≤⟨ lemma₃ _ _ 0≤[α-1][β-1] ⟩
+      ⇓[ ρ /x] (csa ∷+ (+ 0)) + ka
+        ≡⟨ sym (lemma₄ ρ csa ka) ⟩
+      ⇓[ ρ /x] (csa ∷+ ka)
+        ∎
+      where
+        open import Data.Vec.Properties using (map-id ; map-cong ; map-replicate ; zipWith-replicate₂)
+        open import Data.Integer.Properties using (+-identityʳ ; ≤-reflexive ; +-assoc)
+
+    ⊨αβn<aβ≤αb<αβ[n+1] : ⊨[ ρ /x] aβ≤αb → ¬ (∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]ₚ (l , u))) → Σ ℕ λ n → All ⊨[ ρ /x] (αβn<aβ≤αb<αβ[n+1] n)
+    ⊨αβn<aβ≤αb<αβ[n+1] ⊨p₁ ⊭p₂ = n , r₁ ∷ r₂ ∷ r₃ ∷ []
+      where
+        -- How to compute n?
+        n = {!!}
+        -- ⊭aβ≤αβx≤αb : ¬ ⊨ ((α * β) x+∅ ⊝ ⇑1 (β ⊛ a) ∷ ⇑1 (α ⊛ b) ⊝ ((α * β) x+∅) ∷ [])
+        -- ⊭aβ≤αβx≤αb ρ' (⊨p₃ ∷ ⊨p₄ ∷ []) = ⊭p₂ ρ' ({!!} ∷ {!!} ∷ [])
   
--- --     α≤αβ[n+1]-αb : ℕ → Linear i
--- --     α≤αβ[n+1]-αb n = (# (α * β * + (suc n))) ⊝ (α ⊛ b) ⊝ (# α)
+        r₁ = begin
+          + 1
+            ≤⟨ {!!} ⟩
+          ⇓[ ρ /x] ((β ⊛ a) ⊝ (# (α * β * + n)) ⊝ (# (+ 1)))
+            ∎
+        r₂ = begin
+          + 1
+            ≤⟨ {!!} ⟩
+          ⇓[ ρ /x] ((α ⊛ b) ⊝ (β ⊛ a))
+            ∎
+        r₃ = begin
+          + 1
+            ≤⟨ {!!} ⟩
+          ⇓[ ρ /x] ((# (α * β * + suc n)) ⊝ (α ⊛ b) ⊝ (# (+ 1)))
+            ∎
 
--- --     β≤aβ-αβn : ℕ → Linear i
--- --     β≤aβ-αβn n = (β ⊛ a) ⊝ (# (α * β * + n)) ⊝ (# β)
+    ⊨α≤αβ[n+1]-αb : (n : ℕ) →  All ⊨[ ρ /x] (αβn<aβ≤αb<αβ[n+1] n) → ⊨[ ρ /x] (α≤αβ[n+1]-αb n)
+    ⊨α≤αβ[n+1]-αb n (⊨p₁ ∷ ⊨p₂ ∷ ⊨p₃ ∷ []) = begin 
+      + 1
+        ≤⟨ {!!} ⟩
+      ⇓[ ρ /x] α≤αβ[n+1]-αb n
+        ∎
 
--- --     αb-aβ<[α-1][β-1] : Linear i
--- --     αb-aβ<[α-1][β-1] = (# ((α - + 1) * (β - + 1))) ⊝ (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# (+ 1))
+    ⊨β≤aβ-αβn : (n : ℕ) →  All ⊨[ ρ /x] (αβn<aβ≤αb<αβ[n+1] n) → ⊨[ ρ /x] (β≤aβ-αβn n)
+    ⊨β≤aβ-αβn n (⊨p₁ ∷ ⊨p₂ ∷ ⊨p₃ ∷ []) = begin 
+      + 1
+        ≤⟨ {!!} ⟩
+      ⇓[ ρ /x] β≤aβ-αβn n 
+        ∎
 
--- --     ⊨βa≤αb : ⊨ₗ [α-1][β-1]≤αb-aβ → ⊨ₗ aβ≤αb
--- --     ⊨βa≤αb (ρ , pds) = ρ , bar ((α ⊛ b) ⊝ (β ⊛ a)) ((α - + 1) * (β - + 1)) {!∅!} ρ pds 
--- --       where
--- --         open import Data.Vec.Properties using (map-id ; map-cong ; map-replicate ; zipWith-replicate₂)
--- --         open import Data.Integer.Properties using (+-identityʳ ; ≤-reflexive)
+    ⊭[α-1][β-1]≤αb-aβ : {n : ℕ}
+                      → ⊨[ ρ /x] (α≤αβ[n+1]-αb n)
+                      → ⊨[ ρ /x] (β≤aβ-αβn n)
+                      → ⊨[ ρ /x] [α-1][β-1]≤αb-aβ
+                      → ⊥
+    ⊭[α-1][β-1]≤αb-aβ ⊨p₁ ⊨p₂ ⊨ds = {!!} 
 
--- --         foo : (m : ℤ) (n : ℕ) → m - + n Int.≤ m
--- --         foo m zero = ≤-reflexive (+-identityʳ m)
--- --         foo m (suc n) = begin 
--- --           m + - + suc n
--- --             ≤⟨ {!!} ⟩
--- --           m
--- --             ∎
-        
--- --         bar : ∀ {i} → (a : Linear i) (n : ℤ) (pn : (+ 0) Int.≤ n) (ρ : Env i) → ⊨ₗ₀ (a ⊝ (# n) [ ρ /x]ₗ) → ⊨ₗ₀ (a [ ρ /x]ₗ)
--- --         bar (csa ∷+ ka) n pn ρ p = begin 
--- --           + 1
--- --             ≤⟨ p ⟩
--- --           k (((csa ∷+ ka) ⊝ (# n)) [ ρ /x]ₗ)
--- --             ≡⟨ lemma₁ csa ka n ρ ⟩
--- --           k ((csa ∷+ (ka + - n)) [ ρ /x]ₗ)
--- --             ≤⟨ {!!} ⟩
--- --           k ((csa ∷+ ka) [ ρ /x]ₗ)
--- --             ∎
+  -- norrish : ∀ {i} {xs : List ℤ} (ρ : Env i) (lu : Pair (suc i))
+  --         → ¬ ∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]ₚ lu)
+  --         → ¬ ⊨[ ρ /x] (dark-shadow lu)
+  norrish {i} {xs} ρ (l , u) ⊭xs ⊨Ωlu = proof
+    where
+      open norrish-inner i ρ xs l u
+      proof : ⊥
+      proof with ⊨αβn<aβ≤αb<αβ[n+1] (⊨βa≤αb ⊨Ωlu ) ⊭xs
+      proof | n , ps = ⊭[α-1][β-1]≤αb-aβ (⊨α≤αβ[n+1]-αb n ps) (⊨β≤aβ-αβn n ps) ⊨Ωlu
+\end{code}
 
--- --     ⊨αβn<aβ≤αb<αβ[n+1] : ⊨ₗ aβ≤αb → ⊭ (l ∷ u ∷ []) → Σ ℕ λ n → ⊨ (αβn<aβ≤αb<αβ[n+1] n)
--- --     ⊨αβn<aβ≤αb<αβ[n+1] (ρ , ⊨p₁) ⊭p₂ = n , ρ , r₁ ∷ r₂ ∷ r₃ ∷ []
--- --       where
--- --         -- How to compute n?
--- --         n = {!!}
--- --         ⊭aβ≤αβx≤αb : ⊭ ((α * β) x+∅ ⊝ ⇑1 (β ⊛ a) ∷ ⇑1 (α ⊛ b) ⊝ ((α * β) x+∅) ∷ [])
--- --         ⊭aβ≤αβx≤αb ρ' (⊨p₃ ∷ ⊨p₄ ∷ []) = ⊭p₂ ρ' ({!!} ∷ {!!} ∷ [])
-        
--- --         r₁ = begin
--- --           + 1
--- --             ≤⟨ {!!} ⟩
--- --           k (((β ⊛ a) ⊝ (# (α * β * + n)) ⊝ (# (+ 1))) [ ρ /x]ₗ)
--- --             ∎
--- --         r₂ = begin
--- --           + 1
--- --             ≤⟨ {!!} ⟩
--- --           k (((α ⊛ b) ⊝ (β ⊛ a)) [ ρ /x]ₗ)
--- --             ∎
--- --         r₃ = begin
--- --           + 1
--- --             ≤⟨ {!!} ⟩
--- --           k (((# (α * β * + suc n)) ⊝ (α ⊛ b) ⊝ (# (+ 1))) [ ρ /x]ₗ)
--- --             ∎
-    
--- --     ⊨α≤αβ[n+1]-αb : (n : ℕ) →  ⊨ (αβn<aβ≤αb<αβ[n+1] n) → ⊨ₗ (α≤αβ[n+1]-αb n)
--- --     ⊨α≤αβ[n+1]-αb n (ρ , (⊨p₁ ∷ ⊨p₂ ∷ ⊨p₃ ∷ [])) = ρ , (begin 
--- --       + 1
--- --         ≤⟨ {!!} ⟩
--- --       k (α≤αβ[n+1]-αb n [ ρ /x]ₗ)
--- --         ∎)
-    
--- --     ⊨β≤aβ-αβn : (n : ℕ) →  ⊨ (αβn<aβ≤αb<αβ[n+1] n) → ⊨ₗ (β≤aβ-αβn n)
--- --     ⊨β≤aβ-αβn n (ρ , (⊨p₁ ∷ ⊨p₂ ∷ ⊨p₃ ∷ [])) = ρ , (begin 
--- --       + 1
--- --         ≤⟨ {!!} ⟩
--- --       k (β≤aβ-αβn n [ ρ /x]ₗ)
--- --         ∎)
+\todo{Evaluation, if there is time}
 
--- --     ⊨αb-aβ<[α-1][β-1] : {n : ℕ} → ⊨ (α≤αβ[n+1]-αb n ∷ β≤aβ-αβn n ∷ []) → ⊨ₗ αb-aβ<[α-1][β-1]
--- --     ⊨αb-aβ<[α-1][β-1] (ρ , (⊨p₁ ∷ ⊨p₂ ∷ [])) = ρ , (begin 
--- --       + 1
--- --         ≤⟨ {!!} ⟩
--- --       k (αb-aβ<[α-1][β-1] [ ρ /x]ₗ)
--- --         ∎)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Cooper's Algorithm}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
--- --     ⊨⊥ : ⊨ ([α-1][β-1]≤αb-aβ ∷ αb-aβ<[α-1][β-1] ∷ []) → ⊥
--- --     ⊨⊥ (ρ , (⊨p ∷ ⊨¬p ∷ [])) = {!!}
--- \end{code}
+\cite{Cooper1972}
+\cite{Chaieb2003}
 
--- \todo{Evaluation, if there is time}
+As part of its existential quantifier elimination step, Cooper's
+algorithm requires to have variable coefficients set to $1$ or
+$-1$. First, the lowest common multiplier $ℓ$ of all coefficients on
+$x$ is computed, then all atoms are multiplied appropriately so that
+their coefficient on $x$ becomes equal to the LCM $ℓ$. Finally, all
+coefficients are divided by $ℓ$ in accordance to the following
+equivalence:
 
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--- \subsection{Cooper's Algorithm}
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation*}
+P(ℓx) \equiv P(x) \land ℓ | x
+\end{equation*}
 
--- \cite{Cooper1972}
--- \cite{Chaieb2003}
+\begin{theorem}[Cooper, 1972]
+\begin{align*}
+∃x.\: P(x) \equiv \bigvee_{j=1}^\delta P_{- \infty} (j) \lor
+                  \bigvee_{j=1}^\delta \bigvee_{b \in B} P (b + j)
+\end{align*}
+\begin{align*}
+∃x.\: P(x) \equiv \bigvee_{j=1}^\delta P_{+ \infty} (j) \lor
+                  \bigvee_{j=1}^\delta \bigvee_{a \in A} P (a - j)
+\end{align*}
+\end{theorem}
 
--- As part of its existential quantifier elimination step, Cooper's
--- algorithm requires to have variable coefficients set to $1$ or
--- $-1$. First, the lowest common multiplier $ℓ$ of all coefficients on
--- $x$ is computed, then all atoms are multiplied appropriately so that
--- their coefficient on $x$ becomes equal to the LCM $ℓ$. Finally, all
--- coefficients are divided by $ℓ$ in accordance to the following
--- equivalence:
+\AgdaHide{
+\begin{code}
+ 
+  -- module Constraint where
+  --   data Constraint (i : ℕ) : Set where
+  --     0<_ :           (e : Linear i) → Constraint i
+  --     _∣_ : (d : ℕ) → (e : Linear i) → Constraint i
+  --     _∤_ : (d : ℕ) → (e : Linear i) → Constraint i
+  --   
+  --   affine : ∀ {i} → Constraint i → Linear i
+  --   affine (0< e)  = e
+  --   affine (d ∣ e) = e
+  --   affine (d ∤ e) = e
+  --   
+  --   on-affine : ∀ {i j} (f : Linear i → Linear j) → (Constraint i → Constraint j)
+  --   on-affine f (0< e)  = 0< f e
+  --   on-affine f (d ∣ e) = d ∣ f e
+  --   on-affine f (d ∤ e) = d ∤ f e
+  --   
+  --   on-coefficient : ∀ {i} → (ℤ → ℤ) → (Linear (suc i) → Linear (suc i))
+  --   on-coefficient f ((c ∷ cs) ∷+ k) = ((f c) ∷ cs) ∷+ k
+  --   
+  --   coefficient : ∀ {i} → Constraint (suc i) → ℤ
+  --   coefficient = Aff.head ∘ affine
 
--- \begin{equation*}
--- P(ℓx) \equiv P(x) \land ℓ | x
--- \end{equation*}
+  --   divisor : ∀ {i} → Constraint i → Maybe ℕ
+  --   divisor (0< e)  = nothing
+  --   divisor (d ∣ e) = just d
+  --   divisor (d ∤ e) = just d
+  -- 
+  --   ¬_ : ∀ {i} → Constraint i → Constraint i
+  --   ¬ (0< e) = 0< (Aff.¬ e)
+  --   ¬ (d ∣ e) = d ∤ e
+  --   ¬ (d ∤ e) = d ∣ e
+  --   
+  -- open Constraint using (Constraint ; 0<_ ; _∣_ ; _∤_)
+\end{code}
+}
 
--- \begin{theorem}[Cooper, 1972]
--- \begin{align*}
--- ∃x.\: P(x) \equiv \bigvee_{j=1}^\delta P_{- \infty} (j) \lor
---                   \bigvee_{j=1}^\delta \bigvee_{b \in B} P (b + j)
--- \end{align*}
--- \begin{align*}
--- ∃x.\: P(x) \equiv \bigvee_{j=1}^\delta P_{+ \infty} (j) \lor
---                   \bigvee_{j=1}^\delta \bigvee_{a \in A} P (a - j)
--- \end{align*}
--- \end{theorem}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Future work}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
--- \AgdaHide{
--- \begin{code}
-    
---   -- module Constraint where
---   --   data Constraint (i : ℕ) : Set where
---   --     0<_ :           (e : Linear i) → Constraint i
---   --     _∣_ : (d : ℕ) → (e : Linear i) → Constraint i
---   --     _∤_ : (d : ℕ) → (e : Linear i) → Constraint i
---   --   
---   --   affine : ∀ {i} → Constraint i → Linear i
---   --   affine (0< e)  = e
---   --   affine (d ∣ e) = e
---   --   affine (d ∤ e) = e
---   --   
---   --   on-affine : ∀ {i j} (f : Linear i → Linear j) → (Constraint i → Constraint j)
---   --   on-affine f (0< e)  = 0< f e
---   --   on-affine f (d ∣ e) = d ∣ f e
---   --   on-affine f (d ∤ e) = d ∤ f e
---   --   
---   --   on-coefficient : ∀ {i} → (ℤ → ℤ) → (Linear (suc i) → Linear (suc i))
---   --   on-coefficient f ((c ∷ cs) ∷+ k) = ((f c) ∷ cs) ∷+ k
---   --   
---   --   coefficient : ∀ {i} → Constraint (suc i) → ℤ
---   --   coefficient = Aff.head ∘ affine
+Omega:
+  Evaluation
+  Splinters
+  Adapt stdlib
 
---   --   divisor : ∀ {i} → Constraint i → Maybe ℕ
---   --   divisor (0< e)  = nothing
---   --   divisor (d ∣ e) = just d
---   --   divisor (d ∤ e) = just d
---   -- 
---   --   ¬_ : ∀ {i} → Constraint i → Constraint i
---   --   ¬ (0< e) = 0< (Aff.¬ e)
---   --   ¬ (d ∣ e) = d ∤ e
---   --   ¬ (d ∤ e) = d ∣ e
---   --   
---   -- open Constraint using (Constraint ; 0<_ ; _∣_ ; _∤_)
--- \end{code}
--- }
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Verification and validation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--- \subsection{Future work}
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\todo{Dependent types, higher standards, no tests, we formally describe what correct is}
+\todo{This report is type-checked}
 
--- Omega:
---   Evaluation
---   Splinters
---   Adapt stdlib
+%   Verification and Validation In this section you should outline the
+%   verification and validation procedures that you've adopted throughout the
+%   project to ensure that the final product satisfies its specification. In
+%   particular, you should outline the test procedures that you adopted during
+%   and after implementation. Your aim here is to convince the reader that the
+%   product has been thoroughly and appropriately verified. Detailed test
+%   results should, however, form a separate appendix at the end of the report.
 
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--- \chapter{Verification and validation}
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+- Why is this absolutely correct, Agda?
 
--- \todo{Dependent types, higher standards, no tests, we formally describe what correct is}
--- \todo{This report is type-checked}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Results and evaluation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
--- %   Verification and Validation In this section you should outline the
--- %   verification and validation procedures that you've adopted throughout the
--- %   project to ensure that the final product satisfies its specification. In
--- %   particular, you should outline the test procedures that you adopted during
--- %   and after implementation. Your aim here is to convince the reader that the
--- %   product has been thoroughly and appropriately verified. Detailed test
--- %   results should, however, form a separate appendix at the end of the report.
+%   Results and Evaluation The aim of this chapter is twofold. On one hand, it
+%   aims to present the final outcome of the project – i.e., the system
+%   developed – in an appropriate way so that readers of your report can form a
+%   clear picture of the system operation and provided functionality without the
+%   need for a live demo. This would normally require the inclusion of
+%   screenshots and/or images of the system in operation, and indicative results
+%   generated by the system. On the other hand, this chapter also aims to
+%   present an appropriate evaluation of the project as whole, both in terms of
+%   the outcome and in terms of the process followed.
 
--- - Why is this absolutely correct, Agda?
+%   The evaluation of the outcome is expected to be primarily evidence-based,
+%   i.e., the result of either an experimental process, like usability tests and
+%   evaluations, performance-related measurements, etc., or a formal analysis,
+%   such as algorithmic and mathematical analysis of system properties, etc. The
+%   precise nature of the evaluation will depend on the project requirements.
+%   Please note that if you intend to carry out usability tests, you will need
+%   to first obtain approval from the Department's Ethics Committee - the
+%   section on Evaluation and Ethics Approval provides further detail.
 
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--- \chapter{Results and evaluation}
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%   The evaluation of the process is expected to be primarily a reflective
+%   examination of the planning, organisation, implementation and evaluation of
+%   the project. This will normally include the lessons learnt and explanations
+%   of any significant deviations from the original project plan.
 
--- %   Results and Evaluation The aim of this chapter is twofold. On one hand, it
--- %   aims to present the final outcome of the project – i.e., the system
--- %   developed – in an appropriate way so that readers of your report can form a
--- %   clear picture of the system operation and provided functionality without the
--- %   need for a live demo. This would normally require the inclusion of
--- %   screenshots and/or images of the system in operation, and indicative results
--- %   generated by the system. On the other hand, this chapter also aims to
--- %   present an appropriate evaluation of the project as whole, both in terms of
--- %   the outcome and in terms of the process followed.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \chapter{Related work}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
--- %   The evaluation of the outcome is expected to be primarily evidence-based,
--- %   i.e., the result of either an experimental process, like usability tests and
--- %   evaluations, performance-related measurements, etc., or a formal analysis,
--- %   such as algorithmic and mathematical analysis of system properties, etc. The
--- %   precise nature of the evaluation will depend on the project requirements.
--- %   Please note that if you intend to carry out usability tests, you will need
--- %   to first obtain approval from the Department's Ethics Committee - the
--- %   section on Evaluation and Ethics Approval provides further detail.
+%   Related Work You should survey and critically evaluate other work which you
+%   have read or otherwise considered in the general area of the project topic.
+%   The aim here is to place your project work in the context of the related
+%   work.
 
--- %   The evaluation of the process is expected to be primarily a reflective
--- %   examination of the planning, organisation, implementation and evaluation of
--- %   the project. This will normally include the lessons learnt and explanations
--- %   of any significant deviations from the original project plan.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Summary and conclusions}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--- % \chapter{Related work}
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%   Summary and Conclusions In the final chapter of your report, you should
+%   summarise how successful you were in achieving the original project
+%   objectives, what problems arose in the course of the project which could not
+%   be readily solved in the time available, and how your work could be
+%   developed in future to enhance its utility. It is OK to be upbeat,
+%   especially if you are pleased with what you have achieved!
 
--- %   Related Work You should survey and critically evaluate other work which you
--- %   have read or otherwise considered in the general area of the project topic.
--- %   The aim here is to place your project work in the context of the related
--- %   work.
+\bibliographystyle{apalike}
+\bibliography{bibliography}
 
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--- \chapter{Summary and conclusions}
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%   References/Bibliography The references should consist of a list of papers
+%   and books referred to in the body of your report. These should be formatted
+%   as for scholarly computer science publications. Most text- and word-
+%   processors provide useful assistance with referencing - for example latex
+%   uses bibtex. As you know, there are two principal reference schemes.
 
--- %   Summary and Conclusions In the final chapter of your report, you should
--- %   summarise how successful you were in achieving the original project
--- %   objectives, what problems arose in the course of the project which could not
--- %   be readily solved in the time available, and how your work could be
--- %   developed in future to enhance its utility. It is OK to be upbeat,
--- %   especially if you are pleased with what you have achieved!
+%       In one, the list is ordered alphabetically on author's surname and
+%       within the text references take the form (Surname, Date). For example, a
+%       reference to a 2014 work by Zobel would be written (Zobel, 2014).
 
--- \bibliographystyle{apalike}
--- \bibliography{bibliography}
+%       In the other, the list is ordered in the sequence in which a reference
+%       first appears in the report.
 
--- %   References/Bibliography The references should consist of a list of papers
--- %   and books referred to in the body of your report. These should be formatted
--- %   as for scholarly computer science publications. Most text- and word-
--- %   processors provide useful assistance with referencing - for example latex
--- %   uses bibtex. As you know, there are two principal reference schemes.
+%   For both schemes, each reference in the reference list should contain the
+%   following information: author, title, journal or publisher (if book), volume
+%   and part, and date. Depending of the style of references you use, Zobel's
+%   2014 book might be listed in the references of your report as follows:
 
--- %       In one, the list is ordered alphabetically on author's surname and
--- %       within the text references take the form (Surname, Date). For example, a
--- %       reference to a 2014 work by Zobel would be written (Zobel, 2014).
+%   Justin Zobel. Writing for Computer Science. Springer-Verlag, 2014.
 
--- %       In the other, the list is ordered in the sequence in which a reference
--- %       first appears in the report.
+%   For more examples of the first style, see the way in which references are
+%   laid out in "Software Engineering: A Practitioner's Approach" by Roger
+%   Pressman. Note carefully that your references should not just be a list of
+%   URLs! Web pages are not scholarly publications. In particular, they are not
+%   peer reviewed, and so could contain erroneous or inaccurate information.
 
--- %   For both schemes, each reference in the reference list should contain the
--- %   following information: author, title, journal or publisher (if book), volume
--- %   and part, and date. Depending of the style of references you use, Zobel's
--- %   2014 book might be listed in the references of your report as follows:
+\appendix
 
--- %   Justin Zobel. Writing for Computer Science. Springer-Verlag, 2014.
+% \chapter{Detailed Specification and Design}
+%   Appendix A - Detailed Specification and Design This appendix should contain
+%   the details of your project specification that were not included in the main
+%   body of your report.
 
--- %   For more examples of the first style, see the way in which references are
--- %   laid out in "Software Engineering: A Practitioner's Approach" by Roger
--- %   Pressman. Note carefully that your references should not just be a list of
--- %   URLs! Web pages are not scholarly publications. In particular, they are not
--- %   peer reviewed, and so could contain erroneous or inaccurate information.
+% \chapter{Detailed Test Strategy and Test Cases}
+%   Appendix B - Detailed Test Strategy and Test Cases This appendix should
+%   contain the details of the strategy you used to test your software, together
+%   with your tabulated and commented test results.
 
--- \appendix
+% \chapter{User Guide}
+%   Appendix C - User Guide This appendix should provide a detailed description
+%   of how to use your system. In some cases, it may also be appropriate to
+%   include a second guide dealing with maintenance and updating issues.
 
--- % \chapter{Detailed Specification and Design}
--- %   Appendix A - Detailed Specification and Design This appendix should contain
--- %   the details of your project specification that were not included in the main
--- %   body of your report.
-
--- % \chapter{Detailed Test Strategy and Test Cases}
--- %   Appendix B - Detailed Test Strategy and Test Cases This appendix should
--- %   contain the details of the strategy you used to test your software, together
--- %   with your tabulated and commented test results.
-
--- % \chapter{User Guide}
--- %   Appendix C - User Guide This appendix should provide a detailed description
--- %   of how to use your system. In some cases, it may also be appropriate to
--- %   include a second guide dealing with maintenance and updating issues.
-
--- \end{document}
+\end{document}
