@@ -2021,7 +2021,10 @@ Ours, where each step is implied by the next one
       open import Relation.Binary.PreorderReasoning (preorder implication lzero)
     -}
 
-    -- This is only possible because of the way they are interleaved
+    ∀xs→¬∀lus⇒∃lus→¬∃xs : (∀[ xs ] λ x → ¬ ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
+                        → (∃[ lus ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
+    ∀xs→¬∀lus⇒∃lus→¬∃xs = {!!}
+                        
     ∀xs→¬∀lus⇒∀lus→¬∃xs : (∀[ xs ] λ x → ¬ ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
                      → (∀[ lus ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
     ∀xs→¬∀lus⇒∀lus→¬∃xs = {!!} 
@@ -2030,42 +2033,39 @@ Ours, where each step is implied by the next one
                    → (⊨Ωlus : All ⊨[ ρ /x] (omega lus))
                    → (xs ≢ []) → (∀[ xs ] λ x → ¬ ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
                    → ⊥
-  by-contradiction ρ lus xs ⊨Ωlus ¬Ø ∀xs¬∀lus with ∀xs→¬∀lus⇒∀lus→¬∃xs ρ lus xs ∀xs¬∀lus
-  by-contradiction ρ [] .[] ⊨Ωlus ¬Ø [] | [] = ⊥-elim (¬Ø refl)
-  by-contradiction ρ [] .(_ ∷ _) ⊨Ωlus ¬Ø (¬∀lus ∷ ∀xs¬∀lus) | [] = ¬∀lus []
-  by-contradiction ρ (lu ∷ lus) xs (⊨Ωlu ∷ ⊨Ωlus) ¬Ø ∀xs¬∀lus | ¬∃xs ∷ ∀lus→¬∃xs = norrish ρ lu ¬∃xs ⊨Ωlu
+
+  open import Data.List.Any using (satisfied)
+  
+  by-contradiction     ρ lus .[] ⊨Ωlus ¬Ø []       = ⊥-elim (¬Ø refl)
+  by-contradiction {i} ρ lus xs  ⊨Ωlus ¬Ø ∀xs¬∀lus = inner lus ⊨Ωlus (∀xs→¬∀lus⇒∃lus→¬∃xs ρ lus xs ∀xs¬∀lus)
+    where
+    inner : (lus : List (Pair (suc i)))
+          → (⊨Ωlus : All ⊨[ ρ /x] (omega lus))
+          → (∃[ lus ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
+          → ⊥
+    inner [] [] ()
+    inner (lu ∷ lus) (⊨Ωlu ∷ ⊨Ωlus) (here ¬∃xs)       = norrish ρ lu ¬∃xs ⊨Ωlu
+    inner (lu ∷ lus) (⊨Ωlu ∷ ⊨Ωlus) (there ∃lus→¬∃xs) = inner lus ⊨Ωlus ∃lus→¬∃xs
 
   find-x : ∀ {i} (lus : List (Pair (suc i))) (ρ : Env i)
          → All ⊨[ ρ /x] (omega lus)
          → Σ ℤ λ x → All ⊨[ x ∷ ρ /x]ₚ lus
+
   find-x lus ρ ⊨Ωlus with search-space lus (ρ , ⊨Ωlus)
   find-x lus ρ ⊨Ωlus | xs , ¬Ø = search (λ x → all ⟦_⟧[ x ∷ ρ /x]ₚ lus ) xs ¬Ø (by-contradiction ρ lus xs ⊨Ωlus)
 
-  prepend-x : ∀ {i} (irs : List (Constraint (suc i) Irrelevant)) (ρ : Env i) (x : ℤ)
+  prepend-x : ∀ {i} (x : ℤ) (ρ : Env i) (irs : List (Constraint (suc i) Irrelevant))
             → All ⊨[ ρ /x] (elim-irrel irs)
             → All ⊨[ x ∷ ρ /x]ᵢ irs
 
-  prepend-x irs ρ x = begin 
-    All ⊨[ ρ /x] (elim-irrel irs)
-      ∼⟨ map-All ⟩
-    All (⊨[ ρ /x] ∘ tail ∘ proj₁) irs
-      ∼⟨ map (λ ⊚ → one x ρ ⊚) ⟩
-    All ⊨[ x ∷ ρ /x]ᵢ irs
-      ∎
-  
+  prepend-x x ρ [] [] = []
+  prepend-x x ρ (ir ∷ irs) (⊨Ωir ∷ ⊨Ωirs) = one x ρ ir ⊨Ωir ∷ (prepend-x x ρ irs ⊨Ωirs)
     where
-
-    open import Data.List.All using (map)
-    open import Data.List.All.Properties using (map-All)
-    open import Agda.Primitive using (lzero)
-    open import Function.Related using (preorder ; implication)
-    open import Relation.Binary.PreorderReasoning (preorder implication lzero)
-
-    one : ∀ {i} (x : ℤ) (ρ : Env i) {ir : Constraint (suc i) Irrelevant}
+    one : ∀ {i} (x : ℤ) (ρ : Env i) (ir : Constraint (suc i) Irrelevant)
         → (⊨[ ρ /x] ∘ tail ∘ proj₁) ir
         → ⊨[ x ∷ ρ /x]ᵢ ir
 
-    one ρ x {ir} ⊨Ωir = {!!}
+    one x ρ ir ⊨Ωir = {!!}
     
 \end{code}
 
@@ -2083,13 +2083,14 @@ Ours, where each step is implied by the next one
     inner {zero} as ep | yes p = [] , p
     inner {zero} as () | no ¬p
     inner {suc i} as ep with partition as
-    ... | ls , is , us with ×-list ls us
-    ... | lus with ⟦ elim-irrel is ++ omega lus ⟧Ω | inspect ⟦_⟧Ω (elim-irrel is ++ omega lus)
-    inner {suc i} as () | _ , is , _ | lus | false | j
-    inner {suc i} as ep | _ , is , _ | lus | true  | >[ eq ]< with inner (elim-irrel is ++ omega lus) eq
-    inner {suc i} as ep | _ , is , _ | lus | _ | _ | ρ , ⊨Ωas with ++⁻ (elim-irrel is) ⊨Ωas
-    inner {suc i} as ep | _ , is , _ | lus | _ | _ | ρ , ⊨Ωas | ⊨Ωirs , ⊨Ωlus with find-x lus ρ ⊨Ωlus
-    inner {suc i} as ep | _ , is , _ | lus | _ | _ | ρ , ⊨Ωas | ⊨Ωirs , ⊨Ωlus | x , ⊨lus = {!!}
+    ... | ls , irs , us with ×-list ls us
+    ... | lus with ⟦ elim-irrel irs ++ omega lus ⟧Ω | inspect ⟦_⟧Ω (elim-irrel irs ++ omega lus)
+    inner {suc i} as () | _ , irs , _ | lus | false | j
+    inner {suc i} as ep | _ , irs , _ | lus | true  | >[ eq ]< with inner (elim-irrel irs ++ omega lus) eq
+    inner {suc i} as ep | _ , irs , _ | lus | _ | _ | ρ , ⊨Ωas with ++⁻ (elim-irrel irs) ⊨Ωas
+    inner {suc i} as ep | _ , irs , _ | lus | _ | _ | ρ , ⊨Ωas | ⊨Ωirs , ⊨Ωlus with find-x lus ρ ⊨Ωlus
+    inner {suc i} as ep | _ , irs , _ | lus | _ | _ | ρ , ⊨Ωas | ⊨Ωirs , ⊨Ωlus | x , ⊨lus with prepend-x x ρ irs ⊨Ωirs
+    ... | ⊨irs = {!!}
 \end{code}
 
 \todo{Introduce proof by contradiction}
