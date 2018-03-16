@@ -1554,9 +1554,6 @@ which acts on real numbers — to integers.
   UpperBound {zero} a = ⊥
   UpperBound {suc n} a = + 0 > head a
 
-  Unclassified : ∀ {i} → Linear i → Set
-  Unclassified a = ⊤
-
   Constraint : (i : ℕ) (P : Linear i → Set) → Set
   Constraint i P = Σ (Linear i) P
 
@@ -1597,6 +1594,10 @@ Next, we define substitution for constraints:
   [_/x]_ {d = zero} (x ∷ xs) a = [ xs /x] (substitute (# x) a)
   [_/x]_ {d = suc d} xs ((c ∷ cs) ∷+ k) = c x+∅ ⊕ (0x+ ([ xs /x] (cs ∷+ k)))
 
+  postulate [_/x]ₕ_ : ∀ {i} {P : ℤ → Set} → Env i → Σ (Linear (suc i)) (P ∘ head) → Σ (Linear 1) (P ∘ head)
+  -- [ ρ /x]ₕ (a , Pa) with head a | tail a
+  -- ... | h | t = h x+∅ ⊕ (0x+ ([ ρ /x] t)) , {!!}
+
   ⇓[_/x]_ : ∀ {i} → Env i → Linear i → ℤ
   ⇓[ ρ /x] a = k {zero} ([ ρ /x] a)
 \end{code}
@@ -1612,14 +1613,17 @@ substitution.
   ⊨[_/x] : ∀ {i} → Env i → Linear i → Set
   ⊨[ ρ /x] a = ⊨⇓ ([ ρ /x] a)
 
-  ⊨[_/x]ᵢ : ∀ {i} {P : Linear i → Set} → Env i → Constraint i P → Set
-  ⊨[ ρ /x]ᵢ (a , _) = ⊨[ ρ /x] a
-
   ⊨[_/x]ₚ : ∀ {i} → Env i → Pair i → Set
   ⊨[ ρ /x]ₚ ((l , _) , (u , _)) = ⊨[ ρ /x] l × ⊨[ ρ /x] u
   
+  ⊨[_/x]ᵢ : ∀ {i} → Env i → Constraint i Irrelevant → Set
+  ⊨[ ρ /x]ᵢ (ir , _) = ⊨[ ρ /x] ir
+
   ⊨ : ∀ {i} → List (Linear i) → Set
   ⊨ {i} as = Σ (Env i) λ ρ → All ⊨[ ρ /x] as
+
+  ⊨ₚ : ∀ {i} → List (Pair i) → Set
+  ⊨ₚ {i} as = Σ (Env i) λ ρ → All ⊨[ ρ /x]ₚ as
 \end{code}
 
 After substitution, satisfiability is decidable.
@@ -1633,8 +1637,17 @@ After substitution, satisfiability is decidable.
   ⟦_⟧[_/x] : ∀ {i} → (a : Linear i) → (ρ : Env i) → Dec (⊨[ ρ /x] a)
   ⟦ a ⟧[ ρ /x] = ⟦ [ ρ /x] a ⟧⇓
 
+  ⟦_⟧[_/x]ₚ : ∀ {i} → (lu : Pair i) → (ρ : Env i) → Dec (⊨[ ρ /x]ₚ lu)
+  ⟦ ((l , _) , (u , _)) ⟧[ ρ /x]ₚ with ⟦ l ⟧[ ρ /x] | ⟦ u ⟧[ ρ /x]
+  ⟦ (l , _) , u , _ ⟧[ ρ /x]ₚ | yes pl | yes pu = yes (pl , pu)
+  ⟦ (l , _) , u , _ ⟧[ ρ /x]ₚ | _      | no ¬pu = no λ {(_ , pu) → ¬pu pu}
+  ⟦ (l , _) , u , _ ⟧[ ρ /x]ₚ | no ¬pl | _      = no λ {(pl , _) → ¬pl pl}
+
   ⟦_⟧ : ∀ {i} → (as : List (Linear i)) → (ρ : Env i) → Dec (All ⊨[ ρ /x] as)
   ⟦ as ⟧ ρ = all ⟦_⟧[ ρ /x] as
+
+  ⟦_⟧ₚ : ∀ {i} → (lus : List (Pair i)) → (ρ : Env i) → Dec (All ⊨[ ρ /x]ₚ lus)
+  ⟦ lus ⟧ₚ ρ = all ⟦_⟧[ ρ /x]ₚ lus
 \end{code}
 
 \subsubsection{Normalisation}
@@ -1845,19 +1858,11 @@ returns the cartesian product of ~\AgdaBound{ls}~ and ~\AgdaBound{us}.
   dark-shadow ((l , _) , (u , _)) with head l | ⊝ (tail l) | - (head u) | tail u
   ...                             | α | a | β | b = (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# ((α - + 1) * (β - + 1)))
       
-  eliminate-irrelevant : ∀ {i} → Constraint (suc i) Irrelevant → Linear i
-  eliminate-irrelevant = tail ∘ proj₁
+  elim-irrel : ∀ {i} → List (Constraint (suc i) Irrelevant) → List (Linear i)
+  elim-irrel = List.map (tail ∘ proj₁)
   
-  bound-pairs : ∀ {i} → List (Linear (suc i)) → List (Pair (suc i))
-  bound-pairs as with partition as
-  bound-pairs as | ls , is , us = ×-list ls us
-
-  irrelevants : ∀ {i} → List (Linear (suc i)) → List (Constraint (suc i) Irrelevant)
-  irrelevants as with partition as
-  irrelevants as | ls , is , us = is
-
-  omega : ∀ {i} → List (Linear (suc i)) → List (Linear i)
-  omega as = List.map dark-shadow (bound-pairs as) ++ List.map eliminate-irrelevant (irrelevants as)
+  omega : ∀ {i} → List (Pair (suc i)) → List (Linear i)
+  omega = List.map dark-shadow
 \end{code}
 
 For convenience, we will add a shortcut that performs quantifier
@@ -1869,7 +1874,8 @@ variables left, and then decides the variable-free formula.
   ⟦_⟧Ω {zero} as with ⟦ as ⟧ []
   ...           | yes p = true
   ...           | no ¬p = false
-  ⟦_⟧Ω {suc i} as = ⟦ omega as ⟧Ω
+  ⟦_⟧Ω {suc i} as with partition as
+  ...             | ls , is , us = ⟦ elim-irrel is ++ omega (×-list ls us) ⟧Ω
 \end{code}
 
 \subsubsection{Verification}
@@ -1964,11 +1970,11 @@ lowest upper bound.
     bound (((+_ n ∷ []) ∷+ b) , _≤_.+≤+ ())
     bound (((-[1+ β-1 ] ∷ []) ∷+ b) , ub) = sign b ◃ (∣ b ∣ div suc β-1)
 
-  search-space : ∀ {i} (as : List (Linear (suc i))) → ⊨ (omega as) → Σ (List ℤ) (_≢ [])
-  search-space as (ρ , ⊨Ωas) with partition (List.map [ ρ /x]_ as)
-  search-space as (ρ , ⊨Ωas) | ls , is , us with start ls - stop us
-  search-space as (ρ , ⊨Ωas) | ls , is , us | + Δ = List.applyUpTo (λ i → + i + start ls) Δ , {!!}
-  search-space as (ρ , ⊨Ωas) | ls , is , us | -[1+ Δ ] = ⊥-elim {!!}
+  search-space : ∀ {i} (lus : List (Pair (suc i))) → ⊨ (omega lus) → Σ (List ℤ) (_≢ [])
+  search-space lus (ρ , ⊨Ωas) with start (List.map ([ ρ /x]ₕ_  ∘ proj₁) lus )
+  search-space lus (ρ , ⊨Ωas) | Δ₀ with Δ₀ - stop (List.map ([ ρ /x]ₕ_ ∘ proj₂) lus)
+  search-space lus (ρ , ⊨Ωas) | Δ₀ | + n = + n + Δ₀ ∷ List.applyUpTo (λ i → + i + Δ₀) (suc n) , (λ ())
+  search-space lus (ρ , ⊨Ωas) | Δ₀ | -[1+ n ] = ⊥-elim {!!}
 \end{code}
 
 Norrish, where each step is implied by the next one
@@ -2002,97 +2008,88 @@ Ours, where each step is implied by the next one
   ∃[ xs ] P = Any P xs 
 
   norrish : ∀ {i} {xs : List ℤ} (ρ : Env i) (lu : Pair (suc i))
-          → ¬ ∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]ₚ lu)          → ¬ ⊨[ ρ /x] (dark-shadow lu)
+          → ¬ ∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]ₚ lu)
+          → ¬ ⊨[ ρ /x] (dark-shadow lu)
 
-  module _ {i : ℕ} (ρ : Env i) (as : List (Linear (suc i))) (xs : List ℤ) where
+  module _ {i : ℕ} (ρ : Env i) (lus : List (Pair (suc i))) (xs : List ℤ) where
   
-    ⊭irrelevants : (xs ≢ [])
-                 → (∀[ xs ] λ x → ¬ ∀[ as ] ⊨[ x ∷ ρ /x])
-                 → (¬ ∀[ irrelevants as ] (⊨[ ρ /x] ∘ eliminate-irrelevant))
-        
-    ⊭irrelevants ¬Ø = begin
-      (∀[ xs ] λ x → ¬ ∀[ as ] ⊨[ x ∷ ρ /x])
-        ∼⟨ {!!} ⟩
-      (∀[ xs ] λ x → ¬ ∀[ irrelevants as ] ⊨[ x ∷ ρ /x]ᵢ)
-        ∼⟨ (λ { [] → ⊥-elim (¬Ø refl) ; (px ∷ xs) → λ x → px {!!}}) ⟩
-      (¬ ∀[ irrelevants as ] (⊨[ ρ /x] ∘ eliminate-irrelevant))
-        ∎
-      where
+    {-
       open import Data.List.All using (map)
       open import Data.List.All.Properties using (All¬⇒¬Any)
       open import Agda.Primitive using (lzero)
       open import Function.Related using (preorder ; implication)
       open import Relation.Binary.PreorderReasoning (preorder implication lzero)
+    -}
 
-      ⊨[ρ]ᵢ→⊨[x∷ρ]ᵢ : (a : Constraint (suc i) Irrelevant) (x : ℤ)
-                     → ⊨[ ρ /x] (eliminate-irrelevant a) → ⊨[ x ∷ ρ /x]ᵢ a
-      ⊨[ρ]ᵢ→⊨[x∷ρ]ᵢ a x ⊨a = {!!}
-            
+    -- This is only possible because of the way they are interleaved
+    ∀xs→¬∀lus⇒∀lus→¬∃xs : (∀[ xs ] λ x → ¬ ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
+                     → (∀[ lus ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
+    ∀xs→¬∀lus⇒∀lus→¬∃xs = {!!} 
 
-      ⊨irrelevants : ∀ {i} {ρ : Env (suc i)} (as : List (Linear (suc i)))
-                   → ¬ ∀[ as ] ⊨[ ρ /x]
-                   → ¬ ∀[ irrelevants as ] ⊨[ ρ /x]ᵢ
-      ⊨irrelevants as ⊨as = {!!}
+  by-contradiction : {i : ℕ} (ρ : Env i) (lus : List (Pair (suc i))) (xs : List ℤ)
+                   → (⊨Ωlus : All ⊨[ ρ /x] (omega lus))
+                   → (xs ≢ []) → (∀[ xs ] λ x → ¬ ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
+                   → ⊥
+  by-contradiction ρ lus xs ⊨Ωlus ¬Ø ∀xs¬∀lus with ∀xs→¬∀lus⇒∀lus→¬∃xs ρ lus xs ∀xs¬∀lus
+  by-contradiction ρ [] .[] ⊨Ωlus ¬Ø [] | [] = ⊥-elim (¬Ø refl)
+  by-contradiction ρ [] .(_ ∷ _) ⊨Ωlus ¬Ø (¬∀lus ∷ ∀xs¬∀lus) | [] = ¬∀lus []
+  by-contradiction ρ (lu ∷ lus) xs (⊨Ωlu ∷ ⊨Ωlus) ¬Ø ∀xs¬∀lus | ¬∃xs ∷ ∀lus→¬∃xs = norrish ρ lu ¬∃xs ⊨Ωlu
 
+  find-x : ∀ {i} (lus : List (Pair (suc i))) (ρ : Env i)
+         → All ⊨[ ρ /x] (omega lus)
+         → Σ ℤ λ x → All ⊨[ x ∷ ρ /x]ₚ lus
+  find-x lus ρ ⊨Ωlus with search-space lus (ρ , ⊨Ωlus)
+  find-x lus ρ ⊨Ωlus | xs , ¬Ø = search (λ x → all ⟦_⟧[ x ∷ ρ /x]ₚ lus ) xs ¬Ø (by-contradiction ρ lus xs ⊨Ωlus)
 
-    ¬∃x→∀lus⇒∀lus→¬∃x : (∀[ xs ] λ x → ¬ ∀[ bound-pairs as ] ⊨[ x ∷ ρ /x]ₚ)
-                     → (∀[ bound-pairs as ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
-    ¬∃x→∀lus⇒∀lus→¬∃x = {!!} 
+  prepend-x : ∀ {i} (irs : List (Constraint (suc i) Irrelevant)) (ρ : Env i) (x : ℤ)
+            → All ⊨[ ρ /x] (elim-irrel irs)
+            → All ⊨[ x ∷ ρ /x]ᵢ irs
 
-    ∀x⊨[x∷ρ]ᵢ : All (⊨[ ρ /x] ∘ eliminate-irrelevant) (irrelevants as)
-              → ∀[ xs ] λ x → ∀[ irrelevants as ] ⊨[ x ∷ ρ /x]ᵢ
-    ∀x⊨[x∷ρ]ᵢ = ?
-                     
-    ⊭pairs : (∀[ xs ] λ x → ¬ ∀[ as ] ⊨[ x ∷ ρ /x])
-           → (∀[ bound-pairs as ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
-        
-    ⊭pairs = begin
-      (∀[ xs ] λ x → ¬ ∀[ as ] ⊨[ x ∷ ρ /x])
-        ∼⟨ All¬⇒¬Any ⟩
-      (¬ ∃[ xs ] λ x → ∀[ as ] ⊨[ x ∷ ρ /x])
-        ∼⟨ {!!} ⟩
-      (∀[ as ] λ a → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x] a)
-        ∼⟨ {!!} ⟩
-      (∀[ bound-pairs as ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
-        ∎
-      where
+  prepend-x irs ρ x = begin 
+    All ⊨[ ρ /x] (elim-irrel irs)
+      ∼⟨ map-All ⟩
+    All (⊨[ ρ /x] ∘ tail ∘ proj₁) irs
+      ∼⟨ map (λ ⊚ → one x ρ ⊚) ⟩
+    All ⊨[ x ∷ ρ /x]ᵢ irs
+      ∎
+  
+    where
 
-      open import Data.List.All.Properties using (All¬⇒¬Any)
-      open import Agda.Primitive using (lzero)
-      open import Function.Related using (preorder ; implication)
-      open import Relation.Binary.PreorderReasoning (preorder implication lzero)
-      ⊨pairs : ∀ {i} {xs : List ℤ} {ρ : Env (suc i)} (as : List (Linear (suc i)))
-             → (∀[ as ] λ a → ¬ ∃[ xs ] λ x → ⊨[ ρ /x] a)
-             → (∀[ bound-pairs as ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ ρ /x]ₚ lu)
-      ⊨pairs as ⊨as = {!!}
+    open import Data.List.All using (map)
+    open import Data.List.All.Properties using (map-All)
+    open import Agda.Primitive using (lzero)
+    open import Function.Related using (preorder ; implication)
+    open import Relation.Binary.PreorderReasoning (preorder implication lzero)
 
-    by-contradiction : (⊨Ωas : All ⊨[ ρ /x] (omega as))
-                     → (xs ≢ []) → (∀[ xs ] λ x → ¬ ∀[ as ] ⊨[ x ∷ ρ /x])
-                     → ⊥
-    by-contradiction ⊨Ωas          ¬Ø ∀xs¬∀as with bound-pairs as | irrelevants as | ⊭pairs ∀xs¬∀as | ⊭irrelevants ¬Ø ∀xs¬∀as
-    by-contradiction []            ¬Ø _ | []       | []       | ⊭lus       | ⊭irs = ⊭irs []
-    by-contradiction (⊨Ωir ∷ ⊨Ωas) ¬Ø _ | []       | ir ∷ irs | ⊭lus       | ⊭irs = ⊭irs (⊨Ωir ∷ (AllProp.map-All ⊨Ωas))
-    by-contradiction (⊨Ωlu ∷ ⊨Ωas) ¬Ø _ | lu ∷ lus | irs      | ⊭lu ∷ ⊭lus | ⊭irs = (norrish ρ lu ⊭lu) ⊨Ωlu
+    one : ∀ {i} (x : ℤ) (ρ : Env i) {ir : Constraint (suc i) Irrelevant}
+        → (⊨[ ρ /x] ∘ tail ∘ proj₁) ir
+        → ⊨[ x ∷ ρ /x]ᵢ ir
 
-  find-x : ∀ {i} → (as : List (Linear (suc i))) → ⊨ (omega as) → ⊨ as
-  find-x as (ρ , ⊨Ωas) with search-space as (ρ , ⊨Ωas)
-  find-x as (ρ , ⊨Ωas) | xs , ¬Ø with search (λ x → ⟦ as ⟧ (x ∷ ρ)) xs ¬Ø (by-contradiction ρ as xs ⊨Ωas)
-  find-x as (ρ , ⊨Ωas) | xs , ¬Ø | x , ⊨as = (x ∷ ρ) , ⊨as
+    one ρ x {ir} ⊨Ωir = {!!}
+    
 \end{code}
 
 \begin{code}
+  open import Data.List.All.Properties using (++⁻ ; ++⁺)
+  
   ⟦_⟧Ω-correct : ∀ {i} (as : List (Linear i)) → ⟦ as ⟧Ω-Correct
   ⟦_⟧Ω-correct as with ⟦ as ⟧Ω | inspect ⟦_⟧Ω as
   ⟦_⟧Ω-correct as | false | j = tt
   ⟦_⟧Ω-correct as | true | >[ eq ]< = inner as eq
     where
+    
     inner : ∀ {i} (as : List (Linear i)) → ⟦ as ⟧Ω ≡ true → ⊨ as
     inner {zero} as ep with ⟦ as ⟧ []
     inner {zero} as ep | yes p = [] , p
     inner {zero} as () | no ¬p
-    inner {suc i} as ep with ⟦ omega as ⟧Ω | inspect ⟦_⟧Ω (omega as)
-    inner {suc i} as () | false | _
-    inner {suc i} as ep | true | >[ eq ]< = find-x as (inner (omega as) eq)
+    inner {suc i} as ep with partition as
+    ... | ls , is , us with ×-list ls us
+    ... | lus with ⟦ elim-irrel is ++ omega lus ⟧Ω | inspect ⟦_⟧Ω (elim-irrel is ++ omega lus)
+    inner {suc i} as () | _ , is , _ | lus | false | j
+    inner {suc i} as ep | _ , is , _ | lus | true  | >[ eq ]< with inner (elim-irrel is ++ omega lus) eq
+    inner {suc i} as ep | _ , is , _ | lus | _ | _ | ρ , ⊨Ωas with ++⁻ (elim-irrel is) ⊨Ωas
+    inner {suc i} as ep | _ , is , _ | lus | _ | _ | ρ , ⊨Ωas | ⊨Ωirs , ⊨Ωlus with find-x lus ρ ⊨Ωlus
+    inner {suc i} as ep | _ , is , _ | lus | _ | _ | ρ , ⊨Ωas | ⊨Ωirs , ⊨Ωlus | x , ⊨lus = {!!}
 \end{code}
 
 \todo{Introduce proof by contradiction}
