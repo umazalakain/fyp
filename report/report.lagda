@@ -1266,26 +1266,35 @@ module Presburger where
   open import Data.Fin using (Fin ; zero ; suc)
   open import Data.Integer hiding (suc)
   open import Data.Nat as Nat using (ℕ ; zero ; suc)
+  open import Data.Nat.DivMod using (_div_)
   open import Data.Sum using (_⊎_ ; inj₁ ; inj₂)
   open import Data.Vec as Vec using (Vec ; [] ; _∷_)
+  open import Data.Product using (Σ ; _×_ ; _,_ ; proj₁ ; proj₂)
   open import Data.List as List using (List ; [] ; _∷_ ; _++_)
-  open import Data.Maybe using (Maybe ; nothing ; just)
-  open import Data.Product using (Σ ; _×_ ; _,_ ; proj₁ ; proj₂ ; uncurry)
-  open import Relation.Binary.PropositionalEquality using (_≡_ ; refl; cong ; sym ; _≢_ ; inspect) renaming ([_] to >[_]<)
-  open import Relation.Nullary using (Dec ; yes ; no)
-  open import Data.Integer.Properties as IntProp
-  open import Relation.Binary using (Tri)
-  open import Data.List.All using (All ; [] ; _∷_)
+  open import Data.List.All using (All ; all ; [] ; _∷_)
+  open import Data.List.Any using (Any ; any ; here ; there)
   open import Data.Unit using (⊤ ; tt)
-  open import Data.Bool using (Bool ; true ; false ; T ; not ; _∨_)
+  open import Data.Bool using (Bool ; true ; false)
   open import Data.Empty using (⊥ ; ⊥-elim)
-  open import Data.Nat.DivMod using (_div_)
-  open import Data.List.NonEmpty as NE using (List⁺)
-  open import Relation.Unary using (Decidable)
-  open import Data.List.Any using (here ; there)
-  open import Relation.Nullary using (¬_)
-  open import Data.List.Any using (Any)
+  open import Data.Sign as Sign using (Sign)
 
+  open import Data.Integer.Properties as IntProp using ()
+  open import Data.Nat.Properties as NatProp using ()
+  open import Data.List.All.Properties as AllProp using ()
+  open import Data.Vec.Properties as VecProp using ()
+
+  open import Relation.Nullary using (¬_ ; Dec ; yes ; no)
+  open import Relation.Unary using (Decidable)
+  open import Relation.Binary using (Tri)
+  open import Relation.Binary.PropositionalEquality using (_≡_ ; refl; cong ; sym ; _≢_ ; inspect) renaming ([_] to >[_]<)
+
+  open import Agda.Primitive using (lzero) renaming (_⊔_ to _ℓ⊔_)
+  open import Function.Related using (preorder ; implication)
+  import Relation.Binary.PreorderReasoning as PRE
+  module ⇒-Reasoning = PRE (preorder implication lzero)
+  import Relation.Binary.PartialOrderReasoning as POR
+  module ≤-Reasoning = POR IntProp.≤-poset renaming (_≈⟨_⟩_ to _≡⟨_⟩_ ; _≈⟨⟩_ to _≡⟨⟩_)
+  module ≡-Reasoning = Relation.Binary.PropositionalEquality.≡-Reasoning
 
   ×-list : {X Y : Set}(xs : List X)(ys : List Y) → List (X × Y)
   ×-list xs = List.concat ∘ List.map (λ y → List.map (_, y) xs)
@@ -1530,15 +1539,15 @@ which acts on real numbers — to integers.
 
   ⊘ : ∀ {i} → Linear i → Linear i
   ⊘ a = (# (+ 1)) ⊝ a
-\end{code}
 
-\begin{code}
   head : ∀ {i} → Linear (suc i) → ℤ
   head (c x+ cs +ℤ k) = c
 
   tail : ∀ {i} → Linear (suc i) → Linear i
   tail (c x+ cs +ℤ k) = cs ∷+ k
-  
+\end{code}
+
+\begin{code}
   substitute : ∀ {i} → Linear i → Linear (suc i) → Linear i
   substitute x a = (head a ⊛ x) ⊕ tail a
 
@@ -1565,10 +1574,20 @@ which acts on real numbers — to integers.
              × List (Constraint (suc i) Irrelevant)
              × List (Constraint (suc i) UpperBound)
   partition [] = [] , [] , []
-  partition (a ∷ as) with <-cmp (+ 0) (head a) | partition as
+  partition (a ∷ as) with IntProp.<-cmp (+ 0) (head a) | partition as
   partition (a ∷ as) | Tri.tri< 0>c _ _ | ls , is , us = (a , 0>c) ∷ ls , is , us
   partition (a ∷ as) | Tri.tri≈ _ 0=c _ | ls , is , us = ls , (a , 0=c) ∷ is , us
   partition (a ∷ as) | Tri.tri> _ _ 0<c | ls , is , us = ls , is , (a , 0<c) ∷ us
+
+  -- div requires an implicit proof showing its divisor is non-zero
+  a/α : Constraint 1 LowerBound → ℤ
+  a/α (((+_ zero ∷ []) ∷+ -a) , (_≤_.+≤+ ()))
+  a/α (((+_ (suc α-1) ∷ []) ∷+ -a) , lb) = sign (- -a) ◃ (∣ -a ∣ div suc α-1)
+  a/α (((-[1+_] n ∷ []) ∷+ -a) , ())
+
+  b/β : Constraint 1 UpperBound → ℤ
+  b/β (((+_ n ∷ []) ∷+ b) , _≤_.+≤+ ())
+  b/β (((-[1+ β-1 ] ∷ []) ∷+ b) , ub) = sign b ◃ (∣ b ∣ div suc β-1)
 \end{code}
 
 
@@ -1594,9 +1613,13 @@ Next, we define substitution for constraints:
   [_/x]_ {d = zero} (x ∷ xs) a = [ xs /x] (substitute (# x) a)
   [_/x]_ {d = suc d} xs ((c ∷ cs) ∷+ k) = c x+∅ ⊕ (0x+ ([ xs /x] (cs ∷+ k)))
 
-  postulate [_/x]ₕ_ : ∀ {i} {P : ℤ → Set} → Env i → Σ (Linear (suc i)) (P ∘ head) → Σ (Linear 1) (P ∘ head)
-  -- [ ρ /x]ₕ (a , Pa) with head a | tail a
-  -- ... | h | t = h x+∅ ⊕ (0x+ ([ ρ /x] t)) , {!!}
+  [_/x]ₕ_ : ∀ {i} {P : ℤ → Set} → Env i → Σ (Linear (suc i)) (P ∘ head) → Σ (Linear 1) (P ∘ head)
+  [ ρ /x]ₕ (a , Pa) with (head a) x+∅
+  [ ρ /x]ₕ (a , Pa) | (x ∷ cs₁) ∷+ k₁ = {!!}
+  {-
+  x+∅ ⊕ (0x+ [ ρ /x] (tail a))
+  [ ρ /x]ₕ (a , Pa) | a' = a' , {!Pa!} 
+  -}
 
   ⇓[_/x]_ : ∀ {i} → Env i → Linear i → ℤ
   ⇓[ ρ /x] a = k {zero} ([ ρ /x] a)
@@ -1631,8 +1654,6 @@ After substitution, satisfiability is decidable.
 \begin{code}
   ⟦_⟧⇓ : (a : Linear 0) → Dec (⊨⇓ a)
   ⟦ a ⟧⇓ = (+ 0) <? (Linear.k a)
-
-  open import Data.List.All using (all)
 
   ⟦_⟧[_/x] : ∀ {i} → (a : Linear i) → (ρ : Env i) → Dec (⊨[ ρ /x] a)
   ⟦ a ⟧[ ρ /x] = ⟦ [ ρ /x] a ⟧⇓
@@ -1953,22 +1974,10 @@ lowest upper bound.
 
 \begin{code}
   start : List (Constraint 1 LowerBound) → ℤ
-  start ls = List.foldr _⊔_ (+ 0) (List.map bound ls)
-    where
-    -- div requires an implicit proof showing its divisor is non-zero
-    bound : Constraint 1 LowerBound → ℤ
-    bound (((+_ zero ∷ []) ∷+ -a) , (_≤_.+≤+ ()))
-    bound (((+_ (suc α-1) ∷ []) ∷+ -a) , lb) = sign (- -a) ◃ (∣ -a ∣ div (suc α-1))
-    bound (((-[1+_] n ∷ []) ∷+ -a) , ())
-
+  start ls = List.foldr _⊔_ (+ 0) (List.map a/α ls)
 
   stop : List (Constraint 1 UpperBound) → ℤ
-  stop us = List.foldr _⊓_ (+ 0) (List.map bound us)
-    where
-    -- div requires an implicit proof showing its divisor is non-zero
-    bound : Constraint 1 UpperBound → ℤ
-    bound (((+_ n ∷ []) ∷+ b) , _≤_.+≤+ ())
-    bound (((-[1+ β-1 ] ∷ []) ∷+ b) , ub) = sign b ◃ (∣ b ∣ div suc β-1)
+  stop us = List.foldr _⊓_ (+ 0) (List.map b/β us)
 
   search-space : ∀ {i} (lus : List (Pair (suc i))) → ⊨ (omega lus) → Σ (List ℤ) (_≢ [])
   search-space lus (ρ , ⊨Ωas) with start (List.map ([ ρ /x]ₕ_  ∘ proj₁) lus )
@@ -1997,81 +2006,76 @@ Ours, where each step is implied by the next one
 \end{align*}
 
 \begin{code}
-  open import Agda.Primitive renaming (_⊔_ to _ℓ⊔_)
-  open import Data.List.All.Properties as AllProp using ()
-
-
   ∀[_]_ : ∀ {a p} {A : Set a} → List A → (A → Set p) → Set (p ℓ⊔ a)
   ∀[ xs ] P = All P xs 
 
   ∃[_]_ : ∀ {a p} {A : Set a} → List A → (A → Set p) → Set (p ℓ⊔ a)
   ∃[ xs ] P = Any P xs 
 
-  norrish : ∀ {i} {xs : List ℤ} (ρ : Env i) (lu : Pair (suc i))
+  norrish : ∀ {i} (ρ : Env i) (lu : Pair (suc i)) {xs : List ℤ}
           → ¬ ∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]ₚ lu)
           → ¬ ⊨[ ρ /x] (dark-shadow lu)
 
-  module _ {i : ℕ} (ρ : Env i) (lus : List (Pair (suc i))) (xs : List ℤ) where
-  
-    {-
-      open import Data.List.All using (map)
-      open import Data.List.All.Properties using (All¬⇒¬Any)
-      open import Agda.Primitive using (lzero)
-      open import Function.Related using (preorder ; implication)
-      open import Relation.Binary.PreorderReasoning (preorder implication lzero)
-    -}
+  module _ (i : ℕ) (ρ : Env i) where
 
-    ∀xs→¬∀lus⇒∃lus→¬∃xs : (∀[ xs ] λ x → ¬ ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
+    ∀lus∃xs⇒∃xs∀lus : (lus : List (Pair (suc i))) (xs : List ℤ)
+                    → (∀[ lus ] (λ lu → ∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]ₚ lu)))
+                    → (∃[ xs ] (λ x → ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ))
+    ∀lus∃xs⇒∃xs∀lus lus xs ∀lus∃xs = {!!}
+
+    ∀xs→¬∀lus⇒∃lus→¬∃xs : (lus : List (Pair (suc i))) (xs : List ℤ)
+                        → (∀[ xs ] λ x → ¬ ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
                         → (∃[ lus ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
-    ∀xs→¬∀lus⇒∃lus→¬∃xs = {!!}
+    ∀xs→¬∀lus⇒∃lus→¬∃xs lus xs = begin
+      (∀[ xs ] λ x → ¬ ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
+        ∼⟨ AllProp.All¬⇒¬Any ⟩
+      (¬ ∃[ xs ] λ x → ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
+        ∼⟨ (λ ¬∃xs∀lus ∀lus∃xs → ¬∃xs∀lus (∀lus∃xs⇒∃xs∀lus lus xs ∀lus∃xs)) ⟩
+      (¬ ∀[ lus ] λ lu → ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
+        ∼⟨ AllProp.¬All⇒Any¬ (λ lu → any (λ x → ⟦ lu ⟧[ x ∷ ρ /x]ₚ) xs) lus ⟩
+      (∃[ lus ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
+        ∎
+      where
+      open ⇒-Reasoning
                         
-    ∀xs→¬∀lus⇒∀lus→¬∃xs : (∀[ xs ] λ x → ¬ ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
-                     → (∀[ lus ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
-    ∀xs→¬∀lus⇒∀lus→¬∃xs = {!!} 
+    by-contradiction : (lus : List (Pair (suc i))) (xs : List ℤ)
+                     → (⊨Ωlus : All ⊨[ ρ /x] (omega lus))
+                     → (xs ≢ []) → (∀[ xs ] λ x → ¬ ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
+                     → ⊥
+    by-contradiction lus .[] ⊨Ωlus ¬Ø []       = ⊥-elim (¬Ø refl)
+    by-contradiction lus xs  ⊨Ωlus ¬Ø ∀xs¬∀lus = inner lus ⊨Ωlus (∀xs→¬∀lus⇒∃lus→¬∃xs lus xs ∀xs¬∀lus)
+      where
+      inner : (lus : List (Pair (suc i)))
+            → (⊨Ωlus : All ⊨[ ρ /x] (omega lus))
+            → (∃[ lus ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
+            → ⊥
+      inner [] [] ()
+      inner (lu ∷ lus) (⊨Ωlu ∷ ⊨Ωlus) (here ¬∃xs)       = norrish ρ lu ¬∃xs ⊨Ωlu
+      inner (lu ∷ lus) (⊨Ωlu ∷ ⊨Ωlus) (there ∃lus→¬∃xs) = inner lus ⊨Ωlus ∃lus→¬∃xs
 
-  by-contradiction : {i : ℕ} (ρ : Env i) (lus : List (Pair (suc i))) (xs : List ℤ)
-                   → (⊨Ωlus : All ⊨[ ρ /x] (omega lus))
-                   → (xs ≢ []) → (∀[ xs ] λ x → ¬ ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
-                   → ⊥
+    find-x : ∀ (lus : List (Pair (suc i)))
+           → All ⊨[ ρ /x] (omega lus)
+           → Σ ℤ λ x → All ⊨[ x ∷ ρ /x]ₚ lus
 
-  open import Data.List.Any using (satisfied)
-  
-  by-contradiction     ρ lus .[] ⊨Ωlus ¬Ø []       = ⊥-elim (¬Ø refl)
-  by-contradiction {i} ρ lus xs  ⊨Ωlus ¬Ø ∀xs¬∀lus = inner lus ⊨Ωlus (∀xs→¬∀lus⇒∃lus→¬∃xs ρ lus xs ∀xs¬∀lus)
-    where
-    inner : (lus : List (Pair (suc i)))
-          → (⊨Ωlus : All ⊨[ ρ /x] (omega lus))
-          → (∃[ lus ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
-          → ⊥
-    inner [] [] ()
-    inner (lu ∷ lus) (⊨Ωlu ∷ ⊨Ωlus) (here ¬∃xs)       = norrish ρ lu ¬∃xs ⊨Ωlu
-    inner (lu ∷ lus) (⊨Ωlu ∷ ⊨Ωlus) (there ∃lus→¬∃xs) = inner lus ⊨Ωlus ∃lus→¬∃xs
+    find-x lus ⊨Ωlus with search-space lus (ρ , ⊨Ωlus)
+    find-x lus ⊨Ωlus | xs , ¬Ø = search (λ x → all ⟦_⟧[ x ∷ ρ /x]ₚ lus ) xs ¬Ø (by-contradiction lus xs ⊨Ωlus)
 
-  find-x : ∀ {i} (lus : List (Pair (suc i))) (ρ : Env i)
-         → All ⊨[ ρ /x] (omega lus)
-         → Σ ℤ λ x → All ⊨[ x ∷ ρ /x]ₚ lus
+    prepend-x : (x : ℤ) (irs : List (Constraint (suc i) Irrelevant))
+              → All ⊨[ ρ /x] (elim-irrel irs)
+              → All ⊨[ x ∷ ρ /x]ᵢ irs
 
-  find-x lus ρ ⊨Ωlus with search-space lus (ρ , ⊨Ωlus)
-  find-x lus ρ ⊨Ωlus | xs , ¬Ø = search (λ x → all ⟦_⟧[ x ∷ ρ /x]ₚ lus ) xs ¬Ø (by-contradiction ρ lus xs ⊨Ωlus)
+    prepend-x x [] [] = []
+    prepend-x x (ir ∷ irs) (⊨Ωir ∷ ⊨Ωirs) = one x ir ⊨Ωir ∷ (prepend-x x irs ⊨Ωirs)
+      where
+      one : (x : ℤ) (ir : Constraint (suc i) Irrelevant)
+          → (⊨[ ρ /x] ∘ tail ∘ proj₁) ir
+          → ⊨[ x ∷ ρ /x]ᵢ ir
 
-  prepend-x : ∀ {i} (x : ℤ) (ρ : Env i) (irs : List (Constraint (suc i) Irrelevant))
-            → All ⊨[ ρ /x] (elim-irrel irs)
-            → All ⊨[ x ∷ ρ /x]ᵢ irs
-
-  prepend-x x ρ [] [] = []
-  prepend-x x ρ (ir ∷ irs) (⊨Ωir ∷ ⊨Ωirs) = one x ρ ir ⊨Ωir ∷ (prepend-x x ρ irs ⊨Ωirs)
-    where
-    one : ∀ {i} (x : ℤ) (ρ : Env i) (ir : Constraint (suc i) Irrelevant)
-        → (⊨[ ρ /x] ∘ tail ∘ proj₁) ir
-        → ⊨[ x ∷ ρ /x]ᵢ ir
-
-    one x ρ ir ⊨Ωir = {!!}
-    
+      one x ir ⊨Ωir = {!!}
+      
 \end{code}
 
 \begin{code}
-  open import Data.List.All.Properties using (++⁻ ; ++⁺)
-  
   ⟦_⟧Ω-correct : ∀ {i} (as : List (Linear i)) → ⟦ as ⟧Ω-Correct
   ⟦_⟧Ω-correct as with ⟦ as ⟧Ω | inspect ⟦_⟧Ω as
   ⟦_⟧Ω-correct as | false | j = tt
@@ -2087,9 +2091,9 @@ Ours, where each step is implied by the next one
     ... | lus with ⟦ elim-irrel irs ++ omega lus ⟧Ω | inspect ⟦_⟧Ω (elim-irrel irs ++ omega lus)
     inner {suc i} as () | _ , irs , _ | lus | false | j
     inner {suc i} as ep | _ , irs , _ | lus | true  | >[ eq ]< with inner (elim-irrel irs ++ omega lus) eq
-    inner {suc i} as ep | _ , irs , _ | lus | _ | _ | ρ , ⊨Ωas with ++⁻ (elim-irrel irs) ⊨Ωas
-    inner {suc i} as ep | _ , irs , _ | lus | _ | _ | ρ , ⊨Ωas | ⊨Ωirs , ⊨Ωlus with find-x lus ρ ⊨Ωlus
-    inner {suc i} as ep | _ , irs , _ | lus | _ | _ | ρ , ⊨Ωas | ⊨Ωirs , ⊨Ωlus | x , ⊨lus with prepend-x x ρ irs ⊨Ωirs
+    inner {suc i} as ep | _ , irs , _ | lus | _ | _ | ρ , ⊨Ωas with AllProp.++⁻ (elim-irrel irs) ⊨Ωas
+    inner {suc i} as ep | _ , irs , _ | lus | _ | _ | ρ , ⊨Ωas | ⊨Ωirs , ⊨Ωlus with find-x i ρ lus ⊨Ωlus
+    inner {suc i} as ep | _ , irs , _ | lus | _ | _ | ρ , ⊨Ωas | ⊨Ωirs , ⊨Ωlus | x , ⊨lus with prepend-x i ρ x irs ⊨Ωirs
     ... | ⊨irs = {!!}
 \end{code}
 
@@ -2104,14 +2108,13 @@ Ours, where each step is implied by the next one
     (⊝ (# n))
       ≡⟨⟩
     (Vec.map -_ (Vec.replicate (+ 0)) ∷+ (- n))
-      ≡⟨ cong (λ ⊚ → ((⊚ ∷+ (- n)))) (map-replicate -_ (+ 0) _) ⟩
+      ≡⟨ cong (λ ⊚ → ((⊚ ∷+ (- n)))) (VecProp.map-replicate -_ (+ 0) _) ⟩
     (Vec.replicate (- + 0) ∷+ (- n))
       ≡⟨⟩
     (# (- n))
       ∎
     where
-      open Relation.Binary.PropositionalEquality.≡-Reasoning
-      open import Data.Vec.Properties using (map-replicate)
+      open ≡-Reasoning
 
   lemma₁ : ∀ {i} (csa : Vec ℤ i) (ka n : ℤ) → (csa ∷+ ka) ⊕ (# n) ≡ (csa ∷+ (ka + n))
   lemma₁ csa ka n = begin 
@@ -2120,29 +2123,24 @@ Ours, where each step is implied by the next one
     Vec.zipWith _+_ csa (cs (# n)) ∷+ (ka + n)
       ≡⟨⟩
     Vec.zipWith _+_ csa (Vec.replicate (+ 0)) ∷+ (ka + n)
-      ≡⟨ cong (_∷+ (ka + n)) (zipWith-replicate₂ _+_ csa (+ 0)) ⟩
+      ≡⟨ cong (_∷+ (ka + n)) (VecProp.zipWith-replicate₂ _+_ csa (+ 0)) ⟩
     Vec.map (_+ (+ 0)) csa ∷+ (ka + n)
-      ≡⟨ cong (_∷+ (ka + n)) (map-cong +-identityʳ csa) ⟩
+      ≡⟨ cong (_∷+ (ka + n)) (VecProp.map-cong IntProp.+-identityʳ csa) ⟩
     Vec.map id csa ∷+ (ka + n)
-      ≡⟨ cong (_∷+ (ka + n)) (map-id csa) ⟩
+      ≡⟨ cong (_∷+ (ka + n)) (VecProp.map-id csa) ⟩
     csa ∷+ (ka + n)
       ∎
-    where
-      open Relation.Binary.PropositionalEquality.≡-Reasoning
-      open import Data.Vec.Properties using (map-id ; map-cong ; zipWith-replicate₂)
-      open import Data.Integer.Properties using (+-identityʳ)
+    where open ≡-Reasoning
 
   lemma₂ : ∀ {i} → (n : ℤ) → ⊝_ {i} (# n) ≡ # (- n)
   lemma₂ n = begin 
     ⊝ (# n)
       ≡⟨⟩
     (Vec.map -_ (Vec.replicate (+ 0)) ∷+ (- n))
-      ≡⟨ cong (_∷+ (- n)) (map-replicate -_ (+ 0) _) ⟩
+      ≡⟨ cong (_∷+ (- n)) (VecProp.map-replicate -_ (+ 0) _) ⟩
     # (- n)
       ∎
-    where
-      open Relation.Binary.PropositionalEquality.≡-Reasoning
-      open import Data.Vec.Properties using (map-replicate)
+    where open ≡-Reasoning
 
   lemma₃ : (m : ℤ) (n : ℤ) → (+ 0) ≤ n → m - n ≤ m
   lemma₃ m n 0≤n = {!!}
@@ -2163,13 +2161,16 @@ Ours, where each step is implied by the next one
     β = - (head (proj₁ u))
     b = tail (proj₁ u)
     0<β = proj₂ u
+    n = a/α ([ ρ /x]ₕ l)
 
     0≤[α-1][β-1] : (+ 0) ≤ (α - + 1) * (β - + 1)
-    0≤[α-1][β-1] = {!!}
+    0≤[α-1][β-1] with α - + 1 | β - + 1
+    0≤[α-1][β-1] | +_ n | +_ m with Sign.+ ◃ (n Nat.* m) | IntProp.+◃n≡+n (n Nat.* m)
+    0≤[α-1][β-1] | +_ n | +_ m | +_ .(n Nat.* m) | refl = +≤+ Nat.z≤n
+    0≤[α-1][β-1] | +_ n | +_ m | -[1+_] _ | ()
+    0≤[α-1][β-1] | +_ n | -[1+_] m = {!!}
+    0≤[α-1][β-1] | -[1+_] n | m = {!!}
 
-
-    import Relation.Binary.PartialOrderReasoning as POR
-    open POR IntProp.≤-poset renaming (_≈⟨_⟩_ to _≡⟨_⟩_ ; _≈⟨⟩_ to _≡⟨⟩_)
 
     [α-1][β-1]≤αb-aβ : Linear i
     [α-1][β-1]≤αb-aβ = (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# ((α - + 1) * (β - + 1)))
@@ -2182,17 +2183,17 @@ Ours, where each step is implied by the next one
               ∷ (α ⊛ (0x+ b)) ⊝ ((α * β) x+∅)
               ∷ []
 
-    αβn<aβ≤αb<αβ[n+1] : ℕ → List (Linear i)
-    αβn<aβ≤αb<αβ[n+1] n = ((β ⊛ a) ⊝ (# (α * β * + n)) ⊝ (# (+ 1)))
-                        ∷ (α ⊛ b) ⊝ (β ⊛ a)
-                        ∷ ((# (α * β * + (suc n))) ⊝ (α ⊛ b) ⊝ (# (+ 1)))
-                        ∷ []
+    αβn<aβ≤αb<αβ[n+1] : List (Linear i)
+    αβn<aβ≤αb<αβ[n+1] = ((β ⊛ a) ⊝ (# (α * β * n)) ⊝ (# (+ 1)))
+                      ∷ (α ⊛ b) ⊝ (β ⊛ a)
+                      ∷ ((# (α * β * (n + + 1))) ⊝ (α ⊛ b) ⊝ (# (+ 1)))
+                      ∷ []
 
-    α≤αβ[n+1]-αb : ℕ → Linear i
-    α≤αβ[n+1]-αb n = (# (α * β * + (suc n))) ⊝ (α ⊛ b) ⊝ (# α)
+    α≤αβ[n+1]-αb : Linear i
+    α≤αβ[n+1]-αb = (# (α * β * (n + + 1))) ⊝ (α ⊛ b) ⊝ (# α)
 
-    β≤aβ-αβn : ℕ → Linear i
-    β≤aβ-αβn n = (β ⊛ a) ⊝ (# (α * β * + n)) ⊝ (# β)
+    β≤aβ-αβn : Linear i
+    β≤aβ-αβn = (β ⊛ a) ⊝ (# (α * β * n)) ⊝ (# β)
 
     αb-aβ<[α-1][β-1] : Linear i
     αb-aβ<[α-1][β-1] = (# ((α - + 1) * (β - + 1))) ⊝ (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# (+ 1))
@@ -2211,29 +2212,27 @@ Ours, where each step is implied by the next one
       ⇓[ ρ /x] (csa ∷+ (ka - (α - + 1) * (β - + 1)))
         ≡⟨ lemma₄ ρ csa _ ⟩
       ⇓[ ρ /x] (csa ∷+ (+ 0)) + (ka - (α - + 1) * (β - + 1))
-        ≡⟨ sym (+-assoc (⇓[ ρ /x] (csa ∷+ (+ 0))) ka (- ((α - + 1) * (β - + 1)))) ⟩
+        ≡⟨ sym (IntProp.+-assoc (⇓[ ρ /x] (csa ∷+ (+ 0))) ka (- ((α - + 1) * (β - + 1)))) ⟩
       (⇓[ ρ /x] (csa ∷+ (+ 0)) + ka) - (α - + 1) * (β - + 1)
         ≤⟨ lemma₃ _ _ 0≤[α-1][β-1] ⟩
       ⇓[ ρ /x] (csa ∷+ (+ 0)) + ka
         ≡⟨ sym (lemma₄ ρ csa ka) ⟩
       ⇓[ ρ /x] (csa ∷+ ka)
         ∎
-      where
-        open import Data.Vec.Properties using (map-id ; map-cong ; map-replicate ; zipWith-replicate₂)
-        open import Data.Integer.Properties using (+-identityʳ ; ≤-reflexive ; +-assoc)
+      where open ≤-Reasoning
 
-    ⊨αβn<aβ≤αb<αβ[n+1] : ⊨[ ρ /x] aβ≤αb → ¬ (∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]ₚ (l , u))) → Σ ℕ λ n → All ⊨[ ρ /x] (αβn<aβ≤αb<αβ[n+1] n)
-    ⊨αβn<aβ≤αb<αβ[n+1] ⊨p₁ ⊭p₂ = n , r₁ ∷ r₂ ∷ r₃ ∷ []
+    ⊨αβn<aβ≤αb<αβ[n+1] : ⊨[ ρ /x] aβ≤αb → ¬ (∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]ₚ (l , u))) → All ⊨[ ρ /x] αβn<aβ≤αb<αβ[n+1]
+    ⊨αβn<aβ≤αb<αβ[n+1] ⊨p₁ ⊭p₂ = r₁ ∷ r₂ ∷ r₃ ∷ []
       where
-        -- How to compute n?
-        n = {!!}
+        open ≤-Reasoning
+
         -- ⊭aβ≤αβx≤αb : ¬ ⊨ ((α * β) x+∅ ⊝ ⇑1 (β ⊛ a) ∷ ⇑1 (α ⊛ b) ⊝ ((α * β) x+∅) ∷ [])
         -- ⊭aβ≤αβx≤αb ρ' (⊨p₃ ∷ ⊨p₄ ∷ []) = ⊭p₂ ρ' ({!!} ∷ {!!} ∷ [])
   
         r₁ = begin
           + 1
             ≤⟨ {!!} ⟩
-          ⇓[ ρ /x] ((β ⊛ a) ⊝ (# (α * β * + n)) ⊝ (# (+ 1)))
+          ⇓[ ρ /x] ((β ⊛ a) ⊝ (# (α * β * n)) ⊝ (# (+ 1)))
             ∎
         r₂ = begin
           + 1
@@ -2243,39 +2242,40 @@ Ours, where each step is implied by the next one
         r₃ = begin
           + 1
             ≤⟨ {!!} ⟩
-          ⇓[ ρ /x] ((# (α * β * + suc n)) ⊝ (α ⊛ b) ⊝ (# (+ 1)))
+          ⇓[ ρ /x] ((# (α * β * (n + + 1))) ⊝ (α ⊛ b) ⊝ (# (+ 1)))
             ∎
 
-    ⊨α≤αβ[n+1]-αb : (n : ℕ) →  All ⊨[ ρ /x] (αβn<aβ≤αb<αβ[n+1] n) → ⊨[ ρ /x] (α≤αβ[n+1]-αb n)
-    ⊨α≤αβ[n+1]-αb n (⊨p₁ ∷ ⊨p₂ ∷ ⊨p₃ ∷ []) = begin 
+    ⊨α≤αβ[n+1]-αb : All ⊨[ ρ /x] αβn<aβ≤αb<αβ[n+1] → ⊨[ ρ /x] α≤αβ[n+1]-αb
+    ⊨α≤αβ[n+1]-αb (⊨p₁ ∷ ⊨p₂ ∷ ⊨p₃ ∷ []) = begin 
       + 1
         ≤⟨ {!!} ⟩
-      ⇓[ ρ /x] α≤αβ[n+1]-αb n
+      ⇓[ ρ /x] α≤αβ[n+1]-αb
         ∎
+      where open ≤-Reasoning
 
-    ⊨β≤aβ-αβn : (n : ℕ) →  All ⊨[ ρ /x] (αβn<aβ≤αb<αβ[n+1] n) → ⊨[ ρ /x] (β≤aβ-αβn n)
-    ⊨β≤aβ-αβn n (⊨p₁ ∷ ⊨p₂ ∷ ⊨p₃ ∷ []) = begin 
+    ⊨β≤aβ-αβn : All ⊨[ ρ /x] αβn<aβ≤αb<αβ[n+1] → ⊨[ ρ /x] β≤aβ-αβn
+    ⊨β≤aβ-αβn (⊨p₁ ∷ ⊨p₂ ∷ ⊨p₃ ∷ []) = begin 
       + 1
         ≤⟨ {!!} ⟩
-      ⇓[ ρ /x] β≤aβ-αβn n 
+      ⇓[ ρ /x] β≤aβ-αβn
         ∎
+      where open ≤-Reasoning
 
-    ⊭[α-1][β-1]≤αb-aβ : {n : ℕ}
-                      → ⊨[ ρ /x] (α≤αβ[n+1]-αb n)
-                      → ⊨[ ρ /x] (β≤aβ-αβn n)
+    ⊭[α-1][β-1]≤αb-aβ : ⊨[ ρ /x] α≤αβ[n+1]-αb
+                      → ⊨[ ρ /x] β≤aβ-αβn
                       → ⊨[ ρ /x] [α-1][β-1]≤αb-aβ
                       → ⊥
     ⊭[α-1][β-1]≤αb-aβ ⊨p₁ ⊨p₂ ⊨ds = {!!} 
 
-  -- norrish : ∀ {i} {xs : List ℤ} (ρ : Env i) (lu : Pair (suc i))
+  -- norrish : ∀ {i} (ρ : Env i) (lu : Pair (suc i)) {xs : List ℤ}
   --         → ¬ ∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]ₚ lu)
   --         → ¬ ⊨[ ρ /x] (dark-shadow lu)
-  norrish {i} {xs} ρ (l , u) ⊭xs ⊨Ωlu = proof
+  norrish {i} ρ (l , u) {xs} ⊭xs ⊨Ωlu = proof
     where
       open norrish-inner i ρ xs l u
       proof : ⊥
       proof with ⊨αβn<aβ≤αb<αβ[n+1] (⊨βa≤αb ⊨Ωlu ) ⊭xs
-      proof | n , ps = ⊭[α-1][β-1]≤αb-aβ (⊨α≤αβ[n+1]-αb n ps) (⊨β≤aβ-αβn n ps) ⊨Ωlu
+      proof | ps = ⊭[α-1][β-1]≤αb-aβ (⊨α≤αβ[n+1]-αb ps) (⊨β≤aβ-αβn ps) ⊨Ωlu
 \end{code}
 
 \todo{Evaluation, if there is time}
@@ -2310,50 +2310,12 @@ P(ℓx) \equiv P(x) \land ℓ | x
 \end{align*}
 \end{theorem}
 
-\AgdaHide{
-\begin{code}
- 
-  -- module Constraint where
-  --   data Constraint (i : ℕ) : Set where
-  --     0<_ :           (e : Linear i) → Constraint i
-  --     _∣_ : (d : ℕ) → (e : Linear i) → Constraint i
-  --     _∤_ : (d : ℕ) → (e : Linear i) → Constraint i
-  --   
-  --   affine : ∀ {i} → Constraint i → Linear i
-  --   affine (0< e)  = e
-  --   affine (d ∣ e) = e
-  --   affine (d ∤ e) = e
-  --   
-  --   on-affine : ∀ {i j} (f : Linear i → Linear j) → (Constraint i → Constraint j)
-  --   on-affine f (0< e)  = 0< f e
-  --   on-affine f (d ∣ e) = d ∣ f e
-  --   on-affine f (d ∤ e) = d ∤ f e
-  --   
-  --   on-coefficient : ∀ {i} → (ℤ → ℤ) → (Linear (suc i) → Linear (suc i))
-  --   on-coefficient f ((c ∷ cs) ∷+ k) = ((f c) ∷ cs) ∷+ k
-  --   
-  --   coefficient : ∀ {i} → Constraint (suc i) → ℤ
-  --   coefficient = Aff.head ∘ affine
-
-  --   divisor : ∀ {i} → Constraint i → Maybe ℕ
-  --   divisor (0< e)  = nothing
-  --   divisor (d ∣ e) = just d
-  --   divisor (d ∤ e) = just d
-  -- 
-  --   ¬_ : ∀ {i} → Constraint i → Constraint i
-  --   ¬ (0< e) = 0< (Aff.¬ e)
-  --   ¬ (d ∣ e) = d ∤ e
-  --   ¬ (d ∤ e) = d ∣ e
-  --   
-  -- open Constraint using (Constraint ; 0<_ ; _∣_ ; _∤_)
-\end{code}
-}
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Future work}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Omega:
+  Postulates
   Evaluation
   Splinters
   Adapt stdlib
