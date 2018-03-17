@@ -1291,7 +1291,7 @@ module Presburger where
   open import Agda.Primitive using (lzero) renaming (_⊔_ to _ℓ⊔_)
   open import Function.Related using (preorder ; implication)
   import Relation.Binary.PreorderReasoning as PRE
-  module ⇒-Reasoning = PRE (preorder implication lzero)
+  module ⇒-Reasoning = PRE (preorder implication lzero) renaming (_∼⟨_⟩_ to _⇒⟨_⟩_; _≈⟨_⟩_ to _≡⟨_⟩_; _≈⟨⟩_ to _≡⟨⟩_)
   import Relation.Binary.PartialOrderReasoning as POR
   module ≤-Reasoning = POR IntProp.≤-poset renaming (_≈⟨_⟩_ to _≡⟨_⟩_ ; _≈⟨⟩_ to _≡⟨⟩_)
   module ≡-Reasoning = Relation.Binary.PropositionalEquality.≡-Reasoning
@@ -1510,17 +1510,8 @@ which acts on real numbers — to integers.
   ∅ : ∀ {i} → Linear i
   ∅ = Vec.replicate (+ 0) ∷+ (+ 0)
   
-  _x+∅ : ∀ {i} → ℤ → Linear (suc i)
-  n x+∅ = (n ∷ Vec.replicate (+ 0)) ∷+ (+ 0)
-  
   _x+_ : ∀ {i} → ℤ → Linear i → Linear (suc i)
   n x+ (cs ∷+ k) = (n ∷ cs) ∷+ k
-
-  _≤_x : ∀ {i} → Linear i → ℤ → Linear (suc i)
-  (cs ∷+ k) ≤ α x = (α ∷ (Vec.map -_ cs)) ∷+ (- k)
-
-  _x≤_ : ∀ {i} → ℤ → Linear i → Linear (suc i)
-  β x≤ (cs ∷+ k) = ((- β) ∷ cs) ∷+ k
   
   0x+_ : ∀ {i} → Linear i → Linear (suc i)
   0x+_ (cs ∷+ k) = ((+ 0) ∷ cs) ∷+ k
@@ -1537,8 +1528,8 @@ which acts on real numbers — to integers.
   _⊝_ : ∀ {i} → Linear i → Linear i → Linear i
   a ⊝ b = a ⊕ (⊝ b)
 
-  ⊘ : ∀ {i} → Linear i → Linear i
-  ⊘ a = (# (+ 1)) ⊝ a
+  ⊘_ : ∀ {i} → Linear i → Linear i
+  ⊘_ a = (# (+ 1)) ⊝ a
 
   head : ∀ {i} → Linear (suc i) → ℤ
   head (c x+ cs +ℤ k) = c
@@ -1548,9 +1539,6 @@ which acts on real numbers — to integers.
 \end{code}
 
 \begin{code}
-  substitute : ∀ {i} → Linear i → Linear (suc i) → Linear i
-  substitute x a = (head a ⊛ x) ⊕ tail a
-
   Irrelevant : ∀ {i} → Linear i → Set
   Irrelevant {zero} a = ⊥
   Irrelevant {suc n} a = + 0 ≡ head a
@@ -1578,16 +1566,6 @@ which acts on real numbers — to integers.
   partition (a ∷ as) | Tri.tri< 0>c _ _ | ls , is , us = (a , 0>c) ∷ ls , is , us
   partition (a ∷ as) | Tri.tri≈ _ 0=c _ | ls , is , us = ls , (a , 0=c) ∷ is , us
   partition (a ∷ as) | Tri.tri> _ _ 0<c | ls , is , us = ls , is , (a , 0<c) ∷ us
-
-  -- div requires an implicit proof showing its divisor is non-zero
-  a/α : Constraint 1 LowerBound → ℤ
-  a/α (((+_ zero ∷ []) ∷+ -a) , (_≤_.+≤+ ()))
-  a/α (((+_ (suc α-1) ∷ []) ∷+ -a) , lb) = sign (- -a) ◃ (∣ -a ∣ div suc α-1)
-  a/α (((-[1+_] n ∷ []) ∷+ -a) , ())
-
-  b/β : Constraint 1 UpperBound → ℤ
-  b/β (((+_ n ∷ []) ∷+ b) , _≤_.+≤+ ())
-  b/β (((-[1+ β-1 ] ∷ []) ∷+ b) , ub) = sign b ◃ (∣ b ∣ div suc β-1)
 \end{code}
 
 
@@ -1610,19 +1588,21 @@ Next, we define substitution for constraints:
 \begin{code}
   [_/x]_ : ∀ {i d} → Env i → Linear (d Nat.+ i) → Linear d
   [_/x]_ {d = zero} [] a = a
-  [_/x]_ {d = zero} (x ∷ xs) a = [ xs /x] (substitute (# x) a)
-  [_/x]_ {d = suc d} xs ((c ∷ cs) ∷+ k) = c x+∅ ⊕ (0x+ ([ xs /x] (cs ∷+ k)))
+  [_/x]_ {d = zero} (x ∷ xs) (c x+ cs +ℤ k) = [ xs /x] (cs ∷+ (k + c * x))
+  [_/x]_ {d = suc d} xs (c x+ cs +ℤ k) = c x+ ([ xs /x] (cs ∷+ k))
 
-  [_/x]ₕ_ : ∀ {i} {P : ℤ → Set} → Env i → Σ (Linear (suc i)) (P ∘ head) → Σ (Linear 1) (P ∘ head)
-  [ ρ /x]ₕ (a , Pa) with (head a) x+∅
-  [ ρ /x]ₕ (a , Pa) | (x ∷ cs₁) ∷+ k₁ = {!!}
-  {-
-  x+∅ ⊕ (0x+ [ ρ /x] (tail a))
-  [ ρ /x]ₕ (a , Pa) | a' = a' , {!Pa!} 
-  -}
+  [_/x]⇓_ : ∀ {i} → Env i → Linear i → ℤ
+  [ ρ /x]⇓ a = k {zero} ([ ρ /x] a)
 
-  ⇓[_/x]_ : ∀ {i} → Env i → Linear i → ℤ
-  ⇓[ ρ /x] a = k {zero} ([ ρ /x] a)
+  -- div requires an implicit proof showing its divisor is non-zero
+  a/α : ∀ {i} → Env i → Constraint (suc i) LowerBound → ℤ
+  a/α ρ (+_ zero x+ -cs +ℤ -k , (_≤_.+≤+ ()))
+  a/α ρ (+_ (suc α-1) x+ -cs +ℤ -k , lb) = let a = - [ ρ /x]⇓ (-cs ∷+ -k) in sign a ◃ (∣ a ∣ div suc α-1)
+  a/α ρ (-[1+ n ] x+ -cs +ℤ -k , ())
+
+  b/β : ∀ {i} → Env i → Constraint (suc i) UpperBound → ℤ
+  b/β ρ (+_ c x+ cs +ℤ k , _≤_.+≤+ ())
+  b/β ρ (-[1+ β-1 ] x+ cs +ℤ k , ub) = let b = [ ρ /x]⇓ (cs ∷+ k) in sign b ◃ (∣ b ∣ div suc β-1)
 \end{code}
 
 The base case for satisfiability is on a single constraint with no
@@ -1770,7 +1750,7 @@ evaluating operations on atoms and normalising relations between them.
   norm-atom (num' n) = # n
   norm-atom (x +' y) = (norm-atom x) ⊕ (norm-atom y)
   norm-atom (n *' x) = n ⊛ (norm-atom x)
-  norm-atom (var' zero) = (+ 1) x+∅
+  norm-atom (var' zero) = (+ 1) x+ ∅
   norm-atom (var' (suc n)) with norm-atom (var' n)
   ...                     | cs ∷+ k = (+ 0) x+ cs +ℤ k
     
@@ -1973,17 +1953,17 @@ constraints must be bound between the highest lower bound and the
 lowest upper bound.
 
 \begin{code}
-  start : List (Constraint 1 LowerBound) → ℤ
-  start ls = List.foldr _⊔_ (+ 0) (List.map a/α ls)
+  start : ∀ {i} → Env i → List (Constraint (suc i) LowerBound) → ℤ
+  start ρ ls = List.foldr _⊔_ (+ 0) (List.map (a/α ρ) ls)
 
-  stop : List (Constraint 1 UpperBound) → ℤ
-  stop us = List.foldr _⊓_ (+ 0) (List.map b/β us)
+  stop : ∀ {i} → Env i → List (Constraint (suc i) UpperBound) → ℤ
+  stop ρ us = List.foldr _⊓_ (+ 0) (List.map (b/β ρ) us)
 
-  search-space : ∀ {i} (lus : List (Pair (suc i))) → ⊨ (omega lus) → Σ (List ℤ) (_≢ [])
-  search-space lus (ρ , ⊨Ωas) with start (List.map ([ ρ /x]ₕ_  ∘ proj₁) lus )
-  search-space lus (ρ , ⊨Ωas) | Δ₀ with Δ₀ - stop (List.map ([ ρ /x]ₕ_ ∘ proj₂) lus)
-  search-space lus (ρ , ⊨Ωas) | Δ₀ | + n = + n + Δ₀ ∷ List.applyUpTo (λ i → + i + Δ₀) (suc n) , (λ ())
-  search-space lus (ρ , ⊨Ωas) | Δ₀ | -[1+ n ] = ⊥-elim {!!}
+  search-space : ∀ {i} → Env i → (lus : List (Pair (suc i))) → List ℤ
+  search-space ρ lus with start ρ (List.map proj₁ lus)
+  search-space ρ lus | Δ₀ with Δ₀ - stop ρ (List.map proj₂ lus)
+  search-space ρ lus | Δ₀ | + n = List.applyUpTo (λ i → + i + Δ₀) n 
+  search-space ρ lus | Δ₀ | -[1+ n ] = []
 \end{code}
 
 Norrish, where each step is implied by the next one
@@ -2028,11 +2008,11 @@ Ours, where each step is implied by the next one
                         → (∃[ lus ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
     ∀xs→¬∀lus⇒∃lus→¬∃xs lus xs = begin
       (∀[ xs ] λ x → ¬ ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
-        ∼⟨ AllProp.All¬⇒¬Any ⟩
+        ⇒⟨ AllProp.All¬⇒¬Any ⟩
       (¬ ∃[ xs ] λ x → ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
-        ∼⟨ (λ ¬∃xs∀lus ∀lus∃xs → ¬∃xs∀lus (∀lus∃xs⇒∃xs∀lus lus xs ∀lus∃xs)) ⟩
+        ⇒⟨ (λ ¬∃xs∀lus ∀lus∃xs → ¬∃xs∀lus (∀lus∃xs⇒∃xs∀lus lus xs ∀lus∃xs)) ⟩
       (¬ ∀[ lus ] λ lu → ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
-        ∼⟨ AllProp.¬All⇒Any¬ (λ lu → any (λ x → ⟦ lu ⟧[ x ∷ ρ /x]ₚ) xs) lus ⟩
+        ⇒⟨ AllProp.¬All⇒Any¬ (λ lu → any (λ x → ⟦ lu ⟧[ x ∷ ρ /x]ₚ) xs) lus ⟩
       (∃[ lus ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
         ∎
       where
@@ -2057,8 +2037,9 @@ Ours, where each step is implied by the next one
            → All ⊨[ ρ /x] (omega lus)
            → Σ ℤ λ x → All ⊨[ x ∷ ρ /x]ₚ lus
 
-    find-x lus ⊨Ωlus with search-space lus (ρ , ⊨Ωlus)
-    find-x lus ⊨Ωlus | xs , ¬Ø = search (λ x → all ⟦_⟧[ x ∷ ρ /x]ₚ lus ) xs ¬Ø (by-contradiction lus xs ⊨Ωlus)
+    find-x lus ⊨Ωlus with search-space ρ lus
+    find-x lus ⊨Ωlus | [] = ⊥-elim {!!}
+    find-x lus ⊨Ωlus | xs@(_ ∷ _) = search (λ x → all ⟦_⟧[ x ∷ ρ /x]ₚ lus ) xs (λ ()) (by-contradiction lus xs ⊨Ωlus)
 
     prepend-x : (x : ℤ) (irs : List (Constraint (suc i) Irrelevant))
               → All ⊨[ ρ /x] (elim-irrel irs)
@@ -2146,7 +2127,7 @@ Ours, where each step is implied by the next one
   lemma₃ m n 0≤n = {!!}
   
   lemma₄ : ∀ {i} (ρ : Env i) (csa : Vec ℤ i) (ka : ℤ)
-         → ⇓[ ρ /x] (csa ∷+ ka) ≡ (⇓[ ρ /x] (csa ∷+ (+ 0))) + ka
+         → [ ρ /x]⇓ (csa ∷+ ka) ≡ ([ ρ /x]⇓ (csa ∷+ (+ 0))) + ka
   lemma₄ ρ csa ka = {!!}
 \end{code}
      
@@ -2161,7 +2142,7 @@ Ours, where each step is implied by the next one
     β = - (head (proj₁ u))
     b = tail (proj₁ u)
     0<β = proj₂ u
-    n = a/α ([ ρ /x]ₕ l)
+    n = a/α ρ l
 
     0≤[α-1][β-1] : (+ 0) ≤ (α - + 1) * (β - + 1)
     0≤[α-1][β-1] with α - + 1 | β - + 1
@@ -2179,8 +2160,8 @@ Ours, where each step is implied by the next one
     aβ≤αb = ((α ⊛ b) ⊝ (β ⊛ a))
 
     aβ≤αβx≤αb : List (Linear (suc i))
-    aβ≤αβx≤αb = ((α * β) x+∅) ⊝ (β ⊛ (0x+ a))
-              ∷ (α ⊛ (0x+ b)) ⊝ ((α * β) x+∅)
+    aβ≤αβx≤αb = ((α * β) x+ ∅) ⊝ (β ⊛ (0x+ a))
+              ∷ (α ⊛ (0x+ b)) ⊝ ((α * β) x+ ∅)
               ∷ []
 
     αβn<aβ≤αb<αβ[n+1] : List (Linear i)
@@ -2203,21 +2184,21 @@ Ours, where each step is implied by the next one
     ... | (csa ∷+ ka) | >[ eq ]< = begin
       + 1
         ≤⟨ ⊨ds ⟩
-      ⇓[ ρ /x] ((α ⊛ b) ⊝ (β ⊛ a) ⊝ (# ((α - + 1) * (β - + 1))))
-        ≡⟨ cong (λ ⊚ → ⇓[ ρ /x] (⊚ ⊝ (# ((α - + 1) * (β - + 1))))) eq ⟩
-      ⇓[ ρ /x] ((csa ∷+ ka) ⊝ (# ((α - + 1) * (β - + 1))))
-        ≡⟨ cong (λ ⊚ → ⇓[ ρ /x] ((csa ∷+ ka) ⊕ ⊚)) (lemma₂ ((α - + 1) * (β - + 1))) ⟩
-      ⇓[ ρ /x] ((csa ∷+ ka) ⊕ (# (- ((α - + 1) * (β - + 1)))))
-        ≡⟨ cong ⇓[ ρ /x]_ (lemma₁ csa ka (- ((α - + 1) * (β - + 1)))) ⟩
-      ⇓[ ρ /x] (csa ∷+ (ka - (α - + 1) * (β - + 1)))
+      [ ρ /x]⇓ ((α ⊛ b) ⊝ (β ⊛ a) ⊝ (# ((α - + 1) * (β - + 1))))
+        ≡⟨ cong (λ ⊚ → [ ρ /x]⇓ (⊚ ⊝ (# ((α - + 1) * (β - + 1))))) eq ⟩
+      [ ρ /x]⇓ ((csa ∷+ ka) ⊝ (# ((α - + 1) * (β - + 1))))
+        ≡⟨ cong (λ ⊚ → [ ρ /x]⇓ ((csa ∷+ ka) ⊕ ⊚)) (lemma₂ ((α - + 1) * (β - + 1))) ⟩
+      [ ρ /x]⇓ ((csa ∷+ ka) ⊕ (# (- ((α - + 1) * (β - + 1)))))
+        ≡⟨ cong [ ρ /x]⇓_ (lemma₁ csa ka (- ((α - + 1) * (β - + 1)))) ⟩
+      [ ρ /x]⇓ (csa ∷+ (ka - (α - + 1) * (β - + 1)))
         ≡⟨ lemma₄ ρ csa _ ⟩
-      ⇓[ ρ /x] (csa ∷+ (+ 0)) + (ka - (α - + 1) * (β - + 1))
-        ≡⟨ sym (IntProp.+-assoc (⇓[ ρ /x] (csa ∷+ (+ 0))) ka (- ((α - + 1) * (β - + 1)))) ⟩
-      (⇓[ ρ /x] (csa ∷+ (+ 0)) + ka) - (α - + 1) * (β - + 1)
+      [ ρ /x]⇓ (csa ∷+ (+ 0)) + (ka - (α - + 1) * (β - + 1))
+        ≡⟨ sym (IntProp.+-assoc ([ ρ /x]⇓ (csa ∷+ (+ 0))) ka (- ((α - + 1) * (β - + 1)))) ⟩
+      ([ ρ /x]⇓ (csa ∷+ (+ 0)) + ka) - (α - + 1) * (β - + 1)
         ≤⟨ lemma₃ _ _ 0≤[α-1][β-1] ⟩
-      ⇓[ ρ /x] (csa ∷+ (+ 0)) + ka
+      [ ρ /x]⇓ (csa ∷+ (+ 0)) + ka
         ≡⟨ sym (lemma₄ ρ csa ka) ⟩
-      ⇓[ ρ /x] (csa ∷+ ka)
+      [ ρ /x]⇓ (csa ∷+ ka)
         ∎
       where open ≤-Reasoning
 
@@ -2232,24 +2213,24 @@ Ours, where each step is implied by the next one
         r₁ = begin
           + 1
             ≤⟨ {!!} ⟩
-          ⇓[ ρ /x] ((β ⊛ a) ⊝ (# (α * β * n)) ⊝ (# (+ 1)))
+          [ ρ /x]⇓ ((β ⊛ a) ⊝ (# (α * β * n)) ⊝ (# (+ 1)))
             ∎
         r₂ = begin
           + 1
             ≤⟨ {!!} ⟩
-          ⇓[ ρ /x] ((α ⊛ b) ⊝ (β ⊛ a))
+          [ ρ /x]⇓ ((α ⊛ b) ⊝ (β ⊛ a))
             ∎
         r₃ = begin
           + 1
             ≤⟨ {!!} ⟩
-          ⇓[ ρ /x] ((# (α * β * (n + + 1))) ⊝ (α ⊛ b) ⊝ (# (+ 1)))
+          [ ρ /x]⇓ ((# (α * β * (n + + 1))) ⊝ (α ⊛ b) ⊝ (# (+ 1)))
             ∎
 
     ⊨α≤αβ[n+1]-αb : All ⊨[ ρ /x] αβn<aβ≤αb<αβ[n+1] → ⊨[ ρ /x] α≤αβ[n+1]-αb
     ⊨α≤αβ[n+1]-αb (⊨p₁ ∷ ⊨p₂ ∷ ⊨p₃ ∷ []) = begin 
       + 1
         ≤⟨ {!!} ⟩
-      ⇓[ ρ /x] α≤αβ[n+1]-αb
+      [ ρ /x]⇓ α≤αβ[n+1]-αb
         ∎
       where open ≤-Reasoning
 
@@ -2257,7 +2238,7 @@ Ours, where each step is implied by the next one
     ⊨β≤aβ-αβn (⊨p₁ ∷ ⊨p₂ ∷ ⊨p₃ ∷ []) = begin 
       + 1
         ≤⟨ {!!} ⟩
-      ⇓[ ρ /x] β≤aβ-αβn
+      [ ρ /x]⇓ β≤aβ-αβn
         ∎
       where open ≤-Reasoning
 
