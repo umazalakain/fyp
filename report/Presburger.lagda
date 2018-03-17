@@ -497,41 +497,16 @@ module norrish-inner (i : ℕ) (ρ : Env i) (xs : List ℤ)
   ⊭[α-1][β-1]≤αb-aβ ⊨p₁ ⊨p₂ ⊨ds = {!!} 
 \end{code}
 
-%<*elimination>
-\begin{code}
-elim-irrel : ∀ {i} → List (Constraint (suc i) Irrelevant) → List (Linear i)
-elim-irrel = List.map (tail ∘ proj₁)
-
-⟦_⟧Ω : ∀ {i} → List (Linear i) → Bool
-⟦_⟧Ω {zero} as with ⟦ as ⟧ []
-...           | yes p = true
-...           | no ¬p = false
-⟦_⟧Ω {suc i} as with partition as
-...             | ls , is , us = ⟦ elim-irrel is ++ omega (×-list ls us) ⟧Ω
-\end{code}
-%</elimination>
-
-%<*correctness>
-\begin{code}
-⟦_⟧Ω-Correct : ∀ {i} (as : List (Linear i)) → Set
-⟦_⟧Ω-Correct as with ⟦ as ⟧Ω
-⟦_⟧Ω-Correct as | false = ⊤
-⟦_⟧Ω-Correct as | true  = ⊨ as
-\end{code}
-%</correctness>
-
 %<*search>
 \begin{code}
-search : {A : Set} {P : A → Set} (P? : Decidable P)
-       → (as : List A) (¬Ø : as ≢ [])
-       → (as ≢ [] → All (¬_ ∘ P) as → ⊥)
+search : {A : Set} {P : A → Set} (P? : Decidable P) (as : List A) 
+       → (All (¬_ ∘ P) as → ⊥)
        → Σ A P
 
-search P? []               ¬Ø raa = ⊥-elim (¬Ø refl)
-search P? (a ∷ as)         ¬Ø raa with P? a
-search P? (a ∷ as)         ¬Ø raa | yes p = a , p
-search P? (a ∷ [])         ¬Ø raa | no ¬p = ⊥-elim (raa ¬Ø (¬p ∷ []))
-search P? (a ∷ as@(_ ∷ _)) ¬Ø raa | no ¬p = search P? as (λ ()) (λ _ ¬pas → raa ¬Ø (¬p ∷ ¬pas))
+search P? []       raa = ⊥-elim (raa [])
+search P? (a ∷ as) raa with P? a
+search P? (a ∷ as) raa | yes p = a , p
+search P? (a ∷ as) raa | no ¬p = search P? as (λ ¬pas → raa (¬p ∷ ¬pas))
 \end{code}
 %</search>
 
@@ -569,7 +544,7 @@ norrish {i} ρ (l , u) {xs} ⊭xs ⊨Ωlu = proof
 
 %<*contradiction>
 \begin{code}
-module _ (i : ℕ) (ρ : Env i) where
+module _ {i : ℕ} (ρ : Env i) where
 
   ∀lus∃xs⇒∃xs∀lus : (lus : List (Pair (suc i))) (xs : List ℤ)
                   → (∀[ lus ] (λ lu → ∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]ₚ lu)))
@@ -593,10 +568,9 @@ module _ (i : ℕ) (ρ : Env i) where
                       
   by-contradiction : (lus : List (Pair (suc i))) (xs : List ℤ)
                    → (⊨Ωlus : All ⊨[ ρ /x] (omega lus))
-                   → (xs ≢ []) → (∀[ xs ] λ x → ¬ ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
+                   → (∀[ xs ] λ x → ¬ ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
                    → ⊥
-  by-contradiction lus .[] ⊨Ωlus ¬Ø []       = ⊥-elim (¬Ø refl)
-  by-contradiction lus xs  ⊨Ωlus ¬Ø ∀xs¬∀lus = inner lus ⊨Ωlus (∀xs→¬∀lus⇒∃lus→¬∃xs lus xs ∀xs¬∀lus)
+  by-contradiction lus xs  ⊨Ωlus ∀xs¬∀lus = inner lus ⊨Ωlus (∀xs→¬∀lus⇒∃lus→¬∃xs lus xs ∀xs¬∀lus)
     where
     inner : (lus : List (Pair (suc i)))
           → (⊨Ωlus : All ⊨[ ρ /x] (omega lus))
@@ -615,28 +589,70 @@ module _ (i : ℕ) (ρ : Env i) where
          → Σ ℤ λ x → All ⊨[ x ∷ ρ /x]ₚ lus
 
   find-x lus ⊨Ωlus with search-space ρ lus
-  find-x lus ⊨Ωlus | [] = ⊥-elim {!!}
-  find-x lus ⊨Ωlus | xs@(_ ∷ _) = search (λ x → all ⟦_⟧[ x ∷ ρ /x]ₚ lus ) xs (λ ()) (by-contradiction lus xs ⊨Ωlus)
+  find-x lus ⊨Ωlus | xs = search (λ x → all ⟦_⟧[ x ∷ ρ /x]ₚ lus ) xs (by-contradiction lus xs ⊨Ωlus)
 \end{code}
 %</find-x>
 
+    
+\begin{code}
+elim-irrel : ∀ {i} → List (Constraint (suc i) Irrelevant) → List (Linear i)
+elim-irrel = List.map (tail ∘ proj₁)
+
+data EnvTree : Set where
+  var     : ℤ → EnvTree
+  sub-env : List EnvTree → EnvTree
+
+⟦_⟧Ω' : DNF 0 → Bool
+⟦ dnf ⟧Ω' = {!!}
+  where
+  open import Data.Bool
+  mutual
+    eval-conjunction : ∀ {i} → Conjunction i → Bool
+    eval-conjunction {zero} 0≤ cs ∧ es E = {!!}
+    eval-conjunction {suc i} 0≤ cs ∧ es E = {!!}
+
+    eval-existential : ∀ {i} → Existential i → Bool
+    eval-existential (¬∃ x) = false -- TODO: explain
+    eval-existential (∃ x) = {!!}
+
+\end{code}
+
+%<*elimination>
+\begin{code}
+⟦_⟧Ω : ∀ {i} → List (Linear i) → Bool
+⟦_⟧Ω {zero} as with ⟦ as ⟧ []
+...           | yes p = true
+...           | no ¬p = false
+⟦_⟧Ω {suc i} as with partition as
+...             | ls , is , us = ⟦ elim-irrel is ++ omega (×-list ls us) ⟧Ω
+\end{code}
+%</elimination>
+
+%<*correctness>
+\begin{code}
+⟦_⟧Ω-Correct : ∀ {i} (as : List (Linear i)) → Set
+⟦_⟧Ω-Correct as with ⟦ as ⟧Ω
+⟦_⟧Ω-Correct as | false = ⊤
+⟦_⟧Ω-Correct as | true  = ⊨ as
+\end{code}
+%</correctness>
+
 %<*prepend-x>
 \begin{code}
-  prepend-x : (x : ℤ) (irs : List (Constraint (suc i) Irrelevant))
-            → All ⊨[ ρ /x] (elim-irrel irs)
-            → All ⊨[ x ∷ ρ /x]ᵢ irs
+prepend-x : ∀ {i} (ρ : Env i) (x : ℤ) (irs : List (Constraint (suc i) Irrelevant))
+          → All ⊨[ ρ /x] (elim-irrel irs)
+          → All ⊨[ x ∷ ρ /x]ᵢ irs
 
-  prepend-x x [] [] = []
-  prepend-x x (ir ∷ irs) (⊨Ωir ∷ ⊨Ωirs) = one x ir ⊨Ωir ∷ (prepend-x x irs ⊨Ωirs)
-    where
-    one : (x : ℤ) (ir : Constraint (suc i) Irrelevant)
-        → (⊨[ ρ /x] ∘ tail ∘ proj₁) ir
-        → ⊨[ x ∷ ρ /x]ᵢ ir
+prepend-x ρ x [] [] = []
+prepend-x ρ x (ir ∷ irs) (⊨Ωir ∷ ⊨Ωirs) = one ρ x ir ⊨Ωir ∷ (prepend-x ρ x irs ⊨Ωirs)
+  where
+  one : ∀ {i} (ρ : Env i) (x : ℤ) (ir : Constraint (suc i) Irrelevant)
+      → (⊨[ ρ /x] ∘ tail ∘ proj₁) ir
+      → ⊨[ x ∷ ρ /x]ᵢ ir
 
-    one x ir ⊨Ωir = {!!}
+  one x ir ⊨Ωir = {!!}
 \end{code}
 %</prepend-x>
-    
 
 %<*correct>
 \begin{code}
@@ -653,11 +669,11 @@ module _ (i : ℕ) (ρ : Env i) where
   inner {suc i} as ep with partition as
   ... | ls , irs , us with ×-list ls us
   ... | lus with ⟦ elim-irrel irs ++ omega lus ⟧Ω | inspect ⟦_⟧Ω (elim-irrel irs ++ omega lus)
-  inner {suc i} as () | _ , irs , _ | lus | false | j
+  inner {suc i} as () | _ , irs , _ | lus | false | _
   inner {suc i} as ep | _ , irs , _ | lus | true  | >[ eq ]< with inner (elim-irrel irs ++ omega lus) eq
   inner {suc i} as ep | _ , irs , _ | lus | _ | _ | ρ , ⊨Ωas with AllProp.++⁻ (elim-irrel irs) ⊨Ωas
-  inner {suc i} as ep | _ , irs , _ | lus | _ | _ | ρ , ⊨Ωas | ⊨Ωirs , ⊨Ωlus with find-x i ρ lus ⊨Ωlus
-  inner {suc i} as ep | _ , irs , _ | lus | _ | _ | ρ , ⊨Ωas | ⊨Ωirs , ⊨Ωlus | x , ⊨lus with prepend-x i ρ x irs ⊨Ωirs
+  inner {suc i} as ep | _ , irs , _ | lus | _ | _ | ρ , ⊨Ωas | ⊨Ωirs , ⊨Ωlus with find-x ρ lus ⊨Ωlus
+  inner {suc i} as ep | _ , irs , _ | lus | _ | _ | ρ , ⊨Ωas | ⊨Ωirs , ⊨Ωlus | x , ⊨lus with prepend-x ρ x irs ⊨Ωirs
   ... | ⊨irs = {!!}
 \end{code}
 %</correct>
