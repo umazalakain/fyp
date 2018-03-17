@@ -1,3 +1,6 @@
+.#*.lagda
+*.lagda#
+*.lagda~
 *.agdai
 *.aux
 *.log
