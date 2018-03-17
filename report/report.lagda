@@ -63,6 +63,14 @@
 % Inline lists
 \usepackage[inline]{enumitem}
 
+% Appendices
+\usepackage[toc,page]{appendix}
+\renewcommand{\appendixname}{Appendix}
+\renewcommand{\appendixtocname}{Appendix}
+\renewcommand{\appendixpagename}{Appendix}
+
+% Include parts of other files
+\usepackage{catchfilebetweentags}
 
 \begin{document}
 
@@ -775,25 +783,6 @@ Agda-Stdlib.
 \chapter{Solving monoids}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\AgdaHide{
-\begin{code}
-module Monoids where
-  private
-    open import Data.Unit using (⊤ ; tt)
-    open import Data.List using (List ; [] ; _∷_)
-    open import Data.Nat using (ℕ ; zero ; suc ; _+_)
-    open import Data.Fin using (Fin ; zero ; suc)
-    open import Data.Vec using (Vec ; _∷_ ; [] ; tabulate ; lookup)
-    open import Data.Vec.N-ary using (N-ary)
-    open import Data.Fin.Properties renaming (_≟_ to _Fin-≟_)
-    open import Relation.Binary.PropositionalEquality
-    open import Relation.Binary using (Decidable)
-    open import Relation.Binary.List.Pointwise using () renaming (decidable-≡ to List-≟)
-    open import Relation.Nullary using (yes ; no)
-    open ≡-Reasoning
-\end{code}
-}
-
 Monoids are common algebraic structures involved in many problems. A
 monoid solver is an automated proof generator which can be used to
 prove an equation on monoids. Constructing such a solver is a good
@@ -811,19 +800,7 @@ definition of a monoid} is based on notions about many other algebraic
 structures, and is therefore fairly complex. We will instead use our
 own definition, which is entirely self-contained and fairly simple.
 
-\begin{code}
-    -- A monoid is a set
-    record Monoid (M : Set) : Set where
-      infix 25 _·_
-      field
-        -- Together with an associative binary operation
-        _·_ : M → M → M
-        law-·-· : (x y z : M) → (x · y) · z ≡ x · (y · z)
-        -- And a neutral element absorbed on both sides
-        ε : M
-        law-ε-· : (m : M) → ε · m ≡ m
-        law-·-ε : (m : M) → m ≡ m · ε
-\end{code}
+\ExecuteMetaData[Monoids.tex]{monoid}
 
 \AgdaRef{M}, the set on which the monoid is defined, is often referred
 to as the carrier. $(ℕ, +, 0)$ and $(ℕ, ·, 1)$ are both examples of
@@ -832,66 +809,20 @@ monoids need not be — more on solving commutative monoids later. An
 example of a non-commutative monoid are lists together with the
 concatenation operation:
 
-\begin{code}
-    open import Data.List using (List ; [] ; _∷_ ; _++_)
-  
-    LIST-MONOID : (T : Set) → Monoid (List T)
-    LIST-MONOID T = record
-                  { ε = []
-                  ; _·_ = _++_
-                  ; law-ε-· = λ xs → refl
-                  ; law-·-ε = right-[]
-                  ; law-·-· = assoc
-                  } where
-                
-                  right-[] : (xs : List T) → xs ≡ xs ++ []
-                  right-[] [] = refl
-                  right-[] (x ∷ xs) = cong (x ∷_) (right-[] xs)
-                
-                  assoc : (xs ys zs : List T) → (xs ++ ys) ++ zs ≡ xs ++ (ys ++ zs)
-                  assoc [] ys zs = refl
-                  assoc (x ∷ xs) ys zs rewrite assoc xs ys zs = refl
-\end{code}
+\ExecuteMetaData[Monoids.tex]{list-monoid}
 
 An equation on monoids cannot be decided by unification alone: the
 monoid laws show that definitionally distinct propositions might in
 fact have the same meaning.
 
-\begin{code}
-    eqn₁ : {T : Set}(xs : List T) → [] ++ xs ≡ xs ++ []
-    eqn₁ {T} xs = begin
-      [] ++ xs
-        ≡⟨ law-ε-· xs ⟩
-      xs
-        ≡⟨ law-·-ε xs ⟩
-      xs ++ []
-        ∎
-      where open Monoid (LIST-MONOID T) 
-\end{code}
+\ExecuteMetaData[Monoids.tex]{eqn1}
 
 Without an automated solver, the number of law applications and hence
 the length of the proof grows linearly with respect to the size of the
 monoid. An automated solver should allow us to effortlessly satisfy a
 proposition like the following:
 
-\begin{code}
-    eqn₂ : {T : Set}(xs ys zs : List T)
-         → (xs ++ []) ++ ([] ++ (ys ++ (ys ++ zs)))
-         ≡ xs ++ ((ys ++ ys) ++ (zs ++ []))
-
-    eqn₂ xs ys zs = begin
-      (xs ++ []) ++ ([] ++ (ys ++ (ys ++ zs)))
-        ≡⟨ cong (_++ ([] ++ (ys ++ (ys ++ zs)))) (sym (law-·-ε xs)) ⟩
-      xs ++ ([] ++ (ys ++ (ys ++ zs)))
-        ≡⟨ cong (xs ++_) (law-ε-· (ys ++ (ys ++ zs))) ⟩
-      xs ++ (ys ++ (ys ++ zs))
-        ≡⟨ cong (xs ++_) (sym (law-·-· ys ys zs)) ⟩
-      xs ++ ((ys ++ ys) ++ zs)
-        ≡⟨ cong (λ zs' → xs ++ ((ys ++ ys) ++ zs')) (law-·-ε _) ⟩
-      xs ++ ((ys ++ ys) ++ (zs ++ []))
-        ∎
-      where open Monoid (LIST-MONOID _)
-\end{code}
+\ExecuteMetaData[Monoids.tex]{eqn2}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{A verified decision procedure}
@@ -913,15 +844,7 @@ type \AgdaDatatype{Fin}~\AgdaBound{n} contains \AgdaBound{n} distinct
 values. Moreover, we use a type parameter on \AgdaRef{Eqn} to
 \textit{push in} this limitation on the number of indices.
 
-\begin{code}
-    data Expr (n : ℕ) : Set where
-      var' : Fin n           → Expr n
-      ε'   :                   Expr n
-      _·'_ : Expr n → Expr n → Expr n
-
-    data Eqn (n : ℕ) : Set where
-      _≡'_ : Expr n → Expr n → Eqn n
-\end{code}
+\ExecuteMetaData[Monoids.tex]{expr}
 
 Let us use an example to help us come up with a suitable normal
 form. Consider the following two expressions:
@@ -946,26 +869,11 @@ occurrences of each could be represented as a vector of integers —
 where the position in the vector represents the index and the content
 represents the number of occurrences.
 
-\begin{code}
-    NormalForm : ℕ → Set
-    NormalForm n = List (Fin n)
-\end{code}
-
-\AgdaHide{
-\begin{code}
-    _≟_ : ∀ {n} → Decidable {A = List (Fin n)} _≡_
-    _≟_ = List-≟ _Fin-≟_ 
-\end{code}
-}
+\ExecuteMetaData[Monoids.tex]{normal-form}
 
 The normalising function ignores neutral elements and preserves order:
 
-\begin{code}
-    normalise : ∀ {n} → Expr n → NormalForm n
-    normalise (var' i)   = i ∷ []
-    normalise ε'         = []
-    normalise (e₁ ·' e₂) = normalise e₁ ++ normalise e₂
-\end{code}
+\ExecuteMetaData[Monoids.tex]{normalise}
 
 From here on, we will work with a concrete monoid (\AgdaBound{monoid})
 on a concrete carrier \AgdaBound{M}. This results in all of the
@@ -977,11 +885,7 @@ prepended to their type. We can also make the insides of
 \AgdaBound{monoid} directly accessible by opening it as if it were a
 module.
 
-\begin{AgdaAlign}
-\begin{code}
-    module _ {M : Set} (monoid : Monoid M) where
-      open Monoid monoid
-\end{code}
+\ExecuteMetaData[Monoids.tex]{monoid-module}
 
 To evaluate an expression we need a concrete assignment for the
 variables contained within. We call this an environment. An
@@ -992,10 +896,7 @@ of \AgdaDatatype{Vec}~\AgdaBound{M}~\AgdaBound{n}, and so we can
 define a bijection between \AgdaDatatype{Fin}~\AgdaBound{n}
 and \AgdaDatatype{Vec}~\AgdaBound{M}~\AgdaBound{n}.
 
-\begin{code}
-      Env : ℕ → Set
-      Env n = Vec M n
-\end{code}
+\ExecuteMetaData[Monoids.tex]{env}
 
 Once we have expressions, normal forms end environments, we can define
 what the evaluation of both — expressions and normal forms — is. Note
@@ -1003,17 +904,7 @@ that both definitions rule out expressions and normal forms with more
 indices than the environment contains — every index within the
 expression has to have a corresponding value in the environment.
 
-\begin{code}
-      -- lookup x ρ ≔ value at index x in ρ
-      ⟦_⟧ : ∀ {n} → Expr n → Env n → M
-      ⟦ var' i ⟧   ρ = lookup i ρ
-      ⟦ ε' ⟧       ρ = ε
-      ⟦ e₁ ·' e₂ ⟧ ρ = ⟦ e₁ ⟧ ρ · ⟦ e₂ ⟧ ρ
-
-      ⟦_⇓⟧ : ∀ {n} → NormalForm n → Env n → M
-      ⟦ [] ⇓⟧      ρ = ε
-      ⟦ (i ∷ e) ⇓⟧ ρ = (lookup i ρ) · ⟦ e ⇓⟧ ρ
-\end{code}
+\ExecuteMetaData[Monoids.tex]{evaluation}
 
 We are finally ready to make our claim: an equation on monoids holds
 provided that both sides of the equation match after
@@ -1024,12 +915,7 @@ with a single value) as carrier of the monoid: all equations are true,
 yet the monoid laws allow to prove only some of them. Because we
 cannot make any interesting claims, we can claim true the trivial.
 
-\begin{code}
-      Solution : ∀ {n} → Eqn n → Set
-      Solution {n} (e₁ ≡' e₂) with (normalise e₁) ≟ (normalise e₂)
-      ...                     | no  _ = ⊤
-      ...                     | yes _ = ∀ (ρ : Env n) → ⟦ e₁ ⟧ ρ ≡ ⟦ e₂ ⟧ ρ
-\end{code}
+\ExecuteMetaData[Monoids.tex]{solution}
 
 We define decidable equality of normal forms (here \AgdaRef{\_≟\_})
 by relying on the definitions of decidable equality of lists and
@@ -1039,18 +925,13 @@ finite indices.
 for every ~\AgdaDatatype{Eqn}~\AgdaBound{n}. We must now prove that we
 are able to meet such specifications.
 
-\begin{code}
-      solve : ∀ {n} (eqn : Eqn n) → Solution eqn
-\end{code}
+\ExecuteMetaData[Monoids.tex]{solve-type}
 
 The crux of such a proof is to show that the evaluation of an
 expression can be decomposed into the normalisation into a normal form
 and its posterior evaluation.
 
-\begin{code}
-      eval-commutes : ∀ {n} → (e : Expr n) → (ρ : Env n)
-                      → ⟦ e ⟧ ρ ≡ ⟦ normalise e ⇓⟧ ρ
-\end{code}
+\ExecuteMetaData[Monoids.tex]{eval-commutes-type}
 
 Put in a diagrammatic form, we must show that the following commutes:
 
@@ -1072,47 +953,14 @@ we can translate the evaluation of expressions into the evaluation of
 normal forms, and then use congruence to proof that two equal normal
 forms must evaluate to equal values.
 
-\begin{code}
-      solve (e₁ ≡' e₂) with (normalise e₁) ≟ (normalise e₂)
-      ...            | no  _  = tt
-      ...            | yes eq = λ ρ → 
-        ⟦ e₁ ⟧ ρ
-          ≡⟨ eval-commutes e₁ ρ ⟩
-        ⟦ normalise e₁ ⇓⟧ ρ
-          ≡⟨ cong (λ e₌ → ⟦ e₌ ⇓⟧ ρ) eq  ⟩
-        ⟦ normalise e₂ ⇓⟧ ρ
-          ≡⟨ sym (eval-commutes e₂ ρ) ⟩
-        ⟦ e₂ ⟧ ρ
-          ∎
-\end{code}
+\ExecuteMetaData[Monoids.tex]{solve}
 
 Showing \AgdaRef{eval-commutes} is done inductively and it requires a
 proof that concatenation of normal forms (\AgdaRef{\_++\_}) preserves
 the structure of monoids. Note that these proofs, perhaps
 unsurprisingly, use all of the monoid laws.
 
-\begin{code}
-      eval-homo : ∀ {n} (e₁ e₂ : NormalForm n) → (ρ : Env n)
-                  → ⟦ e₁ ⇓⟧ ρ · ⟦ e₂ ⇓⟧ ρ ≡ ⟦ e₁ ++ e₂ ⇓⟧ ρ
-
-      eval-homo []       e₂ ρ = law-ε-· (⟦ e₂ ⇓⟧ ρ)
-      eval-homo (i ∷ e₁) e₂ ρ = begin
-        ((lookup i ρ) · ⟦ e₁ ⇓⟧ ρ) · ⟦ e₂ ⇓⟧ ρ
-          ≡⟨ law-·-· _ _ _ ⟩
-        (lookup i ρ) · (⟦ e₁ ⇓⟧ ρ · ⟦ e₂ ⇓⟧ ρ)
-          ≡⟨ cong (_·_ (lookup i ρ)) (eval-homo e₁ e₂ ρ) ⟩
-        (lookup i ρ) · ⟦ e₁ ++ e₂ ⇓⟧ ρ
-          ∎
-
-      -- eval-commutes : ∀ {n} → (e : Expr n) → (ρ : Env n)
-      --                 → ⟦ e ⟧ ρ ≡ ⟦ normalise e ⇓⟧ ρ
-      eval-commutes ε'         ρ = refl
-      eval-commutes (var' x)   ρ = law-·-ε (lookup x ρ)
-      eval-commutes (e₁ ·' e₂) ρ rewrite eval-commutes e₁ ρ
-                                         | eval-commutes e₂ ρ
-                                         = eval-homo (normalise e₁) (normalise e₂) ρ
-\end{code}
-\end{AgdaAlign}
+\ExecuteMetaData[Monoids.tex]{eval-commutes}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Results and usage}
@@ -1120,11 +968,7 @@ unsurprisingly, use all of the monoid laws.
 
 We can now automatically generate proofs for arbitrary equations on monoids:
 
-\begin{code}
-    eqn₁-auto : {T : Set}(xs : List T) → [] ++ xs ≡ xs ++ []
-    eqn₁-auto xs = solve (LIST-MONOID _)
-                   ((ε' ·' var' zero) ≡' (var' zero ·' ε')) (xs ∷ [])
-\end{code}
+\ExecuteMetaData[Monoids.tex]{eqn1-auto}
 
 However, we still need to manually build the expressions representing
 the target theorem. This includes handling the indices referring to
@@ -1133,51 +977,14 @@ variables appropriatly. As shown by \cite{Bove2009} at
 referrences can be set up automatically, partially alleviating this
 problem and resulting in the following usage:
 
-\AgdaHide{
-\begin{code}
-    _$ⁿ_ : ∀ {n}{A B : Set} → N-ary n A B → (Vec A n → B)
-    f $ⁿ [] = f
-    f $ⁿ (x ∷ xs) = f x $ⁿ xs
-    
-    vars : ∀ {n} → Vec (Expr n) n
-    vars = tabulate var'
-
-    build : ∀ {A}(n : ℕ) → N-ary n (Expr n) A → A
-    build n f = f $ⁿ vars {n}
-\end{code}
-}
-
-\begin{code}
-    eqn₂-auto : {T : Set}(xs ys zs : List T)
-              → (xs ++ []) ++ ([] ++ (ys ++ (ys ++ zs)))
-              ≡ xs ++ ((ys ++ ys) ++ (zs ++ []))
-    
-    eqn₂-auto xs ys zs = solve (LIST-MONOID _) (build 3 λ xs ys zs
-                       → ((xs ·' ε') ·' (ε' ·' (ys ·' (ys ·' zs))))
-                       ≡' (xs ·' ((ys ·' ys) ·' (zs ·' ε')))) (xs ∷ ys ∷ zs ∷ [])
-\end{code}
+\ExecuteMetaData[Monoids.tex]{eqn2-auto}
 
 Agda's support for reflection can be used to build a macro that
 inspects the type of the goal and translates it into a data structure
 that the proof generating procedure can understand. This would result
 in the following example usage:
 
-\AgdaHide{
-\begin{code}
-    postulate
-      magic-solve : {T : Set} (m : Monoid (List T)) (xs ys zs : List T)
-                    → (xs ++ []) ++ ([] ++ (ys ++ (ys ++ zs)))
-                    ≡ xs ++ ((ys ++ ys) ++ (zs ++ []))
-\end{code}
-}
-
-\begin{code}
-    eqn₂-magic : {T : Set}(xs ys zs : List T)
-               → (xs ++ []) ++ ([] ++ (ys ++ (ys ++ zs)))
-               ≡ xs ++ ((ys ++ ys) ++ (zs ++ []))
-
-    eqn₂-magic = magic-solve (LIST-MONOID _)
-\end{code}
+\ExecuteMetaData[Monoids.tex]{eqn2-magic}
 
 \todo{forward reference general verification}
 
@@ -1259,75 +1066,10 @@ module _ where
       suc m' , inj₂ (cong suc (cong (_+ 1) (sym (+-suc m' (m' + 0)))))
 \end{code}
 
-\AgdaHide{
-\begin{code}
-module Presburger where
-  open import Function using (id ; _∘_ ; _⟨_⟩_)
-  open import Data.Fin using (Fin ; zero ; suc)
-  open import Data.Integer hiding (suc)
-  open import Data.Nat as Nat using (ℕ ; zero ; suc)
-  open import Data.Nat.DivMod using (_div_)
-  open import Data.Sum using (_⊎_ ; inj₁ ; inj₂)
-  open import Data.Vec as Vec using (Vec ; [] ; _∷_)
-  open import Data.Product using (Σ ; _×_ ; _,_ ; proj₁ ; proj₂)
-  open import Data.List as List using (List ; [] ; _∷_ ; _++_)
-  open import Data.List.All using (All ; all ; [] ; _∷_)
-  open import Data.List.Any using (Any ; any ; here ; there)
-  open import Data.Unit using (⊤ ; tt)
-  open import Data.Bool using (Bool ; true ; false)
-  open import Data.Empty using (⊥ ; ⊥-elim)
-  open import Data.Sign as Sign using (Sign)
-
-  open import Data.Integer.Properties as IntProp using ()
-  open import Data.Nat.Properties as NatProp using ()
-  open import Data.List.All.Properties as AllProp using ()
-  open import Data.Vec.Properties as VecProp using ()
-
-  open import Relation.Nullary using (¬_ ; Dec ; yes ; no)
-  open import Relation.Unary using (Decidable)
-  open import Relation.Binary using (Tri)
-  open import Relation.Binary.PropositionalEquality using (_≡_ ; refl; cong ; sym ; _≢_ ; inspect) renaming ([_] to >[_]<)
-
-  open import Agda.Primitive using (lzero) renaming (_⊔_ to _ℓ⊔_)
-  open import Function.Related using (preorder ; implication)
-  import Relation.Binary.PreorderReasoning as PRE
-  module ⇒-Reasoning = PRE (preorder implication lzero) renaming (_∼⟨_⟩_ to _⇒⟨_⟩_; _≈⟨_⟩_ to _≡⟨_⟩_; _≈⟨⟩_ to _≡⟨⟩_)
-  import Relation.Binary.PartialOrderReasoning as POR
-  module ≤-Reasoning = POR IntProp.≤-poset renaming (_≈⟨_⟩_ to _≡⟨_⟩_ ; _≈⟨⟩_ to _≡⟨⟩_)
-  module ≡-Reasoning = Relation.Binary.PropositionalEquality.≡-Reasoning
-
-  ×-list : {X Y : Set}(xs : List X)(ys : List Y) → List (X × Y)
-  ×-list xs = List.concat ∘ List.map (λ y → List.map (_, y) xs)
-  
-  _<?_ : (x y : ℤ) → Dec (x < y)
-  x <? y with (+ 1 + x) ≤? y
-  x <? y | yes p = yes p
-  x <? y | no ¬p = no ¬p
-\end{code}
-}
-
 From here on, we will assume the following syntax for Presburger
 predicates:
 
-\begin{code}
-  data Atom (i : ℕ) : Set where
-    num' : ℤ               → Atom i
-    _+'_ : Atom i → Atom i → Atom i
-    _*'_ : ℤ      → Atom i → Atom i
-    var' : Fin i           → Atom i
-                            
-  data Rel : Set where
-    <' >' ≤' ≥' =' : Rel
-  
-  data Formula (i : ℕ) : Set where
-    -- Divisibility
-    _∣'_           : ℕ → Atom i            → Formula i
-    _[_]_          : Atom i → Rel → Atom i → Formula i
-    _∧'_ _∨'_ _⇒'_ : Formula i → Formula i → Formula i
-    ¬'_            : Formula i             → Formula i
-    -- New variable introduction
-    ∃'_ ∀'_        : Formula (suc i)       → Formula i
-\end{code}
+\ExecuteMetaData[Presburger.tex]{formula}
 
 We use de Bruijn \cite{Bruijn1972} indices to refer to bindings by
 their proximity: a variable with index \AgdaNumber{0} refers to the
@@ -1348,14 +1090,7 @@ arguments.
 
 Theorem~\ref{eq:even-or-odd} can be transcribed as follows:
 
-\begin{code}
-  pred₁' : Formula 0
-  pred₁' = ∀' ∃' ((x [ =' ] ((+ 2) *' y))
-              ∨' (x [ =' ] (((+ 2) *' y) +' (num' (+ 1)))))
-    where
-      x = var' (suc zero)
-      y = var' zero
-\end{code}
+\ExecuteMetaData[Presburger.tex]{pred}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Decision procedures}
@@ -1432,13 +1167,7 @@ index indicates the distance to where that variable was introduced.
 The goal of any decision procedure is thus to return an equivalent
 structure containing only ~\AgdaDatatype{Linear}~\AgdaNumber{0}.
 
-\begin{code}
-  record Linear (i : ℕ) : Set where
-    constructor _∷+_
-    field
-      cs : Vec ℤ i
-      k : ℤ
-\end{code}
+\ExecuteMetaData[Presburger.tex]{linear}
 
 Universal quantifiers need to be eliminated as part of their
 normalisation process. This is carried out resorting to the following
@@ -1495,80 +1224,6 @@ which acts on real numbers — to integers.
 
 \subsubsection{Building blocks}
 
-\todo{Add annex}
-
-\begin{code}
-  open Linear
-  pattern _x+_+ℤ_ c cs k = (c ∷ cs) ∷+ k
-  
-  infixl 20 _⊕_
-  infixl 20 _⊝_
-
-  #_ : ∀ {i} → ℤ → Linear i
-  # k = Vec.replicate (+ 0) ∷+ k
-  
-  ∅ : ∀ {i} → Linear i
-  ∅ = Vec.replicate (+ 0) ∷+ (+ 0)
-  
-  _x+_ : ∀ {i} → ℤ → Linear i → Linear (suc i)
-  n x+ (cs ∷+ k) = (n ∷ cs) ∷+ k
-  
-  0x+_ : ∀ {i} → Linear i → Linear (suc i)
-  0x+_ (cs ∷+ k) = ((+ 0) ∷ cs) ∷+ k
-  
-  _⊛_ : ∀ {i} → ℤ → Linear i → Linear i
-  z ⊛ (cs ∷+ k) = Vec.map (z *_) cs ∷+ (z * k)
- 
-  _⊕_ : ∀ {i} → Linear i → Linear i → Linear i
-  (cs₁ ∷+ k₁) ⊕ (cs₂ ∷+ k₂) = Vec.zipWith _+_ cs₁ cs₂ ∷+ (k₁ + k₂)
- 
-  ⊝_ : ∀ {i} → Linear i → Linear i
-  ⊝ (cs ∷+ k) = (Vec.map -_ cs) ∷+ (- k)
-
-  _⊝_ : ∀ {i} → Linear i → Linear i → Linear i
-  a ⊝ b = a ⊕ (⊝ b)
-
-  ⊘_ : ∀ {i} → Linear i → Linear i
-  ⊘_ a = (# (+ 1)) ⊝ a
-
-  head : ∀ {i} → Linear (suc i) → ℤ
-  head (c x+ cs +ℤ k) = c
-
-  tail : ∀ {i} → Linear (suc i) → Linear i
-  tail (c x+ cs +ℤ k) = cs ∷+ k
-\end{code}
-
-\begin{code}
-  Irrelevant : ∀ {i} → Linear i → Set
-  Irrelevant {zero} a = ⊥
-  Irrelevant {suc n} a = + 0 ≡ head a
-
-  LowerBound : ∀ {i} → Linear i → Set
-  LowerBound {zero} a = ⊥
-  LowerBound {suc n} a = + 0 < head a
-
-  UpperBound : ∀ {i} → Linear i → Set
-  UpperBound {zero} a = ⊥
-  UpperBound {suc n} a = + 0 > head a
-
-  Constraint : (i : ℕ) (P : Linear i → Set) → Set
-  Constraint i P = Σ (Linear i) P
-
-  Pair : (i : ℕ) → Set
-  Pair i = Constraint i LowerBound × Constraint i UpperBound
-  
-  partition : ∀ {i} → List (Linear (suc i))
-             → List (Constraint (suc i) LowerBound)
-             × List (Constraint (suc i) Irrelevant)
-             × List (Constraint (suc i) UpperBound)
-  partition [] = [] , [] , []
-  partition (a ∷ as) with IntProp.<-cmp (+ 0) (head a) | partition as
-  partition (a ∷ as) | Tri.tri< 0>c _ _ | ls , is , us = (a , 0>c) ∷ ls , is , us
-  partition (a ∷ as) | Tri.tri≈ _ 0=c _ | ls , is , us = ls , (a , 0=c) ∷ is , us
-  partition (a ∷ as) | Tri.tri> _ _ 0<c | ls , is , us = ls , is , (a , 0<c) ∷ us
-\end{code}
-
-
 To prove our quantifier elimination correct we first need to introduce
 the reader to some basic notions involving satisfiability and
 decidability of Presburger formulas.
@@ -1576,80 +1231,11 @@ decidability of Presburger formulas.
 An environment in which to evaluate a formula is a map from de Bruijn
 indices to integers, where each index stands for a variable.
 
-\begin{code}
-  Env : ℕ → Set
-  Env i = Vec ℤ i
-\end{code}
-
-Next, we define substitution for constraints:
-
-\todo{Comment we substitute outermost vars}
-
-\begin{code}
-  [_/x]_ : ∀ {i d} → Env i → Linear (d Nat.+ i) → Linear d
-  [_/x]_ {d = zero} [] a = a
-  [_/x]_ {d = zero} (x ∷ xs) (c x+ cs +ℤ k) = [ xs /x] (cs ∷+ (k + c * x))
-  [_/x]_ {d = suc d} xs (c x+ cs +ℤ k) = c x+ ([ xs /x] (cs ∷+ k))
-
-  [_/x]⇓_ : ∀ {i} → Env i → Linear i → ℤ
-  [ ρ /x]⇓ a = k {zero} ([ ρ /x] a)
-
-  -- div requires an implicit proof showing its divisor is non-zero
-  a/α : ∀ {i} → Env i → Constraint (suc i) LowerBound → ℤ
-  a/α ρ (+_ zero x+ -cs +ℤ -k , (_≤_.+≤+ ()))
-  a/α ρ (+_ (suc α-1) x+ -cs +ℤ -k , lb) = let a = - [ ρ /x]⇓ (-cs ∷+ -k) in sign a ◃ (∣ a ∣ div suc α-1)
-  a/α ρ (-[1+ n ] x+ -cs +ℤ -k , ())
-
-  b/β : ∀ {i} → Env i → Constraint (suc i) UpperBound → ℤ
-  b/β ρ (+_ c x+ cs +ℤ k , _≤_.+≤+ ())
-  b/β ρ (-[1+ β-1 ] x+ cs +ℤ k , ub) = let b = [ ρ /x]⇓ (cs ∷+ k) in sign b ◃ (∣ b ∣ div suc β-1)
-\end{code}
-
 The base case for satisfiability is on a single constraint with no
 variables, the rest of cases depend on an environment for
 substitution.
 
-\begin{code}
-  ⊨⇓ : Linear 0 → Set
-  ⊨⇓ a = (+ 0) < (Linear.k a)
-
-  ⊨[_/x] : ∀ {i} → Env i → Linear i → Set
-  ⊨[ ρ /x] a = ⊨⇓ ([ ρ /x] a)
-
-  ⊨[_/x]ₚ : ∀ {i} → Env i → Pair i → Set
-  ⊨[ ρ /x]ₚ ((l , _) , (u , _)) = ⊨[ ρ /x] l × ⊨[ ρ /x] u
-  
-  ⊨[_/x]ᵢ : ∀ {i} → Env i → Constraint i Irrelevant → Set
-  ⊨[ ρ /x]ᵢ (ir , _) = ⊨[ ρ /x] ir
-
-  ⊨ : ∀ {i} → List (Linear i) → Set
-  ⊨ {i} as = Σ (Env i) λ ρ → All ⊨[ ρ /x] as
-
-  ⊨ₚ : ∀ {i} → List (Pair i) → Set
-  ⊨ₚ {i} as = Σ (Env i) λ ρ → All ⊨[ ρ /x]ₚ as
-\end{code}
-
 After substitution, satisfiability is decidable.
-
-\begin{code}
-  ⟦_⟧⇓ : (a : Linear 0) → Dec (⊨⇓ a)
-  ⟦ a ⟧⇓ = (+ 0) <? (Linear.k a)
-
-  ⟦_⟧[_/x] : ∀ {i} → (a : Linear i) → (ρ : Env i) → Dec (⊨[ ρ /x] a)
-  ⟦ a ⟧[ ρ /x] = ⟦ [ ρ /x] a ⟧⇓
-
-  ⟦_⟧[_/x]ₚ : ∀ {i} → (lu : Pair i) → (ρ : Env i) → Dec (⊨[ ρ /x]ₚ lu)
-  ⟦ ((l , _) , (u , _)) ⟧[ ρ /x]ₚ with ⟦ l ⟧[ ρ /x] | ⟦ u ⟧[ ρ /x]
-  ⟦ (l , _) , u , _ ⟧[ ρ /x]ₚ | yes pl | yes pu = yes (pl , pu)
-  ⟦ (l , _) , u , _ ⟧[ ρ /x]ₚ | _      | no ¬pu = no λ {(_ , pu) → ¬pu pu}
-  ⟦ (l , _) , u , _ ⟧[ ρ /x]ₚ | no ¬pl | _      = no λ {(pl , _) → ¬pl pl}
-
-  ⟦_⟧ : ∀ {i} → (as : List (Linear i)) → (ρ : Env i) → Dec (All ⊨[ ρ /x] as)
-  ⟦ as ⟧ ρ = all ⟦_⟧[ ρ /x] as
-
-  ⟦_⟧ₚ : ∀ {i} → (lus : List (Pair i)) → (ρ : Env i) → Dec (All ⊨[ ρ /x]ₚ lus)
-  ⟦ lus ⟧ₚ ρ = all ⟦_⟧[ ρ /x]ₚ lus
-\end{code}
 
 \subsubsection{Normalisation}
 
@@ -1684,87 +1270,11 @@ number of available variables is pushed inside the structure —
 constructors ~\AgdaInductiveConstructor{∃}~ and
 \AgdaInductiveConstructor{¬∃} make one variable more available.
 
-\begin{code}
-  mutual
-    data Existential (i : ℕ) : Set where
-      ¬∃ : Conjunction (suc i) → Existential i
-      ∃  : Conjunction (suc i) → Existential i
-  
-    record Conjunction (i : ℕ) : Set where
-      inductive
-      constructor 0≤_∧_E
-      field
-        constraints : List (Linear i)
-        existentials : List (Existential i)
-  
-  DNF : (i : ℕ) → Set
-  DNF i = List (Conjunction i)
-\end{code}
+\ExecuteMetaData[Presburger.tex]{normal-form}
 
 Normalisation proceeds recursively, eliminating universal quantifiers,
 pushing conjunction and negation inward, normalising implication,
 evaluating operations on atoms and normalising relations between them.
-
-\todo{Add anex}
-\AgdaHide{
-\begin{code}
-  open Existential public
-  open Conjunction public
-  
-  ¬-existential : ∀ {i} → Existential i → Existential i
-  ¬-existential (¬∃ x) = ∃ x
-  ¬-existential (∃ x) = ¬∃ x
-    
-  ¬-conjunction : ∀ {i} → Conjunction i → DNF i
-  ¬-conjunction 0≤ cs ∧ bs E = List.map (λ c → 0≤ ⊘ c ∷ [] ∧                   [] E) cs
-                            ++ List.map (λ b → 0≤       [] ∧ ¬-existential b ∷ [] E) bs
-                                                                                               
-  _∧-dnf_ : ∀ {i} → DNF i → DNF i → DNF i
-  xs ∧-dnf ys = List.map 
-     (λ {((0≤ cx ∧ bx E) , (0≤ cy ∧ by E)) → 0≤ cx ++ cy ∧ bx ++ by E})
-     (×-list xs ys)
-  
-  _∨-dnf_ : ∀ {i} → DNF i → DNF i → DNF i
-  _∨-dnf_ = _++_
-  
-  ¬-dnf_ : ∀ {i} → DNF i → DNF i
-  ¬-dnf_ = List.foldl (λ dnf conj → dnf ∧-dnf ¬-conjunction conj) []
-  
-  _⇒-dnf_ : ∀ {i} → DNF i → DNF i → DNF i
-  xs ⇒-dnf ys = (¬-dnf xs) ∨-dnf (xs ∧-dnf ys)
-  
-  ∃-dnf_ : ∀ {i} → DNF (suc i) → DNF i
-  ∃-dnf_ = List.map λ conj → 0≤ [] ∧ (∃ conj ∷ []) E
-                                                     
-  ∀-dnf : ∀ {i} → DNF (suc i) → DNF i
-  ∀-dnf = ¬-dnf_ ∘ ∃-dnf_ ∘ ¬-dnf_
-  
-  norm-rel : ∀ {i} → Rel → Linear i → Linear i → List (Linear i)
-  norm-rel <' l₁ l₂ = (l₂ ⊝ l₁) ⊕ (# (+ 1)) ∷ []
-  norm-rel >' l₁ l₂ = (l₁ ⊝ l₂) ⊕ (# (+ 1)) ∷ []
-  norm-rel ≤' l₁ l₂ = l₂ ⊝ l₁ ∷ []
-  norm-rel ≥' l₁ l₂ = l₁ ⊝ l₂ ∷ []
-  norm-rel =' l₁ l₂ = l₂ ⊝ l₁ ∷ l₁ ⊝ l₂ ∷ []
-
-  norm-atom : ∀ {i} → Atom i → Linear i
-  norm-atom (num' n) = # n
-  norm-atom (x +' y) = (norm-atom x) ⊕ (norm-atom y)
-  norm-atom (n *' x) = n ⊛ (norm-atom x)
-  norm-atom (var' zero) = (+ 1) x+ ∅
-  norm-atom (var' (suc n)) with norm-atom (var' n)
-  ...                     | cs ∷+ k = (+ 0) x+ cs +ℤ k
-    
-  norm-form : {i : ℕ} → Formula i → DNF i
-  norm-form (x ∧' y) = (norm-form x) ∧-dnf (norm-form y)
-  norm-form (x ∨' y) = (norm-form x) ∨-dnf (norm-form y)
-  norm-form (x ⇒' y) = (norm-form x) ⇒-dnf (norm-form y)
-  norm-form (¬' x) = ¬-dnf (norm-form x)
-  norm-form (∃' x) = ∃-dnf (norm-form x)
-  norm-form (∀' x) = ∀-dnf (norm-form x)
-  norm-form (d ∣' x) = 0≤ {!!} ∧ [] E ∷ []
-  norm-form (x [ r ] y) = 0≤ norm-rel r (norm-atom x) (norm-atom y) ∧ [] E ∷ []
-\end{code}
-}
 
 \subsubsection{Elimination}
 
@@ -1854,30 +1364,13 @@ returns the cartesian product of ~\AgdaBound{ls}~ and ~\AgdaBound{us}.
 
 \todo{Maybe clean}
 
-\begin{code}
-  dark-shadow : ∀ {i} → Pair (suc i) → Linear i
-  dark-shadow ((l , _) , (u , _)) with head l | ⊝ (tail l) | - (head u) | tail u
-  ...                             | α | a | β | b = (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# ((α - + 1) * (β - + 1)))
-      
-  elim-irrel : ∀ {i} → List (Constraint (suc i) Irrelevant) → List (Linear i)
-  elim-irrel = List.map (tail ∘ proj₁)
-  
-  omega : ∀ {i} → List (Pair (suc i)) → List (Linear i)
-  omega = List.map dark-shadow
-\end{code}
+\ExecuteMetaData[Presburger.tex]{dark-shadow}
 
 For convenience, we will add a shortcut that performs quantifier
 elimination as per our incomplete Omega Test, until there are no more
 variables left, and then decides the variable-free formula.
 
-\begin{code}
-  ⟦_⟧Ω : ∀ {i} → List (Linear i) → Bool
-  ⟦_⟧Ω {zero} as with ⟦ as ⟧ []
-  ...           | yes p = true
-  ...           | no ¬p = false
-  ⟦_⟧Ω {suc i} as with partition as
-  ...             | ls , is , us = ⟦ elim-irrel is ++ omega (×-list ls us) ⟧Ω
-\end{code}
+\ExecuteMetaData[Presburger.tex]{elimination}
 
 \subsubsection{Verification}
 
@@ -1896,12 +1389,7 @@ $D_1$, we get a sound but incomplete decision procedure where $D_1
 
 Or, in our terms:
 
-\begin{code}
-  ⟦_⟧Ω-Correct : ∀ {i} (as : List (Linear i)) → Set
-  ⟦_⟧Ω-Correct as with ⟦ as ⟧Ω
-  ⟦_⟧Ω-Correct as | false = ⊤
-  ⟦_⟧Ω-Correct as | true  = ⊨ as
-\end{code}
+\ExecuteMetaData[Presburger.tex]{correctness}
 
 The original proof uses induction on every $L(x) × U(x)$ pair to prove
 the above. The goal for each pair is thus the following:
@@ -1930,18 +1418,7 @@ Below, a generalised search function that searches for elements
 satisfying a decidable predicate within a discrete finite non-empty
 search space:
 
-\begin{code}
-  search : {A : Set} {P : A → Set} (P? : Decidable P)
-         → (as : List A) (¬Ø : as ≢ [])
-         → (as ≢ [] → All (¬_ ∘ P) as → ⊥)
-         → Σ A P
-
-  search P? []               ¬Ø raa = ⊥-elim (¬Ø refl)
-  search P? (a ∷ as)         ¬Ø raa with P? a
-  search P? (a ∷ as)         ¬Ø raa | yes p = a , p
-  search P? (a ∷ [])         ¬Ø raa | no ¬p = ⊥-elim (raa ¬Ø (¬p ∷ []))
-  search P? (a ∷ as@(_ ∷ _)) ¬Ø raa | no ¬p = search P? as (λ ()) (λ _ ¬pas → raa ¬Ø (¬p ∷ ¬pas))
-\end{code}
+\ExecuteMetaData[Presburger.tex]{search}
 
 In the case that concerns us, the search is for some $x$ that 
 satisfies a conjunction of constraints of form $a ≤ \alpha x \land
@@ -1952,19 +1429,7 @@ $\left\lceil\frac{b}{β}\right\rceil$; the conjunction of all
 constraints must be bound between the highest lower bound and the
 lowest upper bound.
 
-\begin{code}
-  start : ∀ {i} → Env i → List (Constraint (suc i) LowerBound) → ℤ
-  start ρ ls = List.foldr _⊔_ (+ 0) (List.map (a/α ρ) ls)
-
-  stop : ∀ {i} → Env i → List (Constraint (suc i) UpperBound) → ℤ
-  stop ρ us = List.foldr _⊓_ (+ 0) (List.map (b/β ρ) us)
-
-  search-space : ∀ {i} → Env i → (lus : List (Pair (suc i))) → List ℤ
-  search-space ρ lus with start ρ (List.map proj₁ lus)
-  search-space ρ lus | Δ₀ with Δ₀ - stop ρ (List.map proj₂ lus)
-  search-space ρ lus | Δ₀ | + n = List.applyUpTo (λ i → + i + Δ₀) n 
-  search-space ρ lus | Δ₀ | -[1+ n ] = []
-\end{code}
+\ExecuteMetaData[Presburger.tex]{search-space}
 
 Norrish, where each step is implied by the next one
 
@@ -1985,280 +1450,11 @@ Ours, where each step is implied by the next one
 &\bigwedge_{\substack{l \in L\\ u \in U}} \neg(∃x. l~x \land u~x) \implies \neg(DS~l~u)
 \end{align*}
 
-\begin{code}
-  ∀[_]_ : ∀ {a p} {A : Set a} → List A → (A → Set p) → Set (p ℓ⊔ a)
-  ∀[ xs ] P = All P xs 
-
-  ∃[_]_ : ∀ {a p} {A : Set a} → List A → (A → Set p) → Set (p ℓ⊔ a)
-  ∃[ xs ] P = Any P xs 
-
-  norrish : ∀ {i} (ρ : Env i) (lu : Pair (suc i)) {xs : List ℤ}
-          → ¬ ∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]ₚ lu)
-          → ¬ ⊨[ ρ /x] (dark-shadow lu)
-
-  module _ (i : ℕ) (ρ : Env i) where
-
-    ∀lus∃xs⇒∃xs∀lus : (lus : List (Pair (suc i))) (xs : List ℤ)
-                    → (∀[ lus ] (λ lu → ∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]ₚ lu)))
-                    → (∃[ xs ] (λ x → ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ))
-    ∀lus∃xs⇒∃xs∀lus lus xs ∀lus∃xs = {!!}
-
-    ∀xs→¬∀lus⇒∃lus→¬∃xs : (lus : List (Pair (suc i))) (xs : List ℤ)
-                        → (∀[ xs ] λ x → ¬ ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
-                        → (∃[ lus ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
-    ∀xs→¬∀lus⇒∃lus→¬∃xs lus xs = begin
-      (∀[ xs ] λ x → ¬ ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
-        ⇒⟨ AllProp.All¬⇒¬Any ⟩
-      (¬ ∃[ xs ] λ x → ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
-        ⇒⟨ (λ ¬∃xs∀lus ∀lus∃xs → ¬∃xs∀lus (∀lus∃xs⇒∃xs∀lus lus xs ∀lus∃xs)) ⟩
-      (¬ ∀[ lus ] λ lu → ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
-        ⇒⟨ AllProp.¬All⇒Any¬ (λ lu → any (λ x → ⟦ lu ⟧[ x ∷ ρ /x]ₚ) xs) lus ⟩
-      (∃[ lus ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
-        ∎
-      where
-      open ⇒-Reasoning
-                        
-    by-contradiction : (lus : List (Pair (suc i))) (xs : List ℤ)
-                     → (⊨Ωlus : All ⊨[ ρ /x] (omega lus))
-                     → (xs ≢ []) → (∀[ xs ] λ x → ¬ ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
-                     → ⊥
-    by-contradiction lus .[] ⊨Ωlus ¬Ø []       = ⊥-elim (¬Ø refl)
-    by-contradiction lus xs  ⊨Ωlus ¬Ø ∀xs¬∀lus = inner lus ⊨Ωlus (∀xs→¬∀lus⇒∃lus→¬∃xs lus xs ∀xs¬∀lus)
-      where
-      inner : (lus : List (Pair (suc i)))
-            → (⊨Ωlus : All ⊨[ ρ /x] (omega lus))
-            → (∃[ lus ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
-            → ⊥
-      inner [] [] ()
-      inner (lu ∷ lus) (⊨Ωlu ∷ ⊨Ωlus) (here ¬∃xs)       = norrish ρ lu ¬∃xs ⊨Ωlu
-      inner (lu ∷ lus) (⊨Ωlu ∷ ⊨Ωlus) (there ∃lus→¬∃xs) = inner lus ⊨Ωlus ∃lus→¬∃xs
-
-    find-x : ∀ (lus : List (Pair (suc i)))
-           → All ⊨[ ρ /x] (omega lus)
-           → Σ ℤ λ x → All ⊨[ x ∷ ρ /x]ₚ lus
-
-    find-x lus ⊨Ωlus with search-space ρ lus
-    find-x lus ⊨Ωlus | [] = ⊥-elim {!!}
-    find-x lus ⊨Ωlus | xs@(_ ∷ _) = search (λ x → all ⟦_⟧[ x ∷ ρ /x]ₚ lus ) xs (λ ()) (by-contradiction lus xs ⊨Ωlus)
-
-    prepend-x : (x : ℤ) (irs : List (Constraint (suc i) Irrelevant))
-              → All ⊨[ ρ /x] (elim-irrel irs)
-              → All ⊨[ x ∷ ρ /x]ᵢ irs
-
-    prepend-x x [] [] = []
-    prepend-x x (ir ∷ irs) (⊨Ωir ∷ ⊨Ωirs) = one x ir ⊨Ωir ∷ (prepend-x x irs ⊨Ωirs)
-      where
-      one : (x : ℤ) (ir : Constraint (suc i) Irrelevant)
-          → (⊨[ ρ /x] ∘ tail ∘ proj₁) ir
-          → ⊨[ x ∷ ρ /x]ᵢ ir
-
-      one x ir ⊨Ωir = {!!}
-      
-\end{code}
-
-\begin{code}
-  ⟦_⟧Ω-correct : ∀ {i} (as : List (Linear i)) → ⟦ as ⟧Ω-Correct
-  ⟦_⟧Ω-correct as with ⟦ as ⟧Ω | inspect ⟦_⟧Ω as
-  ⟦_⟧Ω-correct as | false | j = tt
-  ⟦_⟧Ω-correct as | true | >[ eq ]< = inner as eq
-    where
-    
-    inner : ∀ {i} (as : List (Linear i)) → ⟦ as ⟧Ω ≡ true → ⊨ as
-    inner {zero} as ep with ⟦ as ⟧ []
-    inner {zero} as ep | yes p = [] , p
-    inner {zero} as () | no ¬p
-    inner {suc i} as ep with partition as
-    ... | ls , irs , us with ×-list ls us
-    ... | lus with ⟦ elim-irrel irs ++ omega lus ⟧Ω | inspect ⟦_⟧Ω (elim-irrel irs ++ omega lus)
-    inner {suc i} as () | _ , irs , _ | lus | false | j
-    inner {suc i} as ep | _ , irs , _ | lus | true  | >[ eq ]< with inner (elim-irrel irs ++ omega lus) eq
-    inner {suc i} as ep | _ , irs , _ | lus | _ | _ | ρ , ⊨Ωas with AllProp.++⁻ (elim-irrel irs) ⊨Ωas
-    inner {suc i} as ep | _ , irs , _ | lus | _ | _ | ρ , ⊨Ωas | ⊨Ωirs , ⊨Ωlus with find-x i ρ lus ⊨Ωlus
-    inner {suc i} as ep | _ , irs , _ | lus | _ | _ | ρ , ⊨Ωas | ⊨Ωirs , ⊨Ωlus | x , ⊨lus with prepend-x i ρ x irs ⊨Ωirs
-    ... | ⊨irs = {!!}
-\end{code}
 
 \todo{Introduce proof by contradiction}
 \todo{Explain our strategy to make it constructive: bounded search}
 \todo{Extract proof obligation}
 \todo{Go on with the proof}
-
-\begin{code}
-  lemma₀ : ∀ {i} (n : ℤ) → ⊝ (#_ {i} n) ≡ #_ {i} (- n)
-  lemma₀ {i} n = begin
-    (⊝ (# n))
-      ≡⟨⟩
-    (Vec.map -_ (Vec.replicate (+ 0)) ∷+ (- n))
-      ≡⟨ cong (λ ⊚ → ((⊚ ∷+ (- n)))) (VecProp.map-replicate -_ (+ 0) _) ⟩
-    (Vec.replicate (- + 0) ∷+ (- n))
-      ≡⟨⟩
-    (# (- n))
-      ∎
-    where
-      open ≡-Reasoning
-
-  lemma₁ : ∀ {i} (csa : Vec ℤ i) (ka n : ℤ) → (csa ∷+ ka) ⊕ (# n) ≡ (csa ∷+ (ka + n))
-  lemma₁ csa ka n = begin 
-    (csa ∷+ ka) ⊕ (# n)
-      ≡⟨⟩
-    Vec.zipWith _+_ csa (cs (# n)) ∷+ (ka + n)
-      ≡⟨⟩
-    Vec.zipWith _+_ csa (Vec.replicate (+ 0)) ∷+ (ka + n)
-      ≡⟨ cong (_∷+ (ka + n)) (VecProp.zipWith-replicate₂ _+_ csa (+ 0)) ⟩
-    Vec.map (_+ (+ 0)) csa ∷+ (ka + n)
-      ≡⟨ cong (_∷+ (ka + n)) (VecProp.map-cong IntProp.+-identityʳ csa) ⟩
-    Vec.map id csa ∷+ (ka + n)
-      ≡⟨ cong (_∷+ (ka + n)) (VecProp.map-id csa) ⟩
-    csa ∷+ (ka + n)
-      ∎
-    where open ≡-Reasoning
-
-  lemma₂ : ∀ {i} → (n : ℤ) → ⊝_ {i} (# n) ≡ # (- n)
-  lemma₂ n = begin 
-    ⊝ (# n)
-      ≡⟨⟩
-    (Vec.map -_ (Vec.replicate (+ 0)) ∷+ (- n))
-      ≡⟨ cong (_∷+ (- n)) (VecProp.map-replicate -_ (+ 0) _) ⟩
-    # (- n)
-      ∎
-    where open ≡-Reasoning
-
-  lemma₃ : (m : ℤ) (n : ℤ) → (+ 0) ≤ n → m - n ≤ m
-  lemma₃ m n 0≤n = {!!}
-  
-  lemma₄ : ∀ {i} (ρ : Env i) (csa : Vec ℤ i) (ka : ℤ)
-         → [ ρ /x]⇓ (csa ∷+ ka) ≡ ([ ρ /x]⇓ (csa ∷+ (+ 0))) + ka
-  lemma₄ ρ csa ka = {!!}
-\end{code}
-     
-\begin{code}
-  module norrish-inner (i : ℕ) (ρ : Env i) (xs : List ℤ)
-                 (l : Constraint (suc i) LowerBound)
-                 (u : Constraint (suc i) UpperBound)
-                 where
-    α = head (proj₁ l)
-    a = ⊝ (tail (proj₁ l))
-    0<α = proj₂ l
-    β = - (head (proj₁ u))
-    b = tail (proj₁ u)
-    0<β = proj₂ u
-    n = a/α ρ l
-
-    0≤[α-1][β-1] : (+ 0) ≤ (α - + 1) * (β - + 1)
-    0≤[α-1][β-1] with α - + 1 | β - + 1
-    0≤[α-1][β-1] | +_ n | +_ m with Sign.+ ◃ (n Nat.* m) | IntProp.+◃n≡+n (n Nat.* m)
-    0≤[α-1][β-1] | +_ n | +_ m | +_ .(n Nat.* m) | refl = +≤+ Nat.z≤n
-    0≤[α-1][β-1] | +_ n | +_ m | -[1+_] _ | ()
-    0≤[α-1][β-1] | +_ n | -[1+_] m = {!!}
-    0≤[α-1][β-1] | -[1+_] n | m = {!!}
-
-
-    [α-1][β-1]≤αb-aβ : Linear i
-    [α-1][β-1]≤αb-aβ = (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# ((α - + 1) * (β - + 1)))
-
-    aβ≤αb : Linear i
-    aβ≤αb = ((α ⊛ b) ⊝ (β ⊛ a))
-
-    aβ≤αβx≤αb : List (Linear (suc i))
-    aβ≤αβx≤αb = ((α * β) x+ ∅) ⊝ (β ⊛ (0x+ a))
-              ∷ (α ⊛ (0x+ b)) ⊝ ((α * β) x+ ∅)
-              ∷ []
-
-    αβn<aβ≤αb<αβ[n+1] : List (Linear i)
-    αβn<aβ≤αb<αβ[n+1] = ((β ⊛ a) ⊝ (# (α * β * n)) ⊝ (# (+ 1)))
-                      ∷ (α ⊛ b) ⊝ (β ⊛ a)
-                      ∷ ((# (α * β * (n + + 1))) ⊝ (α ⊛ b) ⊝ (# (+ 1)))
-                      ∷ []
-
-    α≤αβ[n+1]-αb : Linear i
-    α≤αβ[n+1]-αb = (# (α * β * (n + + 1))) ⊝ (α ⊛ b) ⊝ (# α)
-
-    β≤aβ-αβn : Linear i
-    β≤aβ-αβn = (β ⊛ a) ⊝ (# (α * β * n)) ⊝ (# β)
-
-    αb-aβ<[α-1][β-1] : Linear i
-    αb-aβ<[α-1][β-1] = (# ((α - + 1) * (β - + 1))) ⊝ (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# (+ 1))
-
-    ⊨βa≤αb : ⊨[ ρ /x] [α-1][β-1]≤αb-aβ → ⊨[ ρ /x] aβ≤αb
-    ⊨βa≤αb ⊨ds with (α ⊛ b) ⊝ (β ⊛ a) | inspect (_⊝_ (α ⊛ b)) (β ⊛ a)
-    ... | (csa ∷+ ka) | >[ eq ]< = begin
-      + 1
-        ≤⟨ ⊨ds ⟩
-      [ ρ /x]⇓ ((α ⊛ b) ⊝ (β ⊛ a) ⊝ (# ((α - + 1) * (β - + 1))))
-        ≡⟨ cong (λ ⊚ → [ ρ /x]⇓ (⊚ ⊝ (# ((α - + 1) * (β - + 1))))) eq ⟩
-      [ ρ /x]⇓ ((csa ∷+ ka) ⊝ (# ((α - + 1) * (β - + 1))))
-        ≡⟨ cong (λ ⊚ → [ ρ /x]⇓ ((csa ∷+ ka) ⊕ ⊚)) (lemma₂ ((α - + 1) * (β - + 1))) ⟩
-      [ ρ /x]⇓ ((csa ∷+ ka) ⊕ (# (- ((α - + 1) * (β - + 1)))))
-        ≡⟨ cong [ ρ /x]⇓_ (lemma₁ csa ka (- ((α - + 1) * (β - + 1)))) ⟩
-      [ ρ /x]⇓ (csa ∷+ (ka - (α - + 1) * (β - + 1)))
-        ≡⟨ lemma₄ ρ csa _ ⟩
-      [ ρ /x]⇓ (csa ∷+ (+ 0)) + (ka - (α - + 1) * (β - + 1))
-        ≡⟨ sym (IntProp.+-assoc ([ ρ /x]⇓ (csa ∷+ (+ 0))) ka (- ((α - + 1) * (β - + 1)))) ⟩
-      ([ ρ /x]⇓ (csa ∷+ (+ 0)) + ka) - (α - + 1) * (β - + 1)
-        ≤⟨ lemma₃ _ _ 0≤[α-1][β-1] ⟩
-      [ ρ /x]⇓ (csa ∷+ (+ 0)) + ka
-        ≡⟨ sym (lemma₄ ρ csa ka) ⟩
-      [ ρ /x]⇓ (csa ∷+ ka)
-        ∎
-      where open ≤-Reasoning
-
-    ⊨αβn<aβ≤αb<αβ[n+1] : ⊨[ ρ /x] aβ≤αb → ¬ (∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]ₚ (l , u))) → All ⊨[ ρ /x] αβn<aβ≤αb<αβ[n+1]
-    ⊨αβn<aβ≤αb<αβ[n+1] ⊨p₁ ⊭p₂ = r₁ ∷ r₂ ∷ r₃ ∷ []
-      where
-        open ≤-Reasoning
-
-        -- ⊭aβ≤αβx≤αb : ¬ ⊨ ((α * β) x+∅ ⊝ ⇑1 (β ⊛ a) ∷ ⇑1 (α ⊛ b) ⊝ ((α * β) x+∅) ∷ [])
-        -- ⊭aβ≤αβx≤αb ρ' (⊨p₃ ∷ ⊨p₄ ∷ []) = ⊭p₂ ρ' ({!!} ∷ {!!} ∷ [])
-  
-        r₁ = begin
-          + 1
-            ≤⟨ {!!} ⟩
-          [ ρ /x]⇓ ((β ⊛ a) ⊝ (# (α * β * n)) ⊝ (# (+ 1)))
-            ∎
-        r₂ = begin
-          + 1
-            ≤⟨ {!!} ⟩
-          [ ρ /x]⇓ ((α ⊛ b) ⊝ (β ⊛ a))
-            ∎
-        r₃ = begin
-          + 1
-            ≤⟨ {!!} ⟩
-          [ ρ /x]⇓ ((# (α * β * (n + + 1))) ⊝ (α ⊛ b) ⊝ (# (+ 1)))
-            ∎
-
-    ⊨α≤αβ[n+1]-αb : All ⊨[ ρ /x] αβn<aβ≤αb<αβ[n+1] → ⊨[ ρ /x] α≤αβ[n+1]-αb
-    ⊨α≤αβ[n+1]-αb (⊨p₁ ∷ ⊨p₂ ∷ ⊨p₃ ∷ []) = begin 
-      + 1
-        ≤⟨ {!!} ⟩
-      [ ρ /x]⇓ α≤αβ[n+1]-αb
-        ∎
-      where open ≤-Reasoning
-
-    ⊨β≤aβ-αβn : All ⊨[ ρ /x] αβn<aβ≤αb<αβ[n+1] → ⊨[ ρ /x] β≤aβ-αβn
-    ⊨β≤aβ-αβn (⊨p₁ ∷ ⊨p₂ ∷ ⊨p₃ ∷ []) = begin 
-      + 1
-        ≤⟨ {!!} ⟩
-      [ ρ /x]⇓ β≤aβ-αβn
-        ∎
-      where open ≤-Reasoning
-
-    ⊭[α-1][β-1]≤αb-aβ : ⊨[ ρ /x] α≤αβ[n+1]-αb
-                      → ⊨[ ρ /x] β≤aβ-αβn
-                      → ⊨[ ρ /x] [α-1][β-1]≤αb-aβ
-                      → ⊥
-    ⊭[α-1][β-1]≤αb-aβ ⊨p₁ ⊨p₂ ⊨ds = {!!} 
-
-  -- norrish : ∀ {i} (ρ : Env i) (lu : Pair (suc i)) {xs : List ℤ}
-  --         → ¬ ∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]ₚ lu)
-  --         → ¬ ⊨[ ρ /x] (dark-shadow lu)
-  norrish {i} ρ (l , u) {xs} ⊭xs ⊨Ωlu = proof
-    where
-      open norrish-inner i ρ xs l u
-      proof : ⊥
-      proof with ⊨αβn<aβ≤αb<αβ[n+1] (⊨βa≤αb ⊨Ωlu ) ⊭xs
-      proof | ps = ⊭[α-1][β-1]≤αb-aβ (⊨α≤αβ[n+1]-αb ps) (⊨β≤aβ-αβn ps) ⊨Ωlu
-\end{code}
-
 \todo{Evaluation, if there is time}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2395,7 +1591,11 @@ Omega:
 %   URLs! Web pages are not scholarly publications. In particular, they are not
 %   peer reviewed, and so could contain erroneous or inaccurate information.
 
-\appendix
+\begin{appendices}
+
+\chapter{Presburger solver}
+
+% \input{Presburger.lagda}
 
 % \chapter{Detailed Specification and Design}
 %   Appendix A - Detailed Specification and Design This appendix should contain
@@ -2411,5 +1611,7 @@ Omega:
 %   Appendix C - User Guide This appendix should provide a detailed description
 %   of how to use your system. In some cases, it may also be appropriate to
 %   include a second guide dealing with maintenance and updating issues.
+
+\end{appendices}
 
 \end{document}
