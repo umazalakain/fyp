@@ -885,6 +885,8 @@ prepended to their type. We can also make the insides of
 \AgdaBound{monoid} directly accessible by opening it as if it were a
 module.
 
+\begin{AgdaAlign}
+
 \ExecuteMetaData[Monoids.tex]{monoid-module}
 
 To evaluate an expression we need a concrete assignment for the
@@ -962,6 +964,8 @@ unsurprisingly, use all of the monoid laws.
 
 \ExecuteMetaData[Monoids.tex]{eval-commutes}
 
+\end{AgdaAlign}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Results and usage}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1010,17 +1014,15 @@ in the following example usage:
 \chapter{Solving Presburger arithmetic}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\todo{Note that there is no such thing in Agda}
-
 In 1929, Mojżesz Presburger presented and proved decidable a predicate
 logic on natural numbers (expandable to integers and real numbers)
 with addition as its only operation. The original paper
 \cite{Presburger1929} is in Polish and uses outdated notation;
 \cite{Stansifer1984} contains an English translation and comments
 clarifying the original. Several procedures capable of deciding
-Presburger arithmetic exist, some of them are introduced
+Presburger arithmetic exist, some of them we introduce
 later on. Nevertheless, \cite{Fischer1974} showed that the worst case
-of any such procedure has a doubly exponential run time.
+run time of any such procedure is a doubly exponential.
 
 Here are some example simple predicates that better illustrate the
 expressiveness of Presburger arithmetic.
@@ -1031,6 +1033,11 @@ expressiveness of Presburger arithmetic.
 ∀x.\:4|x\,⇒\,2|x                                 \\
 ∀x.\:x\,<\,x + 1
 \end{align}
+
+To out knowledge, there is no implementation of a decision procedure
+for Presburger arithmetic written in Agda. In this chapter, we will
+introduce two decision procedures on integers, and partially implement
+and verify correct one of them.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Problem description and specification}
@@ -1053,8 +1060,6 @@ module _ where
 \end{code}
 }
 
-\todo{Add definition of ∃ and +-suc to annex}
-
 \begin{code}
     pred₁ : ∀ n → ∃ λ m → ((n ≡ 2 * m) ⊎ (n ≡ 2 * m + 1))
     pred₁ zero = 0 , inj₁ refl
@@ -1073,8 +1078,8 @@ predicates:
 
 We use de Bruijn \cite{Bruijn1972} indices to refer to bindings by
 their proximity: a variable with index \AgdaNumber{0} refers to the
-most immediate binding to the left; index \AgdaBound{n} refers to the
-binding introduced \AgdaBound{n} bindings away. Using de Bruijn
+most immediate variable to the left; index \AgdaBound{n} refers to the
+variable introduced \AgdaBound{n} bindings away. Using de Bruijn
 indices instead of variable names has two main advantages:
 
 \begin{itemize}[noitemsep]
@@ -1083,7 +1088,7 @@ indices instead of variable names has two main advantages:
 \end{itemize}
 
 For any formula of type ~\AgdaDatatype{Formula}~\AgdaBound{n},
-\AgdaBound{n} indicates the number variables introduced outside of the
+\AgdaBound{n} indicates the number variables introduced outside of that
 formula. Quantifiers ~\AgdaInductiveConstructor{∀'\_}~ and
 ~\AgdaInductiveConstructor{∃'\_} make a new variable available to their
 arguments.
@@ -1098,11 +1103,10 @@ Theorem~\ref{eq:even-or-odd} can be transcribed as follows:
 
 There exist numerous procedures able to decide Presburger
 arithmetic. They are primarily distinguished by the domain of their
-formulas. The validity of these Presburger formulas gets carried onto
-superset domains; the non-validity gets carried onto subset domains.
-
-\todo{Cite}
-\cite{Janicic1997a}
+formulae and their normalisation requirements. The validity of
+Presburger formulae in any domain gets carried onto superset domains;
+the non-validity gets carried onto subset domains, as noted in
+\cite{Janicic1997a}.
 
 \begin{figure}[h]
 \centering
@@ -1121,76 +1125,80 @@ superset domains; the non-validity gets carried onto subset domains.
 \caption{Decidability across domains}
 \end{figure}
 
-Some Presburger formulas are valid on integers but invalid on natural
+Some Presburger formulae are valid on integers but invalid on natural
 numbers: $∃x.\:x+1=0$. Others are valid on rational numbers but
-invalid on integers: $∃x.\:2x=1$. \todo{cite intro} When considering
-which decision procedures to explore, we immediately discarted the
-ones acting on real numbers — irrational numbers are not
-straightforward to handle in constructive mathematics. The most
-well-documented procedures are on integers, and the usage of integer
-Presburger arithmetic is common enough for an automated solver to be
-of value. To solve a problem on natural numbers, we just need add a
-condition $0 ≤ x$ to every existential quantifier.
+invalid on integers: $∃x.\:2x=1$. When considering which decision
+procedures to explore, we immediately discarted the ones acting on
+real numbers — irrational numbers are not straightforward to handle in
+constructive mathematics. The most well-documented procedures are on
+integers, and the usage of integer Presburger arithmetic is common
+enough for an automated solver to be of value. Given we can solve
+problems on integers, to solve problems on natural numbers, we just
+need add a condition $0 ≤ x$ to every existential quantifier.
 
-We have choosen the Omega Test and Cooper's Algorithm as two decision
-procedures on integers of interest to explore. Michael Norrish depicts
-in \cite{Norrish2003} the state of affairs of the implementation of
-Presburger arithmetic deciding procedures by proof assistants. He then
-continues describing the Omega Test and Cooper's Algorithm and
-proposes implementations for both of them for the proof assistant
-HOL. Our attempt to implement both procedures in Agda is significantly
-based on his work, which he also briefly outlines in a later
-talk. \cite{Norrish2006}
+We have choosen the Omega Test and Cooper's Algorithm as the two
+decision procedures on integers we find interesting to
+explore. Michael Norrish depicts in \cite{Norrish2003} the state of
+affairs concerning the implementation of Presburger arithmetic deciding
+procedures by proof assistants. He then continues describing the Omega
+Test and Cooper's Algorithm and proposes implementations for both of
+them for the proof assistant HOL. Our attempt to implement both
+procedures in Agda is significantly based on his work, which he also
+briefly outlines in a later talk. \cite{Norrish2006}
 
-\subsubsection{Common ideas}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{The Omega Test}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The heart of both decision procedures are equivalence theorems that
-eliminate a single innermost existential quantifier. Let $P$ and $Q$
-be quantifier-free formulas, then both theorems are of form:
+The Omega Test was first introduced in \cite{Pugh1991}. It adapts
+Fourier-Motzkin elimination — which acts on real numbers — to
+integers, and requires the input formula to be put in disjunctive
+normal form. This has the potential of exponentially blowing up the
+size of formulae, as can clearly be seen when a conjunction is
+normalised over a disjunction:
 
 \begin{equation*}
-∃x.\:P(x) \equiv Q
+(P \lor Q) \land (R \lor S) \equiv (P \land R) \lor (P \land S) \lor
+(Q \land R) \lor (Q \land S)
 \end{equation*}
 
-This elimination process has to be ran recursively from the bottom
-up. The result, a formula with no variables, can then be trivially
-evaluated. 
+\subsection{Normalisation}
 
-By limiting their domain to the integers, they can both translate all
-relations on ~\AgdaDatatype{Atom}s into a canonical form: $0 ≤ ax + by
-+ \ldots + cz + k$. Operations on ~\AgdaDatatype{Atom}s can be
-evaluated into linear transformations of the form $ax + by + \ldots +
-cz + k$. We use a single type to represent both and keep record of the
-number of variables in the linear inequation, so that we can push this
-requirement onto the vector of coefficients. Here, each coefficient's
-index indicates the distance to where that variable was introduced.
-The goal of any decision procedure is thus to return an equivalent
-structure containing only ~\AgdaDatatype{Linear}~\AgdaNumber{0}.
-
-\ExecuteMetaData[Presburger.tex]{linear}
-
-Universal quantifiers need to be eliminated as part of their
-normalisation process. This is carried out resorting to the following
+As part of this normalisation process, universal quantifiers need to
+be eliminated too.  This is carried out resorting to the following
 equivalence:
 
 \begin{equation*}
-∀x.\:P(x) \equiv ¬∃x.\:¬P(x)
+∀x.P(x) \equiv ¬∃x.¬P(x)
 \end{equation*}
 
-Existential quantifiers are distributed over disjunctions:
+Existential quantifiers can be distributed over disjunctions:
 
 \begin{equation*}
 ∃x.\:P(x) \lor Q(x) \equiv (∃x.\:P(x)) \lor (∃x.\:Q(x))
 \end{equation*}
 
-Negation needs to be pushed inside conjunctions and disjunctions and
-double negation eliminated:
+Negation needs to be pushed inside conjunctions and disjunctions, and
+double negation needs to be eliminated:
 
 \begin{align*}
 \neg (P(x) \land Q(x)) &\equiv \neg P(x) \lor  \neg Q(x) \\
 \neg (P(x) \lor  Q(x)) &\equiv \neg P(x) \land \neg Q(x) \\
 \neg \neg P(x)         &\equiv P(x) 
 \end{align*}
+
+Operations on ~\AgdaDatatype{Atom}s can be evaluated into linear
+transformations of the form $ax + by + \ldots + cz + k$. By limiting
+the domain to the integers, all constraints can be translated into a
+canonical form: $0 ≤ ax + by + \ldots + cz + k$. . We will use a
+single type to represent them both, and a a parameter on the type to
+keep record of the number of variables within. A vector of that same
+length will represent the coefficients $ax + by + \ldots + cz$, where
+each coefficient's index indicates the distance in bindings to where
+that variable was introduced. An additional constant will represent
+$k$.
+
+\ExecuteMetaData[Presburger.tex]{linear}
 
 Relations can then be normalised as follows:
 
@@ -1202,56 +1210,20 @@ p ≥ q &\equiv 0 ≤ p - q     \\
 p = q &\equiv 0 ≤ q - p \land 0 ≤ p - q
 \end{align*}
   
-Divide terms are a special case where a natural number and an
-\AgdaDatatype{Atom} are related. The Omega Test and Cooper's Algorithm
-handle divide terms differently, and we will therefore analyse their
-use separately. Here it suffices to say that divide terms and their
-negations can be eliminated by introducing existential quantifiers,
-which is often not desirable.
+Divide terms and their negations are a special case. The Omega Test
+produces them as a byproduct of its main theorem and uses a special
+algorithm to eliminate them, as we will later see. However, we won't
+implement such procedure and we will limit to naively normalise divide
+terms into linear constraints:
 
 \begin{align*}
 n ∣ a &\equiv ∃x.\:nx = a \\
 n ∤ a &\equiv ∃x.\:\bigvee_{i ∈ 1 \ldots n - 1} nx = (a + i)
 \end{align*}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{The Omega Test}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-The Omega Test was first introduced as procedure deciding Presburger
-arithmetic in \cite{Pugh1991}. It adapts Fourier-Motzkin elimination —
-which acts on real numbers — to integers.
-
-\subsubsection{Building blocks}
-
-To prove our quantifier elimination correct we first need to introduce
-the reader to some basic notions involving satisfiability and
-decidability of Presburger formulas.
-
-An environment in which to evaluate a formula is a map from de Bruijn
-indices to integers, where each index stands for a variable.
-
-The base case for satisfiability is on a single constraint with no
-variables, the rest of cases depend on an environment for
-substitution.
-
-After substitution, satisfiability is decidable.
-
-\subsubsection{Normalisation}
-
-The Omega Test requires input formulas to be put into disjunctive
-normal form. This makes normalisation an expensive exponential
-step, as can be clearly seen when cojunctions are normalised over
-disjunctions:
-
-\begin{equation*}
-(P \lor Q) \land (R \lor S) \equiv (P \land R) \lor (P \land S) \lor
-(Q \land R) \lor (Q \land S)
-\end{equation*}
-
-The result of normalisation has to be a structure where:
+To summarise, the result of normalisation has to be a structure where:
 \begin{enumerate*}[label=(\roman*)]
-  \item the upper layer is a disjunction;
+  \item the top layer is a disjunction;
   \item a disjunction only contains conjunctions; and
   \item a conjunction only contains conjunctions, existential
         quantifiers, negated existential quantifiers, or atoms.
@@ -1259,16 +1231,15 @@ The result of normalisation has to be a structure where:
 
 The following tree-like structure contains ~\AgdaDatatype{Linear}s as
 leafs and, within each conjunction, distinguishes leafs from further
-subtrees containing existential quantifiers — making it clear which
-conjunctions to perform elimination on: on those with no further
-subtrees.
+subtrees that contain existential quantifiers.
 
 As with ~\AgdaDatatype{Formula}s, note that the restriction on the
 number of available variables is pushed inside the structure —
 ~\AgdaDatatype{DNF}~\AgdaBound{n} can only contain
 ~\AgdaDatatype{Conjunction}~\AgdaBound{n}~ and so forth. The
 constructors ~\AgdaInductiveConstructor{∃}~ and
-\AgdaInductiveConstructor{¬∃} make one variable more available.
+\AgdaInductiveConstructor{¬∃} make one variable more available to the
+structures they contain.
 
 \ExecuteMetaData[Presburger.tex]{normal-form}
 
@@ -1276,10 +1247,20 @@ Normalisation proceeds recursively, eliminating universal quantifiers,
 pushing conjunction and negation inward, normalising implication,
 evaluating operations on atoms and normalising relations between them.
 
-\subsubsection{Elimination}
+Once normalisation has taken place, the elimination process is ran
+recursively on quantifier-free sub-formulae. The heart of it is an
+equivalence theorem that eliminates the variable bound by the
+innermost existential quantifier:
 
-The Omega Test's quantifier elimination operates on quantifier-free
-conjunctions of constraints of the form $0 ≤ e$:
+\begin{equation*}
+∃x.P(x) \equiv Q
+\end{equation*}
+
+\subsection{Elimination}
+
+The Omega Test's quantifier elimination process operates on
+quantifier-free conjunctions of constraints of form $0 ≤ e$, where
+every variable is existentially binded:
 
 \begin{theorem}[Pugh, 1991]
 Let $L(x)$ be a conjunction of lower bounds on $x$, indexed by $i$, of
@@ -1298,11 +1279,28 @@ and non-zero. Let $m$ be the maximum of all $\beta_j$s. Then:
 \end{theorem}
 
 Pugh refers to the first disjunct as the \textit{real shadow} and to
-the last as the \textit{splinters}. Each splinter introduces a new
-existential quantifier — one could ask if the quantifier elimination
-indeed happens. These quantifiers can nonetheless be eliminated by the
-following terminating method based on the Euclidean algorithm for the
-computation of greatest common divisors:
+the last as the \textit{splinters}. If all $\alpha_i$ or all $\beta_j$
+are $1$ — that is, if in every $(\alpha , \beta)$ pair $\alpha \equiv
+1 \lor \beta \equiv 1$ —, the theorem reduces to the \textit{exact
+shadow}:
+
+\begin{align*}
+(∃x.L(x) ∧ U(x)) &\equiv \bigvee_{i,j} a_i \beta_j ≤ \alpha_i b_j
+\end{align*}
+
+If the exact shadow is not applicable, the main theorem has to be
+used. Pugh refers to the first disjunct in it as the \textit{real
+shadow} and to the remaining as the \textit{splinters}.
+
+Our initial intention was to implement and verify the complete
+theorem. However, we quickly found out about the complexity introduced
+by splinters.
+
+Each splinter introduces a new existential quantifier — one could ask
+if the quantifier elimination indeed happens. These quantifiers can
+nonetheless be eliminated by the following terminating method based on
+the Euclidean algorithm for the computation of greatest common
+divisors:
 
 \begin{align}
   \intertext{$x$ is the variable to eliminate}
@@ -1325,71 +1323,131 @@ computation of greatest common divisors:
 
 Crucially, \ref{eq:divides} guarantees the eventual elimination of the
 divides term, as $b' < ℓ$ — and modulus if not. This recursive
-computation is however not trivial to model using structural
-recursion. Commonly, structural recursion is applied onto terms that
-have been deconstructed by pattern matching — and thus structures get
-smaller by "fixed steps". Here, on the other hand, recursion has to be
-shown to terminate by account of the divides term's coefficient
+computation, justified because a transitive relation towards the left
+on $<$ for natural numbers eventually terminates, is not entirely
+trivial to model. Commonly, structural recursion is applied onto terms
+that have been deconstructed by pattern matching — and thus structures
+get smaller in "fixed steps". Here, on the other hand, recursion has
+to be shown to terminate by account of the divides term's coefficient
 decreasing in steps of variable size.
 
 \todo{NatRec}
 \todo{Negated divides terms}
 
-However, because of time limitations and the considerable complexity
-that implementing the elimination of equalities in splinters and the
-proofs involving splinters introduce, we decided to limit the extend
-of this chapter to implementing and verifying the soundness of the
-real shadow — the first disjunct on the RHS of Pugh's theorem.
+As to verification, splinters introduce considerable complexity too.
+Pugh's theorem is of form $\text{LHS} \equiv D_1 \lor D_2$. That
+shapes the proof, which first shows the soundness of both disjuncts by
+proving that $D_1 \implies LHS$ and $D_2 \implies \text{LHS}$. It then
+shows its completeness by proving that $\text{LHS} \land \neg D_1
+\implies D_2$. From these three proof obligations, the last one is the
+hardest.
 
-\todo{Mention this is a common thing to do}
+After some initial exploratory programming, given the complexity
+they entail, both in terms of implementation and of verification, and
+taking time constraints into account, we decided to discard
+implementing splinters. Other interactive theorem provers like Coq,
+HOL or Isabelle, limit the completeness of their implementations too,
+often to just the real shadow.
 
-Pugh's theorem is a sound and complete decision procedure
-characterised as a disjunction. Supplying only one of the disjuncts
-renders the decision procedure incomplete but does not affect its
-soundness. That is: every formula decided true by the dark shadow can
-be proven to be true, but no claims can be made about those formulas
-that the dark shadow decided false.
+This decision left us with two components: the real shadow, an
+equivalence only applicable if all $\alpha_i$ or all $\beta_j$ are
+$1$, and the dark shadow, an implication of satisfiability. The
+resulting decision procedure is therefore incomplete, and its
+evaluation has three possible outcomes:
 
-Below, we implement quantifier elimination using Pugh's dark-shadow on
-quantifier-free formulas.
-~\AgdaDatatype{List}~\AgdaSymbol(\AgdaDatatype{Linear}~\AgdaBound{i}\AgdaSymbol{)}~
-represents a conjunction over constraints with ~\AgdaBound{i}~
-variables, ~\AgdaFunction{partition}~\AgdaBound{as}~ classifies those
-constraints into three groups: the lower bounds, with coefficients $0
-< c$; the irrelevant constraints, with coefficients $0 = c$; and the
-upper bounds, with coefficients $0 > c$ — the second argument, ignored
-in this case, is the proof of such inequalities. The symbols $α, a, β,
-b$ are as per Pugh. ~\AgdaFunction{×-list}~\AgdaBound{ls}~\AgdaBound{us}~
-returns the cartesian product of ~\AgdaBound{ls}~ and ~\AgdaBound{us}.
+\ExecuteMetaData[Presburger.tex]{result}
 
-\todo{Maybe clean}
+Implementing the dark shadow is not involved. With $l$ as the lower
+bound constraint, $u$ as the upper bound and $\alpha$, $a$, $\beta$
+and $b$ as per Pugh:
 
 \ExecuteMetaData[Presburger.tex]{dark-shadow}
 
-For convenience, we will add a shortcut that performs quantifier
-elimination as per our incomplete Omega Test, until there are no more
-variables left, and then decides the variable-free formula.
+Given that the entire theorem reduces to the real shadow when all
+$\alpha_i$ or all $\beta_j$ are $1$, so does the dark shadow. The
+function ~\AgdaFunction{dark-shadow}~ is therefore used for both the
+real shadow and the dark shadow. If the real shadow's precondition is
+not met, we fall back to the dark shadow, and interpret a result of
+unsatisfiability as undecided. Following, an elimination procedure for
+quantifier free formulas:
 
 \ExecuteMetaData[Presburger.tex]{elimination}
 
-\subsubsection{Verification}
+Here, ~\AgdaFunction{partition}~\AgdaBound{as}~ classifies constraints
+into three groups: the lower bounds, with coefficients $0 < c$; the
+irrelevant constraints, with coefficients $0 = c$; and the upper
+bounds, with coefficients $0 > c$. ~\AgdaFunction{×-list}~ generates
+the cartesian product of lower bound and upper bound pairs for the
+dark shadow elimination; irrelevant constraints simply get their
+coefficient eliminated. ~\AgdaFunction{interpret} interprets results
+depending on whether the exact shadow or the dark shadow was applied.
 
-Pugh's theorem is of form $\text{LHS} \equiv D_1 \lor D_2$. That
-shapes the proof: it first shows the soundness of both disjuncts by
-proving that $D_1 \implies LHS$ and $D_2 \implies \text{LHS}$. Then it
-shows the completeness of the theorem by proving that $\text{LHS}
-\land \neg D_1 \implies D_2$. By limiting ourselves to implementing
-$D_1$, we get a sound but incomplete decision procedure where $D_1
-\implies \text{LHS}$ is the only proof obligation:
+\subsection{Verification}
+
+The exact shadow is a complete procedure, but is not always
+applicable. The dark shadow is a disjunct in the main equivalence
+theorem, removing the splinters renders it sound but not
+complete. Accordingly, a procedure implementing them both is sound but
+incomplete.
+
+\ExecuteMetaData[Presburger.tex]{correctness}
+
+\subsubsection{Preamble}
+
+Although their definitions are available in the source code, we aim to
+provide the reader with an intuition of the meaning of some of the
+different symbols used in this subsection.
+
+\begin{description}
+  \item [\AgdaFunction{⊨⇓}~\AgdaBound{a}]
+  The foundation of verification: the interpretation of the value
+  ~\AgdaBound{a}~ as a type.
+  \ExecuteMetaData[Presburger.tex]{meaning}
+
+  \item [\AgdaFunction{Env}~\AgdaBound{i}]
+  An environment with \AgdaBound{i} variables, usually named
+  ~\AgdaBound{ρ}.
+
+  \item [\AgdaFunction{Pair}~\AgdaBound{i}]
+  A pair of lower bound and upper bound constraints, usually named
+  ~\AgdaBound{lu}.
+
+  \item [\AgdaFunction{[}~\AgdaBound{ρ}~\AgdaFunction{/x]}~\AgdaBound{a}]
+  The result of substituting the \textbf{outtermost} variables in
+  ~\AgdaBound{a}~ with ~\AgdaBound{ρ}. A variation with the
+  ~\AgdaFunction{↓}~ subscript insists on all variables being
+  substituted.
+
+  \item [\AgdaFunction{⊨[}~\AgdaBound{ρ}~\AgdaFunction{/x]}~\AgdaBound{a}]
+  The interpretation of ~\AgdaBound{a} as a type after total
+  substitution.
+
+  \item [\AgdaFunction{⟦}~\AgdaBound{a}~\AgdaFunction{⟧[}~\AgdaBound{ρ}~\AgdaFunction{/x]}]
+  A function deciding whether the interpretation of ~\AgdaBound{a}
+  after total substitution can be proven.
+
+  \item [\AgdaFunction{⊨}~\AgdaBound{as}]
+  A sigma type: an environment and a proof that, after substitution,
+  every ~\AgdaBound{a}~ in ~\AgdaBound{as}~ is satisfied.
+  \ExecuteMetaData[Presburger.tex]{meaning-all}
+  
+  \item [\textnormal{Variations} \AgdaSymbol{…}\AgdaFunction{ₚ}]
+  For convenience of lower bound and upper bound pairs. A product type
+  carrying away the function on the two constraints.
+  
+  \item [\textnormal{Variations} \AgdaSymbol{…}\AgdaFunction{ᵢ}]
+  For convenience of irrelevant constraints.
+\end{description}
+
+\subsubsection{Real shadow}
+
+\subsubsection{Dark shadow}
 
 \begin{equation*}
 \bigwedge_{i,j} (\alpha_i - 1)(\beta_i - 1) ≤ \alpha_i b_j - a_i \beta_j
 \implies ∃x. L(x) \land U(x)
 \end{equation*}
 
-Or, in our terms:
-
-\ExecuteMetaData[Presburger.tex]{correctness}
 
 The original proof uses induction on every $L(x) × U(x)$ pair to prove
 the above. The goal for each pair is thus the following:

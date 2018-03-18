@@ -87,7 +87,6 @@ record Linear (i : ℕ) : Set where
   field
     cs : Vec ℤ i
     k : ℤ
-open Linear
 \end{code}
 %</linear>
 
@@ -175,26 +174,29 @@ Env i = Vec ℤ i
 [_/x]_ {d = zero} (x ∷ xs) (c x+ cs +ℤ k) = [ xs /x] (cs ∷+ (k + c * x))
 [_/x]_ {d = suc d} xs (c x+ cs +ℤ k) = c x+ ([ xs /x] (cs ∷+ k))
 
-[_/x]⇓_ : ∀ {i} → Env i → Linear i → ℤ
-[ ρ /x]⇓ a = k {zero} ([ ρ /x] a)
+[_/x]↓_ : ∀ {i} → Env i → Linear i → ℤ
+[ ρ /x]↓ a = Linear.k {zero} ([ ρ /x] a)
 
 -- div requires an implicit proof showing its divisor is non-zero
 a/α : ∀ {i} → Env i → Constraint (suc i) LowerBound → ℤ
 a/α ρ (+_ zero x+ -cs +ℤ -k , (_≤_.+≤+ ()))
-a/α ρ (+_ (suc α-1) x+ -cs +ℤ -k , lb) = let a = - [ ρ /x]⇓ (-cs ∷+ -k) in sign a ◃ (∣ a ∣ div suc α-1)
+a/α ρ (+_ (suc α-1) x+ -cs +ℤ -k , lb) = let a = - [ ρ /x]↓ (-cs ∷+ -k) in sign a ◃ (∣ a ∣ div suc α-1)
 a/α ρ (-[1+ n ] x+ -cs +ℤ -k , ())
 
 b/β : ∀ {i} → Env i → Constraint (suc i) UpperBound → ℤ
 b/β ρ (+_ c x+ cs +ℤ k , _≤_.+≤+ ())
-b/β ρ (-[1+ β-1 ] x+ cs +ℤ k , ub) = let b = [ ρ /x]⇓ (cs ∷+ k) in sign b ◃ (∣ b ∣ div suc β-1)
+b/β ρ (-[1+ β-1 ] x+ cs +ℤ k , ub) = let b = [ ρ /x]↓ (cs ∷+ k) in sign b ◃ (∣ b ∣ div suc β-1)
 \end{code}
 %</evaluation>
 
-%<*truth>
+%<*meaning>
 \begin{code}
 ⊨⇓ : Linear 0 → Set
 ⊨⇓ a = (+ 0) ≤ (Linear.k a)
+\end{code}
+%</meaning>
 
+\begin{code}
 ⊨[_/x] : ∀ {i} → Env i → Linear i → Set
 ⊨[ ρ /x] a = ⊨⇓ ([ ρ /x] a)
 
@@ -203,14 +205,14 @@ b/β ρ (-[1+ β-1 ] x+ cs +ℤ k , ub) = let b = [ ρ /x]⇓ (cs ∷+ k) in sig
 
 ⊨[_/x]ᵢ : ∀ {i} → Env i → Constraint i Irrelevant → Set
 ⊨[ ρ /x]ᵢ (ir , _) = ⊨[ ρ /x] ir
+\end{code}
 
+%<*meaning-all>
+\begin{code}
 ⊨ : ∀ {i} → List (Linear i) → Set
 ⊨ {i} as = Σ (Env i) λ ρ → All ⊨[ ρ /x] as
-
-⊨ₚ : ∀ {i} → List (Pair i) → Set
-⊨ₚ {i} as = Σ (Env i) λ ρ → All ⊨[ ρ /x]ₚ as
 \end{code}
-%</truth>
+%</meaning-all>
 
 %<*decidability>
 \begin{code}
@@ -225,12 +227,6 @@ b/β ρ (-[1+ β-1 ] x+ cs +ℤ k , ub) = let b = [ ρ /x]⇓ (cs ∷+ k) in sig
 ⟦ (l , _) , u , _ ⟧[ ρ /x]ₚ | yes pl | yes pu = yes (pl , pu)
 ⟦ (l , _) , u , _ ⟧[ ρ /x]ₚ | _      | no ¬pu = no λ {(_ , pu) → ¬pu pu}
 ⟦ (l , _) , u , _ ⟧[ ρ /x]ₚ | no ¬pl | _      = no λ {(pl , _) → ¬pl pl}
-
-⟦_⟧ : ∀ {i} → (as : List (Linear i)) → (ρ : Env i) → Dec (All ⊨[ ρ /x] as)
-⟦ as ⟧ ρ = all ⟦_⟧[ ρ /x] as
-
-⟦_⟧ₚ : ∀ {i} → (lus : List (Pair i)) → (ρ : Env i) → Dec (All ⊨[ ρ /x]ₚ lus)
-⟦ lus ⟧ₚ ρ = all ⟦_⟧[ ρ /x]ₚ lus
 \end{code}
 %</decidability>
 
@@ -344,7 +340,7 @@ lemma₁ : ∀ {i} (csa : Vec ℤ i) (ka n : ℤ) → (csa ∷+ ka) ⊕ (# n) �
 lemma₁ csa ka n = begin 
   (csa ∷+ ka) ⊕ (# n)
     ≡⟨⟩
-  Vec.zipWith _+_ csa (cs (# n)) ∷+ (ka + n)
+  Vec.zipWith _+_ csa (Linear.cs (# n)) ∷+ (ka + n)
     ≡⟨⟩
   Vec.zipWith _+_ csa (Vec.replicate (+ 0)) ∷+ (ka + n)
     ≡⟨ cong (_∷+ (ka + n)) (VecProp.zipWith-replicate₂ _+_ csa (+ 0)) ⟩
@@ -370,7 +366,7 @@ lemma₃ : (m : ℤ) (n : ℤ) → (+ 0) ≤ n → m - n ≤ m
 lemma₃ m n 0≤n = {!!}
 
 lemma₄ : ∀ {i} (ρ : Env i) (csa : Vec ℤ i) (ka : ℤ)
-       → [ ρ /x]⇓ (csa ∷+ ka) ≡ ([ ρ /x]⇓ (csa ∷+ (+ 0))) + ka
+       → [ ρ /x]↓ (csa ∷+ ka) ≡ ([ ρ /x]↓ (csa ∷+ (+ 0))) + ka
 lemma₄ ρ csa ka = {!!}
 \end{code}
    
@@ -427,21 +423,21 @@ module norrish-inner (i : ℕ) (ρ : Env i) (xs : List ℤ)
   ... | (csa ∷+ ka) | >[ eq ]< = begin
     + 0
       ≤⟨ ⊨ds ⟩
-    [ ρ /x]⇓ ((α ⊛ b) ⊝ (β ⊛ a) ⊝ (# ((α - + 1) * (β - + 1))))
-      ≡⟨ cong (λ ⊚ → [ ρ /x]⇓ (⊚ ⊝ (# ((α - + 1) * (β - + 1))))) eq ⟩
-    [ ρ /x]⇓ ((csa ∷+ ka) ⊝ (# ((α - + 1) * (β - + 1))))
-      ≡⟨ cong (λ ⊚ → [ ρ /x]⇓ ((csa ∷+ ka) ⊕ ⊚)) (lemma₂ ((α - + 1) * (β - + 1))) ⟩
-    [ ρ /x]⇓ ((csa ∷+ ka) ⊕ (# (- ((α - + 1) * (β - + 1)))))
-      ≡⟨ cong [ ρ /x]⇓_ (lemma₁ csa ka (- ((α - + 1) * (β - + 1)))) ⟩
-    [ ρ /x]⇓ (csa ∷+ (ka - (α - + 1) * (β - + 1)))
+    [ ρ /x]↓ ((α ⊛ b) ⊝ (β ⊛ a) ⊝ (# ((α - + 1) * (β - + 1))))
+      ≡⟨ cong (λ ⊚ → [ ρ /x]↓ (⊚ ⊝ (# ((α - + 1) * (β - + 1))))) eq ⟩
+    [ ρ /x]↓ ((csa ∷+ ka) ⊝ (# ((α - + 1) * (β - + 1))))
+      ≡⟨ cong (λ ⊚ → [ ρ /x]↓ ((csa ∷+ ka) ⊕ ⊚)) (lemma₂ ((α - + 1) * (β - + 1))) ⟩
+    [ ρ /x]↓ ((csa ∷+ ka) ⊕ (# (- ((α - + 1) * (β - + 1)))))
+      ≡⟨ cong [ ρ /x]↓_ (lemma₁ csa ka (- ((α - + 1) * (β - + 1)))) ⟩
+    [ ρ /x]↓ (csa ∷+ (ka - (α - + 1) * (β - + 1)))
       ≡⟨ lemma₄ ρ csa _ ⟩
-    [ ρ /x]⇓ (csa ∷+ (+ 0)) + (ka - (α - + 1) * (β - + 1))
-      ≡⟨ sym (IntProp.+-assoc ([ ρ /x]⇓ (csa ∷+ (+ 0))) ka (- ((α - + 1) * (β - + 1)))) ⟩
-    ([ ρ /x]⇓ (csa ∷+ (+ 0)) + ka) - (α - + 1) * (β - + 1)
+    [ ρ /x]↓ (csa ∷+ (+ 0)) + (ka - (α - + 1) * (β - + 1))
+      ≡⟨ sym (IntProp.+-assoc ([ ρ /x]↓ (csa ∷+ (+ 0))) ka (- ((α - + 1) * (β - + 1)))) ⟩
+    ([ ρ /x]↓ (csa ∷+ (+ 0)) + ka) - (α - + 1) * (β - + 1)
       ≤⟨ lemma₃ _ _ 0≤[α-1][β-1] ⟩
-    [ ρ /x]⇓ (csa ∷+ (+ 0)) + ka
+    [ ρ /x]↓ (csa ∷+ (+ 0)) + ka
       ≡⟨ sym (lemma₄ ρ csa ka) ⟩
-    [ ρ /x]⇓ (csa ∷+ ka)
+    [ ρ /x]↓ (csa ∷+ ka)
       ∎
     where open ≤-Reasoning
 
@@ -456,24 +452,24 @@ module norrish-inner (i : ℕ) (ρ : Env i) (xs : List ℤ)
       r₁ = begin
         + 0
           ≤⟨ {!!} ⟩
-        [ ρ /x]⇓ ((β ⊛ a) ⊝ (# (α * β * n)) ⊝ (# (+ 1)))
+        [ ρ /x]↓ ((β ⊛ a) ⊝ (# (α * β * n)) ⊝ (# (+ 1)))
           ∎
       r₂ = begin
         + 0
           ≤⟨ {!!} ⟩
-        [ ρ /x]⇓ ((α ⊛ b) ⊝ (β ⊛ a))
+        [ ρ /x]↓ ((α ⊛ b) ⊝ (β ⊛ a))
           ∎
       r₃ = begin
         + 0
           ≤⟨ {!!} ⟩
-        [ ρ /x]⇓ ((# (α * β * (n + + 1))) ⊝ (α ⊛ b) ⊝ (# (+ 1)))
+        [ ρ /x]↓ ((# (α * β * (n + + 1))) ⊝ (α ⊛ b) ⊝ (# (+ 1)))
           ∎
 
   ⊨α≤αβ[n+1]-αb : All ⊨[ ρ /x] αβn<aβ≤αb<αβ[n+1] → ⊨[ ρ /x] α≤αβ[n+1]-αb
   ⊨α≤αβ[n+1]-αb (⊨p₁ ∷ ⊨p₂ ∷ ⊨p₃ ∷ []) = begin 
     + 0
       ≤⟨ {!!} ⟩
-    [ ρ /x]⇓ α≤αβ[n+1]-αb
+    [ ρ /x]↓ α≤αβ[n+1]-αb
       ∎
     where open ≤-Reasoning
 
@@ -481,7 +477,7 @@ module norrish-inner (i : ℕ) (ρ : Env i) (xs : List ℤ)
   ⊨β≤aβ-αβn (⊨p₁ ∷ ⊨p₂ ∷ ⊨p₃ ∷ []) = begin 
     + 0
       ≤⟨ {!!} ⟩
-    [ ρ /x]⇓ β≤aβ-αβn
+    [ ρ /x]↓ β≤aβ-αβn
       ∎
     where open ≤-Reasoning
 
@@ -588,32 +584,41 @@ module _ {i : ℕ} (ρ : Env i) where
 \end{code}
 %</find-x>
 
-%<*elimination>
+%<*result>
+\begin{code}
+data Result : Set where
+  satisfiable unsatisfiable undecided : Result
+\end{code}
+%</result>
+
 \begin{code}
 elim-irrel : ∀ {i} → List (Constraint (suc i) Irrelevant) → List (Linear i)
 elim-irrel = List.map (tail ∘ proj₁)
-
-data Result : Set where
-  satisfiable unsatisfiable undecided : Result
 
 exact-α : ∀ {i} → Decidable {A = Constraint (suc i) LowerBound} λ l → + 1 ≡ head (proj₁ l)
 exact-α l = + 1 ≟ head (proj₁ l)
 
 exact-β : ∀ {i} → Decidable {A = Constraint (suc i) UpperBound} λ l → - + 1 ≡ head (proj₁ l)
 exact-β l = - + 1 ≟ head (proj₁ l)
+\end{code}
+
+%<*elimination>
+\begin{code}
+interpret : ∀ {i}
+       → List (Constraint (suc i) LowerBound)
+       → List (Constraint (suc i) UpperBound)
+       → Result → Result
+interpret ls us unsatisfiable with all exact-α ls | all exact-β us
+... | no _ | no _ = undecided
+... | _    | _    = unsatisfiable
+interpret ls us r = r
 
 ⟦_⟧Ω : ∀ {i} → List (Linear i) → Result
-⟦_⟧Ω {zero} as with ⟦ as ⟧ []
+⟦_⟧Ω {zero} as with all ⟦_⟧[ [] /x] as
 ...            | yes p = satisfiable
 ...            | no ¬p = unsatisfiable
 ⟦_⟧Ω {suc i} as with partition as
-...             | ls , is , us with ⟦ elim-irrel is ++ omega (×-list ls us) ⟧Ω
-...                            | undecided = undecided
-...                            | satisfiable = satisfiable
-...                            | unsatisfiable with all exact-α ls | all exact-β us
-...                                            | yes _       | _     = unsatisfiable
-...                                            | no _        | yes _ = unsatisfiable
-...                                            | no _        | no _  = undecided
+...             | ls , is , us = interpret ls us ⟦ elim-irrel is ++ omega (×-list ls us) ⟧Ω 
 \end{code}
 %</elimination>
 
@@ -647,7 +652,7 @@ prepend-x ρ x (ir ∷ irs) (⊨Ωir ∷ ⊨Ωirs) = one ρ x ir ⊨Ωir ∷ (pr
 %<*correct>
 \begin{code}
 unsat : ∀ {i} (as : List (Linear i)) → ⟦ as ⟧Ω ≡ unsatisfiable → ⊨ as → ⊥
-unsat {zero} as ep with ⟦ as ⟧ []
+unsat {zero} as ep with all ⟦_⟧[ [] /x] as
 unsat {zero} as () | yes p
 unsat {zero} as ep | no ¬p = λ {(ρ , ⊨as) → ¬p {!⊨as!}}
 unsat {suc i} as ep with partition as
@@ -662,7 +667,7 @@ unsat {suc i} as ep | ls , irs , us | lus | unsatisfiable | j | no _ | yes ∀β
 unsat {suc i} as () | ls , irs , us | lus | unsatisfiable | j | no _ | no _
 
 sat : ∀ {i} (as : List (Linear i)) → ⟦ as ⟧Ω ≡ satisfiable → ⊨ as
-sat {zero} as ep with ⟦ as ⟧ []
+sat {zero} as ep with all ⟦_⟧[ [] /x] as
 sat {zero} as ep | yes p = [] , p
 sat {zero} as () | no ¬p
 sat {suc i} as ep with partition as
