@@ -45,11 +45,6 @@ module ≡-Reasoning = Relation.Binary.PropositionalEquality.≡-Reasoning
 
 ×-list : {X Y : Set}(xs : List X)(ys : List Y) → List (X × Y)
 ×-list xs = List.concat ∘ List.map (λ y → List.map (_, y) xs)
-
-_<?_ : (x y : ℤ) → Dec (x < y)
-x <? y with (+ 1 + x) ≤? y
-x <? y | yes p = yes p
-x <? y | no ¬p = no ¬p
 \end{code}
 
 %<*formula>
@@ -198,7 +193,7 @@ b/β ρ (-[1+ β-1 ] x+ cs +ℤ k , ub) = let b = [ ρ /x]⇓ (cs ∷+ k) in sig
 %<*truth>
 \begin{code}
 ⊨⇓ : Linear 0 → Set
-⊨⇓ a = (+ 0) < (Linear.k a)
+⊨⇓ a = (+ 0) ≤ (Linear.k a)
 
 ⊨[_/x] : ∀ {i} → Env i → Linear i → Set
 ⊨[ ρ /x] a = ⊨⇓ ([ ρ /x] a)
@@ -220,7 +215,7 @@ b/β ρ (-[1+ β-1 ] x+ cs +ℤ k , ub) = let b = [ ρ /x]⇓ (cs ∷+ k) in sig
 %<*decidability>
 \begin{code}
 ⟦_⟧⇓ : (a : Linear 0) → Dec (⊨⇓ a)
-⟦ a ⟧⇓ = (+ 0) <? (Linear.k a)
+⟦ a ⟧⇓ = (+ 0) ≤? (Linear.k a)
 
 ⟦_⟧[_/x] : ∀ {i} → (a : Linear i) → (ρ : Env i) → Dec (⊨[ ρ /x] a)
 ⟦ a ⟧[ ρ /x] = ⟦ [ ρ /x] a ⟧⇓
@@ -430,7 +425,7 @@ module norrish-inner (i : ℕ) (ρ : Env i) (xs : List ℤ)
   ⊨βa≤αb : ⊨[ ρ /x] [α-1][β-1]≤αb-aβ → ⊨[ ρ /x] aβ≤αb
   ⊨βa≤αb ⊨ds with (α ⊛ b) ⊝ (β ⊛ a) | inspect (_⊝_ (α ⊛ b)) (β ⊛ a)
   ... | (csa ∷+ ka) | >[ eq ]< = begin
-    + 1
+    + 0
       ≤⟨ ⊨ds ⟩
     [ ρ /x]⇓ ((α ⊛ b) ⊝ (β ⊛ a) ⊝ (# ((α - + 1) * (β - + 1))))
       ≡⟨ cong (λ ⊚ → [ ρ /x]⇓ (⊚ ⊝ (# ((α - + 1) * (β - + 1))))) eq ⟩
@@ -459,24 +454,24 @@ module norrish-inner (i : ℕ) (ρ : Env i) (xs : List ℤ)
       -- ⊭aβ≤αβx≤αb ρ' (⊨p₃ ∷ ⊨p₄ ∷ []) = ⊭p₂ ρ' ({!!} ∷ {!!} ∷ [])
 
       r₁ = begin
-        + 1
+        + 0
           ≤⟨ {!!} ⟩
         [ ρ /x]⇓ ((β ⊛ a) ⊝ (# (α * β * n)) ⊝ (# (+ 1)))
           ∎
       r₂ = begin
-        + 1
+        + 0
           ≤⟨ {!!} ⟩
         [ ρ /x]⇓ ((α ⊛ b) ⊝ (β ⊛ a))
           ∎
       r₃ = begin
-        + 1
+        + 0
           ≤⟨ {!!} ⟩
         [ ρ /x]⇓ ((# (α * β * (n + + 1))) ⊝ (α ⊛ b) ⊝ (# (+ 1)))
           ∎
 
   ⊨α≤αβ[n+1]-αb : All ⊨[ ρ /x] αβn<aβ≤αb<αβ[n+1] → ⊨[ ρ /x] α≤αβ[n+1]-αb
   ⊨α≤αβ[n+1]-αb (⊨p₁ ∷ ⊨p₂ ∷ ⊨p₃ ∷ []) = begin 
-    + 1
+    + 0
       ≤⟨ {!!} ⟩
     [ ρ /x]⇓ α≤αβ[n+1]-αb
       ∎
@@ -484,7 +479,7 @@ module norrish-inner (i : ℕ) (ρ : Env i) (xs : List ℤ)
 
   ⊨β≤aβ-αβn : All ⊨[ ρ /x] αβn<aβ≤αb<αβ[n+1] → ⊨[ ρ /x] β≤aβ-αβn
   ⊨β≤aβ-αβn (⊨p₁ ∷ ⊨p₂ ∷ ⊨p₃ ∷ []) = begin 
-    + 1
+    + 0
       ≤⟨ {!!} ⟩
     [ ρ /x]⇓ β≤aβ-αβn
       ∎
@@ -570,7 +565,7 @@ module _ {i : ℕ} (ρ : Env i) where
                    → (⊨Ωlus : All ⊨[ ρ /x] (omega lus))
                    → (∀[ xs ] λ x → ¬ ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
                    → ⊥
-  by-contradiction lus xs  ⊨Ωlus ∀xs¬∀lus = inner lus ⊨Ωlus (∀xs→¬∀lus⇒∃lus→¬∃xs lus xs ∀xs¬∀lus)
+  by-contradiction lus xs ⊨Ωlus ∀xs¬∀lus = inner lus ⊨Ωlus (∀xs→¬∀lus⇒∃lus→¬∃xs lus xs ∀xs¬∀lus)
     where
     inner : (lus : List (Pair (suc i)))
           → (⊨Ωlus : All ⊨[ ρ /x] (omega lus))
@@ -593,38 +588,32 @@ module _ {i : ℕ} (ρ : Env i) where
 \end{code}
 %</find-x>
 
-    
+%<*elimination>
 \begin{code}
 elim-irrel : ∀ {i} → List (Constraint (suc i) Irrelevant) → List (Linear i)
 elim-irrel = List.map (tail ∘ proj₁)
 
-data EnvTree : Set where
-  var     : ℤ → EnvTree
-  sub-env : List EnvTree → EnvTree
+data Result : Set where
+  satisfiable unsatisfiable undecided : Result
 
-⟦_⟧Ω' : DNF 0 → Bool
-⟦ dnf ⟧Ω' = {!!}
-  where
-  open import Data.Bool
-  mutual
-    eval-conjunction : ∀ {i} → Conjunction i → Bool
-    eval-conjunction {zero} 0≤ cs ∧ es E = {!!}
-    eval-conjunction {suc i} 0≤ cs ∧ es E = {!!}
+exact-α : ∀ {i} → Decidable {A = Constraint (suc i) LowerBound} λ l → + 1 ≡ head (proj₁ l)
+exact-α l = + 1 ≟ head (proj₁ l)
 
-    eval-existential : ∀ {i} → Existential i → Bool
-    eval-existential (¬∃ x) = false -- TODO: explain
-    eval-existential (∃ x) = {!!}
+exact-β : ∀ {i} → Decidable {A = Constraint (suc i) UpperBound} λ l → - + 1 ≡ head (proj₁ l)
+exact-β l = - + 1 ≟ head (proj₁ l)
 
-\end{code}
-
-%<*elimination>
-\begin{code}
-⟦_⟧Ω : ∀ {i} → List (Linear i) → Bool
+⟦_⟧Ω : ∀ {i} → List (Linear i) → Result
 ⟦_⟧Ω {zero} as with ⟦ as ⟧ []
-...           | yes p = true
-...           | no ¬p = false
+...            | yes p = satisfiable
+...            | no ¬p = unsatisfiable
 ⟦_⟧Ω {suc i} as with partition as
-...             | ls , is , us = ⟦ elim-irrel is ++ omega (×-list ls us) ⟧Ω
+...             | ls , is , us with ⟦ elim-irrel is ++ omega (×-list ls us) ⟧Ω
+...                            | undecided = undecided
+...                            | satisfiable = satisfiable
+...                            | unsatisfiable with all exact-α ls | all exact-β us
+...                                            | yes _       | _     = unsatisfiable
+...                                            | no _        | yes _ = unsatisfiable
+...                                            | no _        | no _  = undecided
 \end{code}
 %</elimination>
 
@@ -632,8 +621,9 @@ data EnvTree : Set where
 \begin{code}
 ⟦_⟧Ω-Correct : ∀ {i} (as : List (Linear i)) → Set
 ⟦_⟧Ω-Correct as with ⟦ as ⟧Ω
-⟦_⟧Ω-Correct as | false = ⊤
-⟦_⟧Ω-Correct as | true  = ⊨ as
+⟦_⟧Ω-Correct as | undecided      = ⊤
+⟦_⟧Ω-Correct as | satisfiable    = ⊨ as
+⟦_⟧Ω-Correct as | unsatisfiable  = ⊨ as → ⊥
 \end{code}
 %</correctness>
 
@@ -656,24 +646,44 @@ prepend-x ρ x (ir ∷ irs) (⊨Ωir ∷ ⊨Ωirs) = one ρ x ir ⊨Ωir ∷ (pr
 
 %<*correct>
 \begin{code}
+unsat : ∀ {i} (as : List (Linear i)) → ⟦ as ⟧Ω ≡ unsatisfiable → ⊨ as → ⊥
+unsat {zero} as ep with ⟦ as ⟧ []
+unsat {zero} as () | yes p
+unsat {zero} as ep | no ¬p = λ {(ρ , ⊨as) → ¬p {!⊨as!}}
+unsat {suc i} as ep with partition as
+... | ls , irs , us with ×-list ls us
+... | lus with ⟦ elim-irrel irs ++ omega lus ⟧Ω | inspect ⟦_⟧Ω (elim-irrel irs ++ omega lus)
+unsat {suc i} as () | ls , irs , us | lus | undecided | _
+unsat {suc i} as () | ls , irs , us | lus | satisfiable | _
+unsat {suc i} as ep | ls , irs , us | lus | unsatisfiable | j with all exact-α ls
+unsat {suc i} as ep | ls , irs , us | lus | unsatisfiable | j | yes ∀α≡1 = {!!}
+unsat {suc i} as ep | ls , irs , us | lus | unsatisfiable | j | no _ with all exact-β us
+unsat {suc i} as ep | ls , irs , us | lus | unsatisfiable | j | no _ | yes ∀β≡1 = {!!}
+unsat {suc i} as () | ls , irs , us | lus | unsatisfiable | j | no _ | no _
+
+sat : ∀ {i} (as : List (Linear i)) → ⟦ as ⟧Ω ≡ satisfiable → ⊨ as
+sat {zero} as ep with ⟦ as ⟧ []
+sat {zero} as ep | yes p = [] , p
+sat {zero} as () | no ¬p
+sat {suc i} as ep with partition as
+... | ls , irs , us with ×-list ls us
+... | lus with ⟦ elim-irrel irs ++ omega lus ⟧Ω | inspect ⟦_⟧Ω (elim-irrel irs ++ omega lus)
+sat {suc i} as () | ls , irs , us | lus | undecided | _
+sat {suc i} as ep | ls , irs , us | lus | unsatisfiable | _ with all exact-α ls
+sat {suc i} as () | ls , irs , us | lus | unsatisfiable | _ | yes _
+sat {suc i} as ep | ls , irs , us | lus | unsatisfiable | _ | no _  with all exact-β us
+sat {suc i} as () | ls , irs , us | lus | unsatisfiable | _ | no _  | yes p
+sat {suc i} as () | ls , irs , us | lus | unsatisfiable | _ | no _  | no _ 
+sat {suc i} as ep | ls , irs , us | lus | satisfiable  | >[ eq ]< with sat (elim-irrel irs ++ omega lus) eq
+sat {suc i} as ep | ls , irs , us | lus | _ | _ | ρ , ⊨Ωas with AllProp.++⁻ (elim-irrel irs) ⊨Ωas
+sat {suc i} as ep | ls , irs , us | lus | _ | _ | ρ , ⊨Ωas | ⊨Ωirs , ⊨Ωlus with find-x ρ lus ⊨Ωlus
+sat {suc i} as ep | ls , irs , us | lus | _ | _ | ρ , ⊨Ωas | ⊨Ωirs , ⊨Ωlus | x , ⊨lus with prepend-x ρ x irs ⊨Ωirs
+... | ⊨irs = {!!}
+
 ⟦_⟧Ω-correct : ∀ {i} (as : List (Linear i)) → ⟦ as ⟧Ω-Correct
 ⟦_⟧Ω-correct as with ⟦ as ⟧Ω | inspect ⟦_⟧Ω as
-⟦_⟧Ω-correct as | false | j = tt
-⟦_⟧Ω-correct as | true | >[ eq ]< = inner as eq
-  where
-  
-  inner : ∀ {i} (as : List (Linear i)) → ⟦ as ⟧Ω ≡ true → ⊨ as
-  inner {zero} as ep with ⟦ as ⟧ []
-  inner {zero} as ep | yes p = [] , p
-  inner {zero} as () | no ¬p
-  inner {suc i} as ep with partition as
-  ... | ls , irs , us with ×-list ls us
-  ... | lus with ⟦ elim-irrel irs ++ omega lus ⟧Ω | inspect ⟦_⟧Ω (elim-irrel irs ++ omega lus)
-  inner {suc i} as () | _ , irs , _ | lus | false | _
-  inner {suc i} as ep | _ , irs , _ | lus | true  | >[ eq ]< with inner (elim-irrel irs ++ omega lus) eq
-  inner {suc i} as ep | _ , irs , _ | lus | _ | _ | ρ , ⊨Ωas with AllProp.++⁻ (elim-irrel irs) ⊨Ωas
-  inner {suc i} as ep | _ , irs , _ | lus | _ | _ | ρ , ⊨Ωas | ⊨Ωirs , ⊨Ωlus with find-x ρ lus ⊨Ωlus
-  inner {suc i} as ep | _ , irs , _ | lus | _ | _ | ρ , ⊨Ωas | ⊨Ωirs , ⊨Ωlus | x , ⊨lus with prepend-x ρ x irs ⊨Ωirs
-  ... | ⊨irs = {!!}
+⟦_⟧Ω-correct as | undecided     | _        = tt
+⟦_⟧Ω-correct as | unsatisfiable | >[ eq ]< = unsat as eq
+⟦_⟧Ω-correct as | satisfiable   | >[ eq ]< = sat as eq
 \end{code}
 %</correct>
