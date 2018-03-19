@@ -132,6 +132,87 @@ tail (c x+ cs +ℤ k) = cs ∷+ k
 \end{code}
 %</linear-ops>
 
+%<*normal-form>
+\begin{code}
+mutual
+  data Existential (i : ℕ) : Set where
+    ¬∃ : Conjunction (suc i) → Existential i
+    ∃  : Conjunction (suc i) → Existential i
+
+  record Conjunction (i : ℕ) : Set where
+    inductive
+    constructor 0≤_∧_E
+    field
+      constraints : List (Linear i)
+      existentials : List (Existential i)
+
+DNF : (i : ℕ) → Set
+DNF i = List (Conjunction i)
+\end{code}
+%</normal-form>
+
+\begin{code}
+open Existential public
+open Conjunction public
+\end{code}
+
+%<*normalisation>
+\begin{code}
+¬-existential : ∀ {i} → Existential i → Existential i
+¬-existential (¬∃ x) = ∃ x
+¬-existential (∃ x) = ¬∃ x
+  
+¬-conjunction : ∀ {i} → Conjunction i → DNF i
+¬-conjunction 0≤ cs ∧ bs E = List.map (λ c → 0≤ ⊘ c ∷ [] ∧                   [] E) cs
+                          ++ List.map (λ b → 0≤       [] ∧ ¬-existential b ∷ [] E) bs
+                                                                                             
+_∧-dnf_ : ∀ {i} → DNF i → DNF i → DNF i
+xs ∧-dnf ys = List.map 
+   (λ {((0≤ cx ∧ bx E) , (0≤ cy ∧ by E)) → 0≤ cx ++ cy ∧ bx ++ by E})
+   (×-list xs ys)
+
+_∨-dnf_ : ∀ {i} → DNF i → DNF i → DNF i
+_∨-dnf_ = _++_
+
+¬-dnf_ : ∀ {i} → DNF i → DNF i
+¬-dnf_ = List.foldl (λ dnf conj → dnf ∧-dnf ¬-conjunction conj) []
+
+_⇒-dnf_ : ∀ {i} → DNF i → DNF i → DNF i
+xs ⇒-dnf ys = (¬-dnf xs) ∨-dnf (xs ∧-dnf ys)
+
+∃-dnf_ : ∀ {i} → DNF (suc i) → DNF i
+∃-dnf_ = List.map λ conj → 0≤ [] ∧ (∃ conj ∷ []) E
+                                                   
+∀-dnf : ∀ {i} → DNF (suc i) → DNF i
+∀-dnf = ¬-dnf_ ∘ ∃-dnf_ ∘ ¬-dnf_
+
+norm-rel : ∀ {i} → Rel → Linear i → Linear i → List (Linear i)
+norm-rel <' l₁ l₂ = (l₂ ⊝ l₁) ⊕ (# (+ 1)) ∷ []
+norm-rel >' l₁ l₂ = (l₁ ⊝ l₂) ⊕ (# (+ 1)) ∷ []
+norm-rel ≤' l₁ l₂ = l₂ ⊝ l₁ ∷ []
+norm-rel ≥' l₁ l₂ = l₁ ⊝ l₂ ∷ []
+norm-rel =' l₁ l₂ = l₂ ⊝ l₁ ∷ l₁ ⊝ l₂ ∷ []
+
+norm-atom : ∀ {i} → Atom i → Linear i
+norm-atom (num' n) = # n
+norm-atom (x +' y) = (norm-atom x) ⊕ (norm-atom y)
+norm-atom (n *' x) = n ⊛ (norm-atom x)
+norm-atom (var' zero) = (+ 1) x+ ∅
+norm-atom (var' (suc n)) with norm-atom (var' n)
+...                     | cs ∷+ k = (+ 0) x+ cs +ℤ k
+  
+norm-form : {i : ℕ} → Formula i → DNF i
+norm-form (x ∧' y) = (norm-form x) ∧-dnf (norm-form y)
+norm-form (x ∨' y) = (norm-form x) ∨-dnf (norm-form y)
+norm-form (x ⇒' y) = (norm-form x) ⇒-dnf (norm-form y)
+norm-form (¬' x) = ¬-dnf (norm-form x)
+norm-form (∃' x) = ∃-dnf (norm-form x)
+norm-form (∀' x) = ∀-dnf (norm-form x)
+norm-form (d ∣' x) = 0≤ {!!} ∧ [] E ∷ []
+norm-form (x [ r ] y) = 0≤ norm-rel r (norm-atom x) (norm-atom y) ∧ [] E ∷ []
+\end{code}
+%</normalisation>
+
 %<*constraints>
 \begin{code}
 Irrelevant : ∀ {i} → Linear i → Set
@@ -230,87 +311,6 @@ b/β ρ (-[1+ β-1 ] x+ cs +ℤ k , ub) = let b = [ ρ /x]↓ (cs ∷+ k) in sig
 \end{code}
 %</decidability>
 
-%<*normal-form>
-\begin{code}
-mutual
-  data Existential (i : ℕ) : Set where
-    ¬∃ : Conjunction (suc i) → Existential i
-    ∃  : Conjunction (suc i) → Existential i
-
-  record Conjunction (i : ℕ) : Set where
-    inductive
-    constructor 0≤_∧_E
-    field
-      constraints : List (Linear i)
-      existentials : List (Existential i)
-
-DNF : (i : ℕ) → Set
-DNF i = List (Conjunction i)
-\end{code}
-%</normal-form>
-
-\begin{code}
-open Existential public
-open Conjunction public
-\end{code}
-
-%<*normalisation>
-\begin{code}
-¬-existential : ∀ {i} → Existential i → Existential i
-¬-existential (¬∃ x) = ∃ x
-¬-existential (∃ x) = ¬∃ x
-  
-¬-conjunction : ∀ {i} → Conjunction i → DNF i
-¬-conjunction 0≤ cs ∧ bs E = List.map (λ c → 0≤ ⊘ c ∷ [] ∧                   [] E) cs
-                          ++ List.map (λ b → 0≤       [] ∧ ¬-existential b ∷ [] E) bs
-                                                                                             
-_∧-dnf_ : ∀ {i} → DNF i → DNF i → DNF i
-xs ∧-dnf ys = List.map 
-   (λ {((0≤ cx ∧ bx E) , (0≤ cy ∧ by E)) → 0≤ cx ++ cy ∧ bx ++ by E})
-   (×-list xs ys)
-
-_∨-dnf_ : ∀ {i} → DNF i → DNF i → DNF i
-_∨-dnf_ = _++_
-
-¬-dnf_ : ∀ {i} → DNF i → DNF i
-¬-dnf_ = List.foldl (λ dnf conj → dnf ∧-dnf ¬-conjunction conj) []
-
-_⇒-dnf_ : ∀ {i} → DNF i → DNF i → DNF i
-xs ⇒-dnf ys = (¬-dnf xs) ∨-dnf (xs ∧-dnf ys)
-
-∃-dnf_ : ∀ {i} → DNF (suc i) → DNF i
-∃-dnf_ = List.map λ conj → 0≤ [] ∧ (∃ conj ∷ []) E
-                                                   
-∀-dnf : ∀ {i} → DNF (suc i) → DNF i
-∀-dnf = ¬-dnf_ ∘ ∃-dnf_ ∘ ¬-dnf_
-
-norm-rel : ∀ {i} → Rel → Linear i → Linear i → List (Linear i)
-norm-rel <' l₁ l₂ = (l₂ ⊝ l₁) ⊕ (# (+ 1)) ∷ []
-norm-rel >' l₁ l₂ = (l₁ ⊝ l₂) ⊕ (# (+ 1)) ∷ []
-norm-rel ≤' l₁ l₂ = l₂ ⊝ l₁ ∷ []
-norm-rel ≥' l₁ l₂ = l₁ ⊝ l₂ ∷ []
-norm-rel =' l₁ l₂ = l₂ ⊝ l₁ ∷ l₁ ⊝ l₂ ∷ []
-
-norm-atom : ∀ {i} → Atom i → Linear i
-norm-atom (num' n) = # n
-norm-atom (x +' y) = (norm-atom x) ⊕ (norm-atom y)
-norm-atom (n *' x) = n ⊛ (norm-atom x)
-norm-atom (var' zero) = (+ 1) x+ ∅
-norm-atom (var' (suc n)) with norm-atom (var' n)
-...                     | cs ∷+ k = (+ 0) x+ cs +ℤ k
-  
-norm-form : {i : ℕ} → Formula i → DNF i
-norm-form (x ∧' y) = (norm-form x) ∧-dnf (norm-form y)
-norm-form (x ∨' y) = (norm-form x) ∨-dnf (norm-form y)
-norm-form (x ⇒' y) = (norm-form x) ⇒-dnf (norm-form y)
-norm-form (¬' x) = ¬-dnf (norm-form x)
-norm-form (∃' x) = ∃-dnf (norm-form x)
-norm-form (∀' x) = ∀-dnf (norm-form x)
-norm-form (d ∣' x) = 0≤ {!!} ∧ [] E ∷ []
-norm-form (x [ r ] y) = 0≤ norm-rel r (norm-atom x) (norm-atom y) ∧ [] E ∷ []
-\end{code}
-%</normalisation>
-
 %<*dark-shadow>
 \begin{code}
 dark-shadow : ∀ {i} → Pair (suc i) → Linear i
@@ -333,8 +333,7 @@ lemma₀ {i} n = begin
     ≡⟨⟩
   (# (- n))
     ∎
-  where
-    open ≡-Reasoning
+  where open ≡-Reasoning
 
 lemma₁ : ∀ {i} (csa : Vec ℤ i) (ka n : ℤ) → (csa ∷+ ka) ⊕ (# n) ≡ (csa ∷+ (ka + n))
 lemma₁ csa ka n = begin 
@@ -511,76 +510,95 @@ stop ρ us = List.foldr _⊓_ (+ 0) (List.map (b/β ρ) us)
 
 search-space : ∀ {i} → Env i → (lus : List (Pair (suc i))) → List ℤ
 search-space ρ lus with start ρ (List.map proj₁ lus)
-search-space ρ lus | Δ₀ with Δ₀ - stop ρ (List.map proj₂ lus)
+search-space ρ lus | Δ₀ with stop ρ (List.map proj₂ lus) - Δ₀
 search-space ρ lus | Δ₀ | + n = List.applyUpTo (λ i → + i + Δ₀) n 
 search-space ρ lus | Δ₀ | -[1+ n ] = []
 \end{code}
 %</search-space>
 
+\begin{code}
+module _ {i : ℕ} (ρ : Env i) (xs : List ℤ) where
+\end{code}
+
+%<*norrish-type>
+\begin{code}
+  norrish : (lu : Pair (suc i))
+          → ¬ ∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]ₚ lu)
+          → ¬ ⊨[ ρ /x] (dark-shadow lu)
+\end{code}
+%</norrish-type>
+
 %<*norrish>
 \begin{code}
-norrish : ∀ {i} (ρ : Env i) (lu : Pair (suc i)) {xs : List ℤ}
-        → ¬ ∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]ₚ lu)
-        → ¬ ⊨[ ρ /x] (dark-shadow lu)
-
-norrish {i} ρ (l , u) {xs} ⊭xs ⊨Ωlu = proof
-  where
-    open norrish-inner i ρ xs l u
-    proof : ⊥
-    proof with ⊨αβn<aβ≤αb<αβ[n+1] (⊨βa≤αb ⊨Ωlu ) ⊭xs
-    proof | ps = ⊭[α-1][β-1]≤αb-aβ (⊨α≤αβ[n+1]-αb ps) (⊨β≤aβ-αβn ps) ⊨Ωlu
+  norrish (l , u) ⊭xs ⊨Ωlu = proof
+    where
+      open norrish-inner i ρ xs l u
+      proof : ⊥
+      proof with ⊨αβn<aβ≤αb<αβ[n+1] (⊨βa≤αb ⊨Ωlu ) ⊭xs
+      proof | ps = ⊭[α-1][β-1]≤αb-aβ (⊨α≤αβ[n+1]-αb ps) (⊨β≤aβ-αβn ps) ⊨Ωlu
 \end{code}
 %</norrish>
 
-
-%<*contradiction>
+%<*contradiction-adaptation>
 \begin{code}
-module _ {i : ℕ} (ρ : Env i) where
+  postulate ∀lus∃xs⇒∃xs∀lus : (lus : List (Pair (suc i)))
+                            → (∀[ lus ] (λ lu → ∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]ₚ lu)))
+                            → (∃[ xs ] (λ x → ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ))
 
-  ∀lus∃xs⇒∃xs∀lus : (lus : List (Pair (suc i))) (xs : List ℤ)
-                  → (∀[ lus ] (λ lu → ∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]ₚ lu)))
-                  → (∃[ xs ] (λ x → ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ))
-  ∀lus∃xs⇒∃xs∀lus lus xs ∀lus∃xs = {!!}
-
-  ∀xs→¬∀lus⇒∃lus→¬∃xs : (lus : List (Pair (suc i))) (xs : List ℤ)
+  ∀xs→¬∀lus⇒∃lus→¬∃xs : (lus : List (Pair (suc i)))
                       → (∀[ xs ] λ x → ¬ ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
                       → (∃[ lus ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
-  ∀xs→¬∀lus⇒∃lus→¬∃xs lus xs = begin
+
+  ∀xs→¬∀lus⇒∃lus→¬∃xs lus = begin
     (∀[ xs ] λ x → ¬ ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
       ⇒⟨ AllProp.All¬⇒¬Any ⟩
     (¬ ∃[ xs ] λ x → ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
-      ⇒⟨ (λ ¬∃xs∀lus ∀lus∃xs → ¬∃xs∀lus (∀lus∃xs⇒∃xs∀lus lus xs ∀lus∃xs)) ⟩
+      ⇒⟨ (λ ¬∃xs∀lus ∀lus∃xs → ¬∃xs∀lus (∀lus∃xs⇒∃xs∀lus lus ∀lus∃xs)) ⟩
     (¬ ∀[ lus ] λ lu → ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
       ⇒⟨ AllProp.¬All⇒Any¬ (λ lu → any (λ x → ⟦ lu ⟧[ x ∷ ρ /x]ₚ) xs) lus ⟩
     (∃[ lus ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
       ∎
-    where
-    open ⇒-Reasoning
-                      
-  by-contradiction : (lus : List (Pair (suc i))) (xs : List ℤ)
+    where open ⇒-Reasoning
+\end{code}
+%</contradiction-adaptation>
+
+%<*contradiction-search>
+\begin{code}
+  ¬∃lus→¬∃xs : (lus : List (Pair (suc i)))
+             → (⊨Ωlus : All ⊨[ ρ /x] (omega lus))
+             → (∃[ lus ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
+             → ⊥
+
+  ¬∃lus→¬∃xs [] [] ()
+  ¬∃lus→¬∃xs (lu ∷ lus) (⊨Ωlu ∷ ⊨Ωlus) (here ¬∃xs)       = norrish lu ¬∃xs ⊨Ωlu
+  ¬∃lus→¬∃xs (lu ∷ lus) (⊨Ωlu ∷ ⊨Ωlus) (there ∃lus→¬∃xs) = ¬∃lus→¬∃xs lus ⊨Ωlus ∃lus→¬∃xs
+\end{code}
+%</contradiction-search>
+
+%<*by-contradiction-type>
+\begin{code}
+  by-contradiction : (lus : List (Pair (suc i)))
                    → (⊨Ωlus : All ⊨[ ρ /x] (omega lus))
                    → (∀[ xs ] λ x → ¬ ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
                    → ⊥
-  by-contradiction lus xs ⊨Ωlus ∀xs¬∀lus = inner lus ⊨Ωlus (∀xs→¬∀lus⇒∃lus→¬∃xs lus xs ∀xs¬∀lus)
-    where
-    inner : (lus : List (Pair (suc i)))
-          → (⊨Ωlus : All ⊨[ ρ /x] (omega lus))
-          → (∃[ lus ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
-          → ⊥
-    inner [] [] ()
-    inner (lu ∷ lus) (⊨Ωlu ∷ ⊨Ωlus) (here ¬∃xs)       = norrish ρ lu ¬∃xs ⊨Ωlu
-    inner (lu ∷ lus) (⊨Ωlu ∷ ⊨Ωlus) (there ∃lus→¬∃xs) = inner lus ⊨Ωlus ∃lus→¬∃xs
 \end{code}
-%</contradiction>
+%</by-contradiction-type>
+
+%<*by-contradiction>
+\begin{code}
+  by-contradiction lus ⊨Ωlus ∀xs¬∀lus =
+    ¬∃lus→¬∃xs lus ⊨Ωlus (∀xs→¬∀lus⇒∃lus→¬∃xs lus ∀xs¬∀lus)
+\end{code}
+%</by-contradiction>
 
 %<*find-x>
 \begin{code}
-  find-x : ∀ (lus : List (Pair (suc i)))
-         → All ⊨[ ρ /x] (omega lus)
-         → Σ ℤ λ x → All ⊨[ x ∷ ρ /x]ₚ lus
+find-x : ∀ {i} (ρ : Env i) (lus : List (Pair (suc i)))
+       → All ⊨[ ρ /x] (omega lus)
+       → Σ ℤ λ x → All ⊨[ x ∷ ρ /x]ₚ lus
 
-  find-x lus ⊨Ωlus with search-space ρ lus
-  find-x lus ⊨Ωlus | xs = search (λ x → all ⟦_⟧[ x ∷ ρ /x]ₚ lus ) xs (by-contradiction lus xs ⊨Ωlus)
+find-x ρ lus ⊨Ωlus with search-space ρ lus
+find-x ρ lus ⊨Ωlus | xs = search (λ x → all ⟦_⟧[ x ∷ ρ /x]ₚ lus ) xs (by-contradiction ρ xs lus ⊨Ωlus)
 \end{code}
 %</find-x>
 
@@ -604,10 +622,9 @@ exact-β l = - + 1 ≟ head (proj₁ l)
 
 %<*elimination>
 \begin{code}
-interpret : ∀ {i}
-       → List (Constraint (suc i) LowerBound)
-       → List (Constraint (suc i) UpperBound)
-       → Result → Result
+interpret : ∀ {i} → List (Constraint (suc i) LowerBound)
+                  → List (Constraint (suc i) UpperBound)
+                  → Result → Result
 interpret ls us unsatisfiable with all exact-α ls | all exact-β us
 ... | no _ | no _ = undecided
 ... | _    | _    = unsatisfiable
@@ -651,17 +668,23 @@ prepend-x ρ x (ir ∷ irs) (⊨Ωir ∷ ⊨Ωirs) = one ρ x ir ⊨Ωir ∷ (pr
 
 %<*correct>
 \begin{code}
+foo : ∀ {i} (x : ℤ) (ρ : Env i) (lus : List (Pair (suc i))) → All ⊨[ x ∷ ρ /x]ₚ lus → All ⊨[ ρ /x] (omega lus)
+foo x ρ [] [] = []
+foo x ρ ((l , u) ∷ lus) ((⊨l , ⊨u) ∷ ⊨lus) = {!!}
+
 unsat : ∀ {i} (as : List (Linear i)) → ⟦ as ⟧Ω ≡ unsatisfiable → ⊨ as → ⊥
 unsat {zero} as ep with all ⟦_⟧[ [] /x] as
 unsat {zero} as () | yes p
-unsat {zero} as ep | no ¬p = λ {(ρ , ⊨as) → ¬p {!⊨as!}}
+unsat {zero} as ep | no ¬p = λ {([] , ⊨as) → ¬p ⊨as}
 unsat {suc i} as ep with partition as
 ... | ls , irs , us with ×-list ls us
 ... | lus with ⟦ elim-irrel irs ++ omega lus ⟧Ω | inspect ⟦_⟧Ω (elim-irrel irs ++ omega lus)
 unsat {suc i} as () | ls , irs , us | lus | undecided | _
 unsat {suc i} as () | ls , irs , us | lus | satisfiable | _
 unsat {suc i} as ep | ls , irs , us | lus | unsatisfiable | j with all exact-α ls
-unsat {suc i} as ep | ls , irs , us | lus | unsatisfiable | j | yes ∀α≡1 = {!!}
+unsat {suc i} as ep | ls , irs , us | lus | unsatisfiable | >[ eq ]< | yes ∀α≡1 with unsat (elim-irrel irs ++ omega lus) eq
+... | z = λ { ((x ∷ ρ) , ⊨smth) → z (ρ , {!!})}
+
 unsat {suc i} as ep | ls , irs , us | lus | unsatisfiable | j | no _ with all exact-β us
 unsat {suc i} as ep | ls , irs , us | lus | unsatisfiable | j | no _ | yes ∀β≡1 = {!!}
 unsat {suc i} as () | ls , irs , us | lus | unsatisfiable | j | no _ | no _

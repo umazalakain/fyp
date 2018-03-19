@@ -72,6 +72,9 @@
 % Include parts of other files
 \usepackage{catchfilebetweentags}
 
+% Intertext with less vertical space
+\usepackage{mathtools}
+
 \begin{document}
 
 \AgdaHide{
@@ -689,6 +692,9 @@ You can now leave a record of type rewrites and their justifications:
         ∎ 
 \end{code}
 
+\todo{Explain Σ types somewhere}
+\todo{Comment on ≤-Reasoning, ⇒-Reasoning}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Proof by reflection}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -706,6 +712,8 @@ terms that represent them. In the other direction, these abstract
 terms can be procedurally built and later ``unquoted'' into concrete
 Agda code. Additionally, Agda also offers means to directly control
 type checking and unification.
+
+\todo{Comment difference with Coq}
 
 Reflection is most commonly used to create ``tactics'' that
 programmatically proof propositions. For this common use case, Agda
@@ -1134,7 +1142,7 @@ constructive mathematics. The most well-documented procedures are on
 integers, and the usage of integer Presburger arithmetic is common
 enough for an automated solver to be of value. Given we can solve
 problems on integers, to solve problems on natural numbers, we just
-need add a condition $0 ≤ x$ to every existential quantifier.
+need add a condition $0 \leq x$ to every existential quantifier.
 
 We have choosen the Omega Test and Cooper's Algorithm as the two
 decision procedures on integers we find interesting to
@@ -1190,7 +1198,7 @@ double negation needs to be eliminated:
 Operations on ~\AgdaDatatype{Atom}s can be evaluated into linear
 transformations of the form $ax + by + \ldots + cz + k$. By limiting
 the domain to the integers, all constraints can be translated into a
-canonical form: $0 ≤ ax + by + \ldots + cz + k$. . We will use a
+canonical form: $0 \leq ax + by + \ldots + cz + k$. . We will use a
 single type to represent them both, and a a parameter on the type to
 keep record of the number of variables within. A vector of that same
 length will represent the coefficients $ax + by + \ldots + cz$, where
@@ -1203,11 +1211,11 @@ $k$.
 Relations can then be normalised as follows:
 
 \begin{align*}
-p < q &\equiv 0 ≤ q - p + 1 \\
-p > q &\equiv 0 ≤ p - q + 1 \\
-p ≤ q &\equiv 0 ≤ q - p     \\
-p ≥ q &\equiv 0 ≤ p - q     \\
-p = q &\equiv 0 ≤ q - p \land 0 ≤ p - q
+p < q    &\equiv 0 \leq q - p + 1 \\
+p > q    &\equiv 0 \leq p - q + 1 \\
+p \leq q &\equiv 0 \leq q - p     \\
+p \geq q &\equiv 0 \leq p - q     \\
+p = q    &\equiv 0 \leq q - p \land 0 \leq p - q
 \end{align*}
   
 Divide terms and their negations are a special case. The Omega Test
@@ -1259,19 +1267,19 @@ innermost existential quantifier:
 \subsection{Elimination}
 
 The Omega Test's quantifier elimination process operates on
-quantifier-free conjunctions of constraints of form $0 ≤ e$, where
+quantifier-free conjunctions of constraints of form $0 \leq e$, where
 every variable is existentially binded:
 
 \begin{theorem}[Pugh, 1991]
 Let $L(x)$ be a conjunction of lower bounds on $x$, indexed by $i$, of
-the form $a_i ≤ \alpha_i x$, with $\alpha_i$ positive and
+the form $a_i \leq \alpha_i x$, with $\alpha_i$ positive and
 non-zero. Similarly, let $U(x)$ be a set of upper bounds on $x$,
-indexed by $j$, of the form $\beta_j x ≤ b_j$, with $\beta_j$ positive
-and non-zero. Let $m$ be the maximum of all $\beta_j$s. Then:
+indexed by $j$, of the form $\beta_j x \leq b_j$, with $\beta_j$
+positive and non-zero. Let $m$ be the maximum of all $\beta_j$s. Then:
 
 \begin{align*}
 (∃x.L(x) ∧ U(x)) &\equiv
-\left(\bigwedge_{i,j} (\alpha_i - 1)(\beta_j - 1) ≤ (\alpha_i b_j - a_i \beta_j)\right) \\
+\left(\bigwedge_{i,j} (\alpha_i - 1)(\beta_j - 1) \leq (\alpha_i b_j - a_i \beta_j)\right) \\
 &\qquad {} \qquad {} \qquad {} \qquad {} \qquad {} \lor \\
 &\qquad {} \bigvee_i \bigvee^{\left\lfloor \alpha_i - \frac{\alpha_i}{m} - 1 \right\rfloor}_{k=0}
 ∃x. (\alpha_i x = a_i + k) \land L(x) \land U(x)
@@ -1285,7 +1293,7 @@ are $1$ — that is, if in every $(\alpha , \beta)$ pair $\alpha \equiv
 shadow}:
 
 \begin{align*}
-(∃x.L(x) ∧ U(x)) &\equiv \bigvee_{i,j} a_i \beta_j ≤ \alpha_i b_j
+∃x.L(x) ∧ U(x) \equiv \bigvee_{i,j} a_i \beta_j \leq \alpha_i b_j
 \end{align*}
 
 If the exact shadow is not applicable, the main theorem has to be
@@ -1303,22 +1311,22 @@ the Euclidean algorithm for the computation of greatest common
 divisors:
 
 \begin{align}
-  \intertext{$x$ is the variable to eliminate}
+  \shortintertext{$x$ is the variable to eliminate}
   ∃y. ∃x. &\ldots \land ax = by + e \land \ldots \\
-  \intertext{Find the lowest common divisor $ℓ$ of coefficients of $x$
+  \shortintertext{Find the lowest common divisor $ℓ$ of coefficients of $x$
         and multiply every constraint by an integer $n$ so that 
         its coeffiecient on $x$ is $ℓ$}
   ∃y. ∃x. &\ldots \land ℓx = b'y + e' \land \ldots \\
-  \intertext{Make all coeffients on $x$ be $1$ by resorting to the
+  \shortintertext{Make all coeffients on $x$ be $1$ by resorting to the
         equivalence $P(ℓx) \equiv P(x) \land ℓ ∣ x$.}
   ∃y. ∃x. &\ldots \land (x = b'y + e') \land (ℓ ∣ x) \land \ldots \\
-  \intertext{Substitute $x$}
+  \shortintertext{Substitute $x$}
   ∃y. &\ldots \land ℓ ∣ b'y + e' \land \ldots \label{eq:divides} \\
-  \intertext{Eliminate the divides term by introducing a new existential}
+  \shortintertext{Eliminate the divides term by introducing a new existential}
   ∃y. ∃z. &\ldots \land ℓz = b'y + e' \land \ldots \\
-  \intertext{Rearrange}
+  \shortintertext{Rearrange}
   ∃y. ∃z. &\ldots \land b'y = ℓz - e' \land \ldots
-  \intertext{$y$ is the variable to eliminate} \nonumber
+  \shortintertext{$y$ is the variable to eliminate} \nonumber
 \end{align}
 
 Crucially, \ref{eq:divides} guarantees the eventual elimination of the
@@ -1343,11 +1351,11 @@ shows its completeness by proving that $\text{LHS} \land \neg D_1
 hardest.
 
 After some initial exploratory programming, given the complexity
-they entail, both in terms of implementation and of verification, and
+they entail, both in terms of implementation and verification, and
 taking time constraints into account, we decided to discard
 implementing splinters. Other interactive theorem provers like Coq,
 HOL or Isabelle, limit the completeness of their implementations too,
-often to just the real shadow.
+often just to the real shadow.
 
 This decision left us with two components: the real shadow, an
 equivalence only applicable if all $\alpha_i$ or all $\beta_j$ are
@@ -1379,18 +1387,13 @@ irrelevant constraints, with coefficients $0 = c$; and the upper
 bounds, with coefficients $0 > c$. ~\AgdaFunction{×-list}~ generates
 the cartesian product of lower bound and upper bound pairs for the
 dark shadow elimination; irrelevant constraints simply get their
-coefficient eliminated. ~\AgdaFunction{interpret} interprets results
+coefficient eliminated. ~\AgdaFunction{interpret}~ interprets results
 depending on whether the exact shadow or the dark shadow was applied.
+~\AgdaFunction{⟦\_⟧[}~\AgdaInductiveConstructor{[]}~\AgdaFunction{/x]}~
+decides the validity of a constraint with no variables, as we will see
+in the next section.
 
 \subsection{Verification}
-
-The exact shadow is a complete procedure, but is not always
-applicable. The dark shadow is a disjunct in the main equivalence
-theorem, removing the splinters renders it sound but not
-complete. Accordingly, a procedure implementing them both is sound but
-incomplete.
-
-\ExecuteMetaData[Presburger.tex]{correctness}
 
 \subsubsection{Preamble}
 
@@ -1437,51 +1440,78 @@ different symbols used in this subsection.
   
   \item [\textnormal{Variations} \AgdaSymbol{…}\AgdaFunction{ᵢ}]
   For convenience of irrelevant constraints.
+
+  \item [\AgdaFunction{∀[}~\AgdaBound{xs}~\AgdaFunction{]}~\AgdaBound{P}]
+  A type where ~\AgdaBound{P}~\AgdaBound{x}~ for every ~\AgdaBound{x}~
+  in ~\AgdaBound{xs}.
+
+  \item [\AgdaFunction{∃[}~\AgdaBound{xs}~\AgdaFunction{]}~\AgdaBound{P}]
+  A type where ~\AgdaBound{P}~\AgdaBound{x}~ for some ~\AgdaBound{x}~
+  in ~\AgdaBound{xs}.
 \end{description}
+
+\subsubsection{Goal}
+
+The exact shadow is a complete procedure, but is not always
+applicable. The dark shadow is a disjunct in the main equivalence
+theorem, removing the splinters renders the theorem sound but not
+complete. Accordingly, a procedure implementing them both is sound but
+incomplete.
+
+The specification of correctness for such an incomplete decision
+procedure follows. No proof is required if the procedure cannot decide
+the input; an environment satisfying the input is required if the
+input was decided satisfiable; a function showing the inadequacy of
+any given environment is required if the input was decided
+unsatisfiable.
+
+\ExecuteMetaData[Presburger.tex]{correctness}
 
 \subsubsection{Real shadow}
 
-\subsubsection{Dark shadow}
+Where all $\alpha_i$ or all $\beta_i$ are $1$.
 
 \begin{equation*}
-\bigwedge_{i,j} (\alpha_i - 1)(\beta_i - 1) ≤ \alpha_i b_j - a_i \beta_j
+∃x.L(x) ∧ U(x) \equiv \bigvee_{i,j} a_i \beta_j \leq \alpha_i b_j
+\end{equation*}
+
+\subsubsection{Dark shadow}
+
+The goal is to prove that the elimination performed by the dark shadow
+preserves satisfiability: whenever the dark shadow is satisfiable, so
+should its input be:
+
+\begin{equation*}
+\bigwedge_{i,j} (\alpha_i - 1)(\beta_i - 1) \leq \alpha_i b_j - a_i \beta_j
 \implies ∃x. L(x) \land U(x)
 \end{equation*}
 
-
-The original proof uses induction on every $L(x) × U(x)$ pair to prove
-the above. The goal for each pair is thus the following:
+The original proof then proceeds by induction on every $L(x) × U(x)$
+pair, where the proof obligation is fulfilled resorting to a proof by
+contradiction:
 
 \begin{equation*}
-(\alpha - 1)(\beta - 1) ≤ \alpha b - a \beta \implies ∃x. a ≤ αx \land βx ≤ b
+\neg (∃x. a \leq αx \land βx \leq b) \implies
+\neg (\alpha - 1)(\beta - 1) \leq \alpha b - a \beta
 \end{equation*}
 
-This obligation is fulfilled resorting on a proof by contradiction: we
-assume $¬∃x. a ≤ αx \land βx ≤ b$ and derive $∃x. a ≤ αx \land βx ≤
-b$, in contradiction with the premise which, we conclude, must have
-been wrong.  However, we cannot generally imply $P$ from $¬P → ⊥$
-in constructive mathematics: the first requires a witness $p : P$ that
-the later does not provide.
+However, $P$ cannot be generally concluded from $¬P → ⊥$ in
+constructive mathematics: the first requires a witness $p : P$ that
+the later does not provide. Nevertheless, a proof by contradiction is
+still useful. If the elements to test for $P$ can be limited to a
+finite set, a proof by contradiction — showing that it cannot be that
+$P$ is false for every element — can be used to build a terminating
+search function that is guaranteed to find an element satisfying $P$.
 
-Nevertheless, a proof by contradiction is still useful. If we can
-limit the elements to test for $P$ to a finite set and prove, by
-contradiction, that $P$ cannot be false for every element in the set,
-then we can supply a terminating function that finds an element
-satisfying $P$. We will thus use the proof outlined in
-\cite{Norrish2003} to assure the success of our search.
-
-\todo{Explain Σ types somewhere}
-
-Below, a generalised search function that searches for elements
-satisfying a decidable predicate within a discrete finite non-empty
-search space:
+Below, such a generalised search function, which searches for elements
+satisfying a decidable predicate within a finite list.
 
 \ExecuteMetaData[Presburger.tex]{search}
 
-In the case that concerns us, the search is for some $x$ that 
-satisfies a conjunction of constraints of form $a ≤ \alpha x \land
-\beta x ≤ b$, with $\alpha$ and $\beta$ positive and non-zero. For
-every constraint, $x$ must be bound between
+In the case concerning us, the search is for some $x$ that satisfies a
+conjunction of constraints of form $a \leq \alpha x \land \beta x \leq
+b$, with $\alpha$ and $\beta$ positive and non-zero. For every
+constraint, $x$ must be bound between
 $\left\lfloor\frac{a}{α}\right\rfloor$ and
 $\left\lceil\frac{b}{β}\right\rceil$; the conjunction of all
 constraints must be bound between the highest lower bound and the
@@ -1489,31 +1519,81 @@ lowest upper bound.
 
 \ExecuteMetaData[Presburger.tex]{search-space}
 
-Norrish, where each step is implied by the next one
+The proof outlined in \cite{Norrish2003} will be used to assure the
+success of the search. However, while Norrish's proof by contradiction
+is on individual constraint pairs\ldots
 
-\begin{align*}
-&\bigwedge_{\substack{l \in L\\ u \in U}} DS~l~u \implies ∃x. \bigwedge_{\substack{l \in L\\ u \in U}} l~x \land u~x \\
-&\bigwedge_{\substack{l \in L\\ u \in U}} DS~l~u \implies \bigwedge_{\substack{l \in L\\ u \in U}} ∃x. l~x \land u~x \\
-&\bigwedge_{\substack{l \in L\\ u \in U}} DS~l~u \implies ∃x. l~x \land u~x \\
-&\bigwedge_{\substack{l \in L\\ u \in U}} \neg(∃x. l~x \land u~x) \implies \neg(DS~l~u)
-\end{align*}
+\ExecuteMetaData[Presburger.tex]{norrish-type}
 
-Ours, where each step is implied by the next one
+\ldots the search function demands a proof by contradiction on the
+entire conjunction of constraint pairs.
 
-\begin{align*}
-&\bigwedge_{\substack{l \in L\\ u \in U}} DS~l~u \implies ∃x. \bigwedge_{\substack{l \in L\\ u \in U}} l~x \land u~x \\
-&\bigwedge_{\substack{l \in L\\ u \in U}} DS~l~u \implies \bigwedge_{\substack{l \in L\\ u \in U}} ∃x. l~x \land u~x \\
-\neg&\bigwedge_{\substack{l \in L\\ u \in U}} ∃x. l~x \land u~x \implies \neg\bigwedge_{\substack{l \in L\\ u \in U}} DS~l~u \\
-&\bigvee_{\substack{l \in L\\ u \in U}} \neg(∃x. l~x \land u~x) \implies \bigvee_{\substack{l \in L\\ u \in U}} \neg(DS~l~u) \\
-&\bigwedge_{\substack{l \in L\\ u \in U}} \neg(∃x. l~x \land u~x) \implies \neg(DS~l~u)
-\end{align*}
+\ExecuteMetaData[Presburger.tex]{by-contradiction-type}
 
+Nevertheless, the premise that we must prove false (informally,
+$∀x.¬∀lu.⊨ₓlu$) is equivalent to a form $∃lu.¬∃x.⊨ₓlu$, suitable to be
+fed into Norrish's contradiction proof, which for any $lu$ expects
+$¬∃x.⊨ₓlu$. Note that the unsolved postulate is the same justification
+that Norrish's initial induction requires. The proof is a one-way
+implication, but bi-implication could be shown.
 
-\todo{Introduce proof by contradiction}
-\todo{Explain our strategy to make it constructive: bounded search}
-\todo{Extract proof obligation}
-\todo{Go on with the proof}
-\todo{Evaluation, if there is time}
+\ExecuteMetaData[Presburger.tex]{contradiction-adaptation}
+
+Finally, we must search for one of the pairs $lu$ for which
+$¬∃x.⊨ₓlu$, execute Norrish's proof on it, derive
+~\AgdaBound{⊨Ωlu}~\AgdaSymbol{→}~\AgdaDatatype{⊥}~ and apply it to
+~\AgdaBound{⊨Ωlu}.
+
+\ExecuteMetaData[Presburger.tex]{contradiction-search}
+
+Put together, this satisfies the proof by contradiction:
+
+\ExecuteMetaData[Presburger.tex]{by-contradiction-type}
+\ExecuteMetaData[Presburger.tex]{by-contradiction}
+
+The proof by contradiction can then be used to guarantee the success
+of the search for an $x$ within bounds:
+
+\ExecuteMetaData[Presburger.tex]{find-x}
+
+\subsubsection{Norrish}
+
+Below, we briefly reproduce Norrish's proof of the correctness of the
+dark shadow. For every pair of lower bound and upper bound
+constraints, it has to be shown that:
+
+\begin{equation*}
+(\alpha - 1)(\beta - 1) \leq \alpha b - a \beta \equiv
+(∃x. a \leq αx \land βx \leq b)
+\end{equation*}
+
+To prove it, assume the opposite. Then there is no multiple of
+$\alpha \beta$ between $a \beta$ and $\alpha b$:
+
+\begin{equation*}
+\neg ∃x. a \beta \leq \alpha \beta x \leq \alpha b
+\end{equation*}
+
+As both $0 < \alpha$ and $0 < \beta$, the other assumption implies
+that $a \beta \leq \alpha b$. Take $i$ to be the greatest multiple of
+$\alpha \beta$ less than $a \beta$. Then
+
+\begin{equation*}
+\alpha \beta i < a \beta \leq \alpha b < \alpha \beta (i + 1)
+\end{equation*}
+
+Because $0 < \alpha \beta (i + 1) - \alpha b$, conclude $1 \leq \beta
+(i + 1)$, and thus $\alpha \leq \alpha \beta (i + 1) - \alpha
+b$. Similarly, $\beta \leq a \beta - \alpha \beta i$. Infer $\alpha +
+\beta \leq \alpha \beta + a \beta - \alpha b$, or (re-arranging),
+$\alpha b - a \beta < \alpha \beta - \alpha - \beta + 1$, which
+contradicts the first assumption.
+
+\todo{Don't go over all of it}
+\todo{Mention module}
+\todo{Give types}
+\todo{Give the thing that puts them together}
+\todo{Show an example proof}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Cooper's Algorithm}
@@ -1546,21 +1626,12 @@ P(ℓx) \equiv P(x) \land ℓ | x
 \end{theorem}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Future work}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-Omega:
-  Postulates
-  Evaluation
-  Splinters
-  Adapt stdlib
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Verification and validation}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \todo{Dependent types, higher standards, no tests, we formally describe what correct is}
 \todo{This report is type-checked}
+\todo{Formal verification is our business}
 
 %   Verification and Validation In this section you should outline the
 %   verification and validation procedures that you've adopted throughout the
@@ -1569,8 +1640,6 @@ Omega:
 %   and after implementation. Your aim here is to convince the reader that the
 %   product has been thoroughly and appropriately verified. Detailed test
 %   results should, however, form a separate appendix at the end of the report.
-
-- Why is this absolutely correct, Agda?
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Results and evaluation}
@@ -1601,17 +1670,15 @@ Omega:
 %   of any significant deviations from the original project plan.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% \chapter{Related work}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%   Related Work You should survey and critically evaluate other work which you
-%   have read or otherwise considered in the general area of the project topic.
-%   The aim here is to place your project work in the context of the related
-%   work.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Summary and conclusions}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Omega:
+  Postulates
+  Evaluation
+  Splinters
+  Adapt stdlib
+  Quoting
 
 %   Summary and Conclusions In the final chapter of your report, you should
 %   summarise how successful you were in achieving the original project
@@ -1623,37 +1690,9 @@ Omega:
 \bibliographystyle{apalike}
 \bibliography{bibliography}
 
-%   References/Bibliography The references should consist of a list of papers
-%   and books referred to in the body of your report. These should be formatted
-%   as for scholarly computer science publications. Most text- and word-
-%   processors provide useful assistance with referencing - for example latex
-%   uses bibtex. As you know, there are two principal reference schemes.
-
-%       In one, the list is ordered alphabetically on author's surname and
-%       within the text references take the form (Surname, Date). For example, a
-%       reference to a 2014 work by Zobel would be written (Zobel, 2014).
-
-%       In the other, the list is ordered in the sequence in which a reference
-%       first appears in the report.
-
-%   For both schemes, each reference in the reference list should contain the
-%   following information: author, title, journal or publisher (if book), volume
-%   and part, and date. Depending of the style of references you use, Zobel's
-%   2014 book might be listed in the references of your report as follows:
-
-%   Justin Zobel. Writing for Computer Science. Springer-Verlag, 2014.
-
-%   For more examples of the first style, see the way in which references are
-%   laid out in "Software Engineering: A Practitioner's Approach" by Roger
-%   Pressman. Note carefully that your references should not just be a list of
-%   URLs! Web pages are not scholarly publications. In particular, they are not
-%   peer reviewed, and so could contain erroneous or inaccurate information.
-
 \begin{appendices}
 
-\chapter{Presburger solver}
-
-% \input{Presburger.lagda}
+\todo{Link to the repo}
 
 % \chapter{Detailed Specification and Design}
 %   Appendix A - Detailed Specification and Design This appendix should contain
