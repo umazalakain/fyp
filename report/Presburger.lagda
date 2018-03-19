@@ -252,7 +252,7 @@ Env i = Vec ℤ i
 
 [_/x]_ : ∀ {i d} → Env i → Linear (d Nat.+ i) → Linear d
 [_/x]_ {d = zero} [] a = a
-[_/x]_ {d = zero} (x ∷ xs) (c x+ cs +ℤ k) = [ xs /x] (cs ∷+ (k + c * x))
+[_/x]_ {d = zero} xs (cs ∷+ k) = [] ∷+ Vec.foldr₁ _+_ (k ∷ Vec.zipWith _*_ cs xs)
 [_/x]_ {d = suc d} xs (c x+ cs +ℤ k) = c x+ ([ xs /x] (cs ∷+ k))
 
 [_/x]↓_ : ∀ {i} → Env i → Linear i → ℤ
@@ -323,36 +323,58 @@ omega = List.map dark-shadow
 %</dark-shadow>
 
 \begin{code}
-lemma₀ : ∀ {i} (n : ℤ) → ⊝ (#_ {i} n) ≡ #_ {i} (- n)
-lemma₀ {i} n = begin
-  (⊝ (# n))
+k-out : ∀ {i} (a : Linear i) → (Linear.cs a ∷+ (+ 0)) ⊕ (# (Linear.k a)) ≡ a
+k-out (cs ∷+ k) = begin 
+  (cs ∷+ (+ 0)) ⊕ (# k)
     ≡⟨⟩
-  (Vec.map -_ (Vec.replicate (+ 0)) ∷+ (- n))
-    ≡⟨ cong (λ ⊚ → ((⊚ ∷+ (- n)))) (VecProp.map-replicate -_ (+ 0) _) ⟩
-  (Vec.replicate (- + 0) ∷+ (- n))
+  Vec.zipWith _+_ cs (Vec.replicate (+ 0)) ∷+ ((+ 0) + k)
+    ≡⟨ cong (_∷+ ((+ 0) + k)) (VecProp.zipWith-replicate₂ _+_ cs (+ 0)) ⟩
+  Vec.map (_+ (+ 0)) cs ∷+ ((+ 0) + k)
+    ≡⟨ cong (_∷+ ((+ 0) + k)) (VecProp.map-cong IntProp.+-identityʳ cs) ⟩
+  Vec.map id cs ∷+ ((+ 0) + k)
+    ≡⟨ cong (_∷+ ((+ 0) + k)) (VecProp.map-id cs) ⟩
+  (cs ∷+ ((+ 0) + k))
+    ≡⟨ cong (λ ⊚ → cs ∷+ ⊚) (IntProp.+-identityˡ k) ⟩
+  (cs ∷+ k)
+    ∎
+
+  where open ≡-Reasoning
+
+[_/x]↓-distr : ∀ {i} (ρ : Env i) (a b : Linear i) → [ ρ /x]↓ (a ⊕ b) ≡ [ ρ /x]↓ a + [ ρ /x]↓ b
+[ ρ /x]↓-distr a@(csa ∷+ ka) b@(csb ∷+ kb)  = begin 
+  [ ρ /x]↓ (a ⊕ b)
     ≡⟨⟩
-  (# (- n))
+  Linear.k ([ ρ /x] (Vec.zipWith _+_ csa csb ∷+ (ka + kb)))
+    ≡⟨⟩
+  Vec.foldr₁ _+_ ((ka + kb) ∷ Vec.zipWith _*_ (Vec.zipWith _+_ csa csb) ρ)
+    ≡⟨ {!!} ⟩
+  Vec.foldr₁ _+_ ((ka ∷ Vec.zipWith _*_ csa ρ) Vec.++ kb ∷ Vec.zipWith _*_ csb ρ)
+    ≡⟨ {!!} ⟩
+  (Vec.foldr₁ _+_ (ka ∷ Vec.zipWith _*_ csa ρ)) + (Vec.foldr₁ _+_ (kb ∷ Vec.zipWith _*_ csb ρ))
+    ≡⟨⟩
+  Linear.k ([ ρ /x] (csa ∷+ ka)) + Linear.k ([ ρ /x] (csb ∷+ kb))
+    ≡⟨⟩
+  [ ρ /x]↓ a + [ ρ /x]↓ b
     ∎
   where open ≡-Reasoning
 
-lemma₁ : ∀ {i} (csa : Vec ℤ i) (ka n : ℤ) → (csa ∷+ ka) ⊕ (# n) ≡ (csa ∷+ (ka + n))
-lemma₁ csa ka n = begin 
-  (csa ∷+ ka) ⊕ (# n)
+[_/x]↓-# : ∀ {i} (ρ : Env i) (k : ℤ) → [ ρ /x]↓ (# k) ≡ k
+[_/x]↓-# ρ k = begin 
+  [ ρ /x]↓ (# k)
     ≡⟨⟩
-  Vec.zipWith _+_ csa (Linear.cs (# n)) ∷+ (ka + n)
+  Vec.foldr₁ _+_ (k ∷ Vec.replicate (+ 0))
     ≡⟨⟩
-  Vec.zipWith _+_ csa (Vec.replicate (+ 0)) ∷+ (ka + n)
-    ≡⟨ cong (_∷+ (ka + n)) (VecProp.zipWith-replicate₂ _+_ csa (+ 0)) ⟩
-  Vec.map (_+ (+ 0)) csa ∷+ (ka + n)
-    ≡⟨ cong (_∷+ (ka + n)) (VecProp.map-cong IntProp.+-identityʳ csa) ⟩
-  Vec.map id csa ∷+ (ka + n)
-    ≡⟨ cong (_∷+ (ka + n)) (VecProp.map-id csa) ⟩
-  csa ∷+ (ka + n)
+  k + Vec.foldr₁ _+_ (Vec.replicate (+ 0))
+    ≡⟨ cong (λ ⊚ → k + ⊚) {!!} ⟩
+  k + (+ 0)
+    ≡⟨ IntProp.+-identityʳ k ⟩
+  k
     ∎
   where open ≡-Reasoning
 
-lemma₂ : ∀ {i} → (n : ℤ) → ⊝_ {i} (# n) ≡ # (- n)
-lemma₂ n = begin 
+  
+⊝#n≡#-n : ∀ {i} → (n : ℤ) → ⊝_ {i} (# n) ≡ # (- n)
+⊝#n≡#-n n = begin 
   ⊝ (# n)
     ≡⟨⟩
   (Vec.map -_ (Vec.replicate (+ 0)) ∷+ (- n))
@@ -361,39 +383,43 @@ lemma₂ n = begin
     ∎
   where open ≡-Reasoning
 
-lemma₃ : (m : ℤ) (n : ℤ) → (+ 0) ≤ n → m - n ≤ m
-lemma₃ m n 0≤n = {!!}
+0≤n→m-n≤m : (m : ℤ) (n : ℤ) → (+ 0) ≤ n → m - n ≤ m
+0≤n→m-n≤m = {!!}
 
-lemma₄ : ∀ {i} (ρ : Env i) (csa : Vec ℤ i) (ka : ℤ)
-       → [ ρ /x]↓ (csa ∷+ ka) ≡ ([ ρ /x]↓ (csa ∷+ (+ 0))) + ka
-lemma₄ ρ csa ka = {!!}
 \end{code}
    
+%<*norrish-inner-header>
 \begin{code}
 module norrish-inner (i : ℕ) (ρ : Env i) (xs : List ℤ)
-               (l : Constraint (suc i) LowerBound)
-               (u : Constraint (suc i) UpperBound)
-               where
+                     (l : Constraint (suc i) LowerBound)
+                     (u : Constraint (suc i) UpperBound)
+                     where
   α = head (proj₁ l)
   a = ⊝ (tail (proj₁ l))
   0<α = proj₂ l
   β = - (head (proj₁ u))
   b = tail (proj₁ u)
-  0<β = proj₂ u
+  0<β : + 0 < β
+  0<β with head (proj₁ u) | proj₂ u
+  0<β | +_ _ | +≤+ ()
+  0<β | -[1+_] n | z = +≤+ (Nat.s≤s Nat.z≤n)
   n = a/α ρ l
+\end{code}
+%</norrish-inner-header>
 
+\begin{code}
   0≤[α-1][β-1] : (+ 0) ≤ (α - + 1) * (β - + 1)
-  0≤[α-1][β-1] with α - + 1 | β - + 1
-  0≤[α-1][β-1] | +_ n | +_ m with Sign.+ ◃ (n Nat.* m) | IntProp.+◃n≡+n (n Nat.* m)
-  0≤[α-1][β-1] | +_ n | +_ m | +_ .(n Nat.* m) | refl = +≤+ Nat.z≤n
-  0≤[α-1][β-1] | +_ n | +_ m | -[1+_] _ | ()
-  0≤[α-1][β-1] | +_ n | -[1+_] m = {!!}
-  0≤[α-1][β-1] | -[1+_] n | m = {!!}
+  0≤[α-1][β-1] with α       | 0<α 
+  0≤[α-1][β-1] | -[1+_] _   | ()
+  0≤[α-1][β-1] | +_ zero    | +≤+ ()
+  0≤[α-1][β-1] | +_ (suc n) | _ with β       | 0<β
+  0≤[α-1][β-1] | +_ (suc n) | _ | -[1+_] m   | ()
+  0≤[α-1][β-1] | +_ (suc n) | _ | +_ zero    | +≤+ ()
+  0≤[α-1][β-1] | +_ (suc n) | _ | +_ (suc m) | _ rewrite IntProp.+◃n≡+n (n Nat.* m) = +≤+ Nat.z≤n
 
-
-  [α-1][β-1]≤αb-aβ : Linear i
-  [α-1][β-1]≤αb-aβ = (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# ((α - + 1) * (β - + 1)))
-
+  [α-1][β-1] : ℤ
+  [α-1][β-1] = (α - + 1) * (β - + 1)
+  
   aβ≤αb : Linear i
   aβ≤αb = ((α ⊛ b) ⊝ (β ⊛ a))
 
@@ -415,32 +441,45 @@ module norrish-inner (i : ℕ) (ρ : Env i) (xs : List ℤ)
   β≤aβ-αβn = (β ⊛ a) ⊝ (# (α * β * n)) ⊝ (# β)
 
   αb-aβ<[α-1][β-1] : Linear i
-  αb-aβ<[α-1][β-1] = (# ((α - + 1) * (β - + 1))) ⊝ (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# (+ 1))
+  αb-aβ<[α-1][β-1] = (# [α-1][β-1]) ⊝ (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# (+ 1))
+\end{code}
 
+%<*goal-example>
+\begin{code}
+  [α-1][β-1]≤αb-aβ : Linear i
+  [α-1][β-1]≤αb-aβ = (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# ((α - + 1) * (β - + 1)))
+\end{code}
+%</goal-example>
+
+%<*norrish-subgoal-1>
+\begin{code}
   ⊨βa≤αb : ⊨[ ρ /x] [α-1][β-1]≤αb-aβ → ⊨[ ρ /x] aβ≤αb
-  ⊨βa≤αb ⊨ds with (α ⊛ b) ⊝ (β ⊛ a) | inspect (_⊝_ (α ⊛ b)) (β ⊛ a)
-  ... | (csa ∷+ ka) | >[ eq ]< = begin
+  ⊨βa≤αb ⊨ds = begin 
     + 0
       ≤⟨ ⊨ds ⟩
-    [ ρ /x]↓ ((α ⊛ b) ⊝ (β ⊛ a) ⊝ (# ((α - + 1) * (β - + 1))))
-      ≡⟨ cong (λ ⊚ → [ ρ /x]↓ (⊚ ⊝ (# ((α - + 1) * (β - + 1))))) eq ⟩
-    [ ρ /x]↓ ((csa ∷+ ka) ⊝ (# ((α - + 1) * (β - + 1))))
-      ≡⟨ cong (λ ⊚ → [ ρ /x]↓ ((csa ∷+ ka) ⊕ ⊚)) (lemma₂ ((α - + 1) * (β - + 1))) ⟩
-    [ ρ /x]↓ ((csa ∷+ ka) ⊕ (# (- ((α - + 1) * (β - + 1)))))
-      ≡⟨ cong [ ρ /x]↓_ (lemma₁ csa ka (- ((α - + 1) * (β - + 1)))) ⟩
-    [ ρ /x]↓ (csa ∷+ (ka - (α - + 1) * (β - + 1)))
-      ≡⟨ lemma₄ ρ csa _ ⟩
-    [ ρ /x]↓ (csa ∷+ (+ 0)) + (ka - (α - + 1) * (β - + 1))
-      ≡⟨ sym (IntProp.+-assoc ([ ρ /x]↓ (csa ∷+ (+ 0))) ka (- ((α - + 1) * (β - + 1)))) ⟩
-    ([ ρ /x]↓ (csa ∷+ (+ 0)) + ka) - (α - + 1) * (β - + 1)
-      ≤⟨ lemma₃ _ _ 0≤[α-1][β-1] ⟩
-    [ ρ /x]↓ (csa ∷+ (+ 0)) + ka
-      ≡⟨ sym (lemma₄ ρ csa ka) ⟩
-    [ ρ /x]↓ (csa ∷+ ka)
+    [ ρ /x]↓ (aβ≤αb ⊝ (# [α-1][β-1]))
+      ≡⟨ cong (λ ⊚ → [ ρ /x]↓ (aβ≤αb ⊕ ⊚)) (⊝#n≡#-n [α-1][β-1]) ⟩
+    [ ρ /x]↓ (aβ≤αb ⊕ (# (- [α-1][β-1])))
+      ≡⟨ [ ρ /x]↓-distr _ _ ⟩
+    [ ρ /x]↓ aβ≤αb + [ ρ /x]↓ (# (- [α-1][β-1]))
+      ≡⟨ cong (λ ⊚ → [ ρ /x]↓ aβ≤αb + ⊚) ([_/x]↓-# ρ _) ⟩
+    [ ρ /x]↓ aβ≤αb + (- [α-1][β-1])
+      ≤⟨ 0≤n→m-n≤m _ _ 0≤[α-1][β-1]  ⟩
+    [ ρ /x]↓ aβ≤αb
       ∎
     where open ≤-Reasoning
+\end{code}
+%</norrish-subgoal-1>
 
-  ⊨αβn<aβ≤αb<αβ[n+1] : ⊨[ ρ /x] aβ≤αb → ¬ (∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]ₚ (l , u))) → All ⊨[ ρ /x] αβn<aβ≤αb<αβ[n+1]
+%<*norrish-subgoal-2>
+\begin{code}
+  ⊨αβn<aβ≤αb<αβ[n+1] : ⊨[ ρ /x] aβ≤αb
+                     → ¬ (∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]ₚ (l , u)))
+                     → All ⊨[ ρ /x] αβn<aβ≤αb<αβ[n+1]
+\end{code}
+%</norrish-subgoal-2>
+
+\begin{code}
   ⊨αβn<aβ≤αb<αβ[n+1] ⊨p₁ ⊭p₂ = r₁ ∷ r₂ ∷ r₃ ∷ []
     where
       open ≤-Reasoning
@@ -463,27 +502,50 @@ module norrish-inner (i : ℕ) (ρ : Env i) (xs : List ℤ)
           ≤⟨ {!!} ⟩
         [ ρ /x]↓ ((# (α * β * (n + + 1))) ⊝ (α ⊛ b) ⊝ (# (+ 1)))
           ∎
+\end{code}
 
-  ⊨α≤αβ[n+1]-αb : All ⊨[ ρ /x] αβn<aβ≤αb<αβ[n+1] → ⊨[ ρ /x] α≤αβ[n+1]-αb
+%<*norrish-subgoal-3>
+\begin{code}
+  ⊨α≤αβ[n+1]-αb : All ⊨[ ρ /x] αβn<aβ≤αb<αβ[n+1]
+                → ⊨[ ρ /x] α≤αβ[n+1]-αb
+\end{code}
+%</norrish-subgoal-3>
+
+\begin{code}
   ⊨α≤αβ[n+1]-αb (⊨p₁ ∷ ⊨p₂ ∷ ⊨p₃ ∷ []) = begin 
     + 0
       ≤⟨ {!!} ⟩
     [ ρ /x]↓ α≤αβ[n+1]-αb
       ∎
     where open ≤-Reasoning
+\end{code}
 
-  ⊨β≤aβ-αβn : All ⊨[ ρ /x] αβn<aβ≤αb<αβ[n+1] → ⊨[ ρ /x] β≤aβ-αβn
+%<*norrish-subgoal-4>
+\begin{code}
+  ⊨β≤aβ-αβn : All ⊨[ ρ /x] αβn<aβ≤αb<αβ[n+1]
+            → ⊨[ ρ /x] β≤aβ-αβn
+\end{code}
+%</norrish-subgoal-4>
+
+\begin{code}
   ⊨β≤aβ-αβn (⊨p₁ ∷ ⊨p₂ ∷ ⊨p₃ ∷ []) = begin 
     + 0
       ≤⟨ {!!} ⟩
     [ ρ /x]↓ β≤aβ-αβn
       ∎
     where open ≤-Reasoning
+\end{code}
 
+%<*norrish-subgoal-5>
+\begin{code}
   ⊭[α-1][β-1]≤αb-aβ : ⊨[ ρ /x] α≤αβ[n+1]-αb
                     → ⊨[ ρ /x] β≤aβ-αβn
                     → ⊨[ ρ /x] [α-1][β-1]≤αb-aβ
                     → ⊥
+\end{code}
+%</norrish-subgoal-5>
+
+\begin{code}
   ⊭[α-1][β-1]≤αb-aβ ⊨p₁ ⊨p₂ ⊨ds = {!!} 
 \end{code}
 

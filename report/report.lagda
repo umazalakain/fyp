@@ -164,17 +164,14 @@ who has a keen interest in the subject and is willing to share
 it. This project was the perfect excuse for countless hours of
 education.
 
-Brief but intense, this project has also involved — and been affected
-by — personal frustration and self-doubt. It was on those occasions
-that my friends, both local and remote, and my parents, on the other
-side of this planet, have kept the ball rolling.
+Brief but intense, this project has also been affected by personal
+frustration, dysphoria, self-doubt and my neighbour's barking dog. It
+was on those occasions that my friends, both local and remote, and my
+parents, on the other side of this planet, have kept the ball rolling.
 
 Needless to say, this project, of little importance to anyone but me,
 is based on large amounts of previous science and countless hours of
-accumulated human effort — a thought that still impresses me.
-
-\todo{Special mention to my neighbour's dog}
-\todo{Dysphoria}
+accumulated human effort. To all that people, I am immensely grateful.
 
 \tableofcontents
 
@@ -1150,9 +1147,8 @@ explore. Michael Norrish depicts in \cite{Norrish2003} the state of
 affairs concerning the implementation of Presburger arithmetic deciding
 procedures by proof assistants. He then continues describing the Omega
 Test and Cooper's Algorithm and proposes implementations for both of
-them for the proof assistant HOL. Our attempt to implement both
-procedures in Agda is significantly based on his work, which he also
-briefly outlines in a later talk. \cite{Norrish2006}
+them for the proof assistant HOL. A later talk gives more
+details. \cite{Norrish2006}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{The Omega Test}
@@ -1161,16 +1157,19 @@ briefly outlines in a later talk. \cite{Norrish2006}
 The Omega Test was first introduced in \cite{Pugh1991}. It adapts
 Fourier-Motzkin elimination — which acts on real numbers — to
 integers, and requires the input formula to be put in disjunctive
-normal form. This has the potential of exponentially blowing up the
-size of formulae, as can clearly be seen when a conjunction is
-normalised over a disjunction:
+normal form. The following work is significantly based on the material
+found in \cite{Norrish2003} and \cite{Norrish2006}.
+
+\subsection{Normalisation}
+
+Transforming input formulae into disjunctive normal forms has the
+potential of blowing up the size of formulae exponentialy, as can
+clearly be seen when a conjunction is normalised over a disjunction:
 
 \begin{equation*}
 (P \lor Q) \land (R \lor S) \equiv (P \land R) \lor (P \land S) \lor
 (Q \land R) \lor (Q \land S)
 \end{equation*}
-
-\subsection{Normalisation}
 
 As part of this normalisation process, universal quantifiers need to
 be eliminated too.  This is carried out resorting to the following
@@ -1255,6 +1254,8 @@ Normalisation proceeds recursively, eliminating universal quantifiers,
 pushing conjunction and negation inward, normalising implication,
 evaluating operations on atoms and normalising relations between them.
 
+\subsection{Elimination}
+
 Once normalisation has taken place, the elimination process is ran
 recursively on quantifier-free sub-formulae. The heart of it is an
 equivalence theorem that eliminates the variable bound by the
@@ -1263,8 +1264,6 @@ innermost existential quantifier:
 \begin{equation*}
 ∃x.P(x) \equiv Q
 \end{equation*}
-
-\subsection{Elimination}
 
 The Omega Test's quantifier elimination process operates on
 quantifier-free conjunctions of constraints of form $0 \leq e$, where
@@ -1296,19 +1295,13 @@ shadow}:
 ∃x.L(x) ∧ U(x) \equiv \bigvee_{i,j} a_i \beta_j \leq \alpha_i b_j
 \end{align*}
 
-If the exact shadow is not applicable, the main theorem has to be
-used. Pugh refers to the first disjunct in it as the \textit{real
-shadow} and to the remaining as the \textit{splinters}.
-
 Our initial intention was to implement and verify the complete
 theorem. However, we quickly found out about the complexity introduced
-by splinters.
-
-Each splinter introduces a new existential quantifier — one could ask
-if the quantifier elimination indeed happens. These quantifiers can
-nonetheless be eliminated by the following terminating method based on
-the Euclidean algorithm for the computation of greatest common
-divisors:
+by splinters. Each splinter introduces a new existential quantifier —
+one could ask if the quantifier elimination indeed happens. These
+quantifiers can nonetheless be eliminated by the following terminating
+method based on the Euclidean algorithm for the computation of
+greatest common divisors:
 
 \begin{align}
   \shortintertext{$x$ is the variable to eliminate}
@@ -1376,8 +1369,9 @@ $\alpha_i$ or all $\beta_j$ are $1$, so does the dark shadow. The
 function ~\AgdaFunction{dark-shadow}~ is therefore used for both the
 real shadow and the dark shadow. If the real shadow's precondition is
 not met, we fall back to the dark shadow, and interpret a result of
-unsatisfiability as undecided. Following, an elimination procedure for
-quantifier free formulas:
+~\AgdaInductiveConstructor{unsatisfiable}~ as
+~\AgdaInductiveConstructor{undecided}. Following, an elimination
+procedure for quantifier free formulas:
 
 \ExecuteMetaData[Presburger.tex]{elimination}
 
@@ -1519,9 +1513,9 @@ lowest upper bound.
 
 \ExecuteMetaData[Presburger.tex]{search-space}
 
-The proof outlined in \cite{Norrish2003} will be used to assure the
-success of the search. However, while Norrish's proof by contradiction
-is on individual constraint pairs\ldots
+The proof outlined by Norrish will be used to assure the success of
+the search. However, while Norrish's proof by contradiction is on
+individual constraint pairs\ldots
 
 \ExecuteMetaData[Presburger.tex]{norrish-type}
 
@@ -1589,11 +1583,48 @@ b$. Similarly, $\beta \leq a \beta - \alpha \beta i$. Infer $\alpha +
 $\alpha b - a \beta < \alpha \beta - \alpha - \beta + 1$, which
 contradicts the first assumption.
 
-\todo{Don't go over all of it}
-\todo{Mention module}
-\todo{Give types}
-\todo{Give the thing that puts them together}
-\todo{Show an example proof}
+We do not intend to reproduce here the entire proof as written in
+Agda. In fact, time constraints and the low priority we assigned to
+filling in the details made us keep multiple sub-goals as unfinished
+postulates. Instead, we show how we split the main goal into smaller
+sub-goals and how we later put them back together. We also give an
+example of a finished sub-goal proof to show the reader what it looks
+like.
+
+We use a parametrised module for the arguments common to all
+sub-goals. We \textit{open} the supplied lower bound and upper bound
+constraints to handle their constituents more comfortably.
+
+\begin{AgdaAlign}
+
+\ExecuteMetaData[Presburger.tex]{norrish-inner-header}
+
+We give the sub-goal forms their own definitions so that we can later
+refer to them in multiple types.
+
+\ExecuteMetaData[Presburger.tex]{goal-example}
+
+As an example, here we show that $(\alpha - 1)(\beta - 1) \leq \alpha
+b - a \beta$ implies $a \beta \leq \alpha b$ when both $0 < \alpha$
+and $0 < \beta$:
+
+\ExecuteMetaData[Presburger.tex]{norrish-subgoal-1}
+
+The other sub-goals have been defined as:
+
+\begin{itemize}
+    \item \ExecuteMetaData[Presburger.tex]{norrish-subgoal-2}
+    \item \ExecuteMetaData[Presburger.tex]{norrish-subgoal-3}
+    \item \ExecuteMetaData[Presburger.tex]{norrish-subgoal-4}
+    \item \ExecuteMetaData[Presburger.tex]{norrish-subgoal-5}
+\end{itemize}
+\end{AgdaAlign}
+
+Finally, putting them all together, we supply Norrish's proof:
+
+\ExecuteMetaData[Presburger.tex]{norrish-type}
+\ExecuteMetaData[Presburger.tex]{norrish}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Cooper's Algorithm}
