@@ -32,7 +32,9 @@ open import Relation.Binary.PropositionalEquality using (_≡_ ; refl; cong ; sy
 open import Agda.Primitive using (lzero) renaming (_⊔_ to _ℓ⊔_)
 open import Function.Related using (preorder ; implication)
 import Relation.Binary.PreorderReasoning as PRE
-module ⇒-Reasoning = PRE (preorder implication lzero) renaming (_∼⟨_⟩_ to _⇒⟨_⟩_; _≈⟨_⟩_ to _≡⟨_⟩_; _≈⟨⟩_ to _≡⟨⟩_)
+module ⇒-Reasoning = PRE (preorder implication lzero)
+open Function.Related using (≡⇒) 
+
 import Relation.Binary.PartialOrderReasoning as POR
 module ≤-Reasoning = POR IntProp.≤-poset renaming (_≈⟨_⟩_ to _≡⟨_⟩_ ; _≈⟨⟩_ to _≡⟨⟩_)
 module ≡-Reasoning = Relation.Binary.PropositionalEquality.≡-Reasoning
@@ -250,37 +252,30 @@ partition (a ∷ as) | Tri.tri> _ _ 0<c | ls , is , us = ls , is , (a , 0<c) ∷
 Env : ℕ → Set
 Env i = Vec ℤ i
 
-[_/x]_ : ∀ {i d} → Env i → Linear (d Nat.+ i) → Linear d
-[_/x]_ {d = zero} [] a = a
-[_/x]_ {d = zero} xs (cs ∷+ k) = [] ∷+ Vec.foldr₁ _+_ (k ∷ Vec.zipWith _*_ cs xs)
-[_/x]_ {d = suc d} xs (c x+ cs +ℤ k) = c x+ ([ xs /x] (cs ∷+ k))
-
-[_/x]↓_ : ∀ {i} → Env i → Linear i → ℤ
-[ ρ /x]↓ a = Linear.k {zero} ([ ρ /x] a)
+[_/x]_ : ∀ {i} → Env i → Linear i → ℤ
+[_/x]_ [] ([] ∷+ k) = k
+[_/x]_ (x ∷ xs) ((c ∷ cs) ∷+ k) = c * x + [ xs /x] (cs ∷+ k)
 
 -- div requires an implicit proof showing its divisor is non-zero
 a/α : ∀ {i} → Env i → Constraint (suc i) LowerBound → ℤ
 a/α ρ (+_ zero x+ -cs +ℤ -k , (_≤_.+≤+ ()))
-a/α ρ (+_ (suc α-1) x+ -cs +ℤ -k , lb) = let a = - [ ρ /x]↓ (-cs ∷+ -k) in sign a ◃ (∣ a ∣ div suc α-1)
+a/α ρ (+_ (suc α-1) x+ -cs +ℤ -k , lb) = let a = - [ ρ /x] (-cs ∷+ -k) in sign a ◃ (∣ a ∣ div suc α-1)
 a/α ρ (-[1+ n ] x+ -cs +ℤ -k , ())
 
 b/β : ∀ {i} → Env i → Constraint (suc i) UpperBound → ℤ
 b/β ρ (+_ c x+ cs +ℤ k , _≤_.+≤+ ())
-b/β ρ (-[1+ β-1 ] x+ cs +ℤ k , ub) = let b = [ ρ /x]↓ (cs ∷+ k) in sign b ◃ (∣ b ∣ div suc β-1)
+b/β ρ (-[1+ β-1 ] x+ cs +ℤ k , ub) = let b = [ ρ /x] (cs ∷+ k) in sign b ◃ (∣ b ∣ div suc β-1)
 \end{code}
 %</evaluation>
 
 %<*meaning>
 \begin{code}
-⊨⇓ : Linear 0 → Set
-⊨⇓ a = (+ 0) ≤ (Linear.k a)
+⊨[_/x] : ∀ {i} → Env i → Linear i → Set
+⊨[ ρ /x] a = + 0 ≤ ([ ρ /x] a)
 \end{code}
 %</meaning>
 
 \begin{code}
-⊨[_/x] : ∀ {i} → Env i → Linear i → Set
-⊨[ ρ /x] a = ⊨⇓ ([ ρ /x] a)
-
 ⊨[_/x]ₚ : ∀ {i} → Env i → Pair i → Set
 ⊨[ ρ /x]ₚ ((l , _) , (u , _)) = ⊨[ ρ /x] l × ⊨[ ρ /x] u
 
@@ -288,20 +283,10 @@ b/β ρ (-[1+ β-1 ] x+ cs +ℤ k , ub) = let b = [ ρ /x]↓ (cs ∷+ k) in sig
 ⊨[ ρ /x]ᵢ (ir , _) = ⊨[ ρ /x] ir
 \end{code}
 
-%<*meaning-all>
-\begin{code}
-⊨ : ∀ {i} → List (Linear i) → Set
-⊨ {i} as = Σ (Env i) λ ρ → All ⊨[ ρ /x] as
-\end{code}
-%</meaning-all>
-
 %<*decidability>
 \begin{code}
-⟦_⟧⇓ : (a : Linear 0) → Dec (⊨⇓ a)
-⟦ a ⟧⇓ = (+ 0) ≤? (Linear.k a)
-
 ⟦_⟧[_/x] : ∀ {i} → (a : Linear i) → (ρ : Env i) → Dec (⊨[ ρ /x] a)
-⟦ a ⟧[ ρ /x] = ⟦ [ ρ /x] a ⟧⇓
+⟦ a ⟧[ ρ /x] = + 0 ≤? [ ρ /x] a
 
 ⟦_⟧[_/x]ₚ : ∀ {i} → (lu : Pair i) → (ρ : Env i) → Dec (⊨[ ρ /x]ₚ lu)
 ⟦ ((l , _) , (u , _)) ⟧[ ρ /x]ₚ with ⟦ l ⟧[ ρ /x] | ⟦ u ⟧[ ρ /x]
@@ -310,6 +295,14 @@ b/β ρ (-[1+ β-1 ] x+ cs +ℤ k , ub) = let b = [ ρ /x]↓ (cs ∷+ k) in sig
 ⟦ (l , _) , u , _ ⟧[ ρ /x]ₚ | no ¬pl | _      = no λ {(pl , _) → ¬pl pl}
 \end{code}
 %</decidability>
+
+%<*meaning-all>
+\begin{code}
+⊨ : ∀ {i} → List (Linear i) → Set
+⊨ {i} as = Σ (Env i) λ ρ → All ⊨[ ρ /x] as
+\end{code}
+%</meaning-all>
+
 
 %<*dark-shadow>
 \begin{code}
@@ -337,63 +330,98 @@ k-out (cs ∷+ k) = begin
     ≡⟨ cong (λ ⊚ → cs ∷+ ⊚) (IntProp.+-identityˡ k) ⟩
   (cs ∷+ k)
     ∎
-
   where open ≡-Reasoning
 
-[_/x]↓-distr : ∀ {i} (ρ : Env i) (a b : Linear i) → [ ρ /x]↓ (a ⊕ b) ≡ [ ρ /x]↓ a + [ ρ /x]↓ b
-[ ρ /x]↓-distr a@(csa ∷+ ka) b@(csb ∷+ kb)  = begin 
-  [ ρ /x]↓ (a ⊕ b)
-    ≡⟨⟩
-  Linear.k ([ ρ /x] (Vec.zipWith _+_ csa csb ∷+ (ka + kb)))
-    ≡⟨⟩
-  Vec.foldr₁ _+_ ((ka + kb) ∷ Vec.zipWith _*_ (Vec.zipWith _+_ csa csb) ρ)
-    ≡⟨ {!!} ⟩
-  Vec.foldr₁ _+_ ((ka ∷ Vec.zipWith _*_ csa ρ) Vec.++ kb ∷ Vec.zipWith _*_ csb ρ)
-    ≡⟨ {!!} ⟩
-  (Vec.foldr₁ _+_ (ka ∷ Vec.zipWith _*_ csa ρ)) + (Vec.foldr₁ _+_ (kb ∷ Vec.zipWith _*_ csb ρ))
-    ≡⟨⟩
-  Linear.k ([ ρ /x] (csa ∷+ ka)) + Linear.k ([ ρ /x] (csb ∷+ kb))
-    ≡⟨⟩
-  [ ρ /x]↓ a + [ ρ /x]↓ b
+[_/x]-+ : ∀ {i} (ρ : Env i) (a b : Linear i) → [ ρ /x] (a ⊕ b) ≡ [ ρ /x] a + [ ρ /x] b
+[ [] /x]-+ ([] ∷+ ka) ([] ∷+ kb) = refl
+[ x ∷ ρ /x]-+ ((ca ∷ csa) ∷+ ka) ((cb ∷ csb) ∷+ kb)
+  rewrite [ ρ /x]-+ (csa ∷+ ka) (csb ∷+ kb) = begin 
+  (ca + cb) * x + ([ ρ /x] (csa ∷+ ka) + [ ρ /x] (csb ∷+ kb))
+    ≡⟨ cong (λ ⊚ → ⊚ + _) (IntProp.distribʳ x ca cb) ⟩
+  (ca * x + cb * x) + ([ ρ /x] (csa ∷+ ka) + [ ρ /x] (csb ∷+ kb))
+    ≡⟨ IntProp.+-assoc (ca * x) (cb * x) _ ⟩
+  ca * x + (cb * x + ([ ρ /x] (csa ∷+ ka) + [ ρ /x] (csb ∷+ kb)))
+    ≡⟨ cong (λ ⊚ → ca * x + ⊚) (sym (IntProp.+-assoc (cb * x) _ _)) ⟩
+  ca * x + (cb * x + [ ρ /x] (csa ∷+ ka) + [ ρ /x] (csb ∷+ kb))
+    ≡⟨ cong (λ ⊚ → ca * x + (⊚ + _)) (IntProp.+-comm (cb * x) ([ ρ /x] (csa ∷+ ka))) ⟩
+  ca * x + ([ ρ /x] (csa ∷+ ka) + cb * x + [ ρ /x] (csb ∷+ kb))
+    ≡⟨ cong (λ ⊚ → ca * x + ⊚) (IntProp.+-assoc ([ ρ /x] (csa ∷+ ka)) (cb * x) _) ⟩
+  ca * x + ([ ρ /x] (csa ∷+ ka) + (cb * x + [ ρ /x] (csb ∷+ kb)))
+    ≡⟨ sym (IntProp.+-assoc (ca * x) ([ ρ /x] (csa ∷+ ka)) _) ⟩
+  (ca * x + [ ρ /x] (csa ∷+ ka)) + (cb * x + [ ρ /x] (csb ∷+ kb))
     ∎
   where open ≡-Reasoning
 
-[_/x]↓-# : ∀ {i} (ρ : Env i) (k : ℤ) → [ ρ /x]↓ (# k) ≡ k
-[_/x]↓-# ρ k = begin 
-  [ ρ /x]↓ (# k)
-    ≡⟨⟩
-  Vec.foldr₁ _+_ (k ∷ Vec.replicate (+ 0))
-    ≡⟨⟩
-  k + Vec.foldr₁ _+_ (Vec.replicate (+ 0))
-    ≡⟨ cong (λ ⊚ → k + ⊚) {!!} ⟩
-  k + (+ 0)
-    ≡⟨ IntProp.+-identityʳ k ⟩
-  k
+[_/x]-* : ∀ {i} (ρ : Env i) (n : ℤ) (a : Linear i) → [ ρ /x] (n ⊛ a) ≡ n * ([ ρ /x] a)
+[ [] /x]-* n ([] ∷+ k) = refl
+[ x ∷ ρ /x]-* n ((c ∷ cs) ∷+ k) rewrite [ ρ /x]-* n (cs ∷+ k) = begin
+  n * c * x + n * [ ρ /x] (cs ∷+ k)
+    ≡⟨ cong (λ ⊚ → ⊚ + _) (IntProp.*-assoc n c x) ⟩
+  n * (c * x) + n * [ ρ /x] (cs ∷+ k)
+    ≡⟨ cong (λ ⊚ → ⊚ + _) (IntProp.*-comm n (c * x)) ⟩
+  c * x * n + n * [ ρ /x] (cs ∷+ k)
+    ≡⟨ cong (λ ⊚ → c * x * n + ⊚) (IntProp.*-comm n _) ⟩
+  c * x * n + [ ρ /x] (cs ∷+ k) * n
+    ≡⟨ sym (IntProp.distribʳ n (c * x) _) ⟩
+  (c * x + [ ρ /x] (cs ∷+ k)) * n
+    ≡⟨ sym (IntProp.*-comm n _) ⟩
+  n * (c * x + [ ρ /x] (cs ∷+ k))
     ∎
   where open ≡-Reasoning
 
+⊨[_/x]-trans : ∀ {i} (ρ : Env i) (a b c : Linear i)
+              → ⊨[ ρ /x] (b ⊝ a)
+              → ⊨[ ρ /x] (c ⊝ b)
+              → ⊨[ ρ /x] (c ⊝ a)
+⊨[ ρ /x]-trans a b c ⊨b⊝a ⊨c⊝b with [ ρ /x] (b ⊝ a) | [ ρ /x] (c ⊝ b)
+⊨[ ρ /x]-trans a b c ⊨b⊝a ⊨c⊝b | -[1+_] n | j = {!⊨b⊝a!}
+⊨[ ρ /x]-trans a b c ⊨b⊝a ⊨c⊝b | +_ n | -[1+_] n₁ = {!!}
+⊨[ ρ /x]-trans a b c ⊨b⊝a ⊨c⊝b | +_ n | +_ n₁ = {!!}
+              
+[_/x]-# : ∀ {i} (ρ : Env i) (k : ℤ) → [ ρ /x] (# k) ≡ k
+[ [] /x]-# k = refl
+[ x ∷ ρ /x]-# k rewrite [ ρ /x]-# k = IntProp.+-identityˡ k
   
 ⊝#n≡#-n : ∀ {i} → (n : ℤ) → ⊝_ {i} (# n) ≡ # (- n)
-⊝#n≡#-n n = begin 
-  ⊝ (# n)
-    ≡⟨⟩
-  (Vec.map -_ (Vec.replicate (+ 0)) ∷+ (- n))
-    ≡⟨ cong (_∷+ (- n)) (VecProp.map-replicate -_ (+ 0) _) ⟩
-  # (- n)
-    ∎
-  where open ≡-Reasoning
+⊝#n≡#-n n = cong (_∷+ (- n)) (VecProp.map-replicate -_ (+ 0) _)
+
+[_/x]#0≡0 : ∀ {i} (ρ : Env i) → [ ρ /x] (# (+ 0)) ≡ + 0
+[ [] /x]#0≡0 = refl
+[ x ∷ ρ /x]#0≡0 rewrite [ ρ /x]#0≡0 = refl
 
 0≤n→m-n≤m : (m : ℤ) (n : ℤ) → (+ 0) ≤ n → m - n ≤ m
 0≤n→m-n≤m = {!!}
 
+⊨cs≡⊨0∷cs : ∀ {i} (ρ : Env i) (x : ℤ) (ir : Constraint (suc i) Irrelevant)
+           → (⊨[ ρ /x] ∘ tail ∘ proj₁) ir ≡ ⊨[ x ∷ ρ /x]ᵢ ir
+
+⊨cs≡⊨0∷cs ρ x ir@(c x+ cs +ℤ k , 0=c) = begin 
+  ⊨[ ρ /x] (cs ∷+ k)
+    ≡⟨ {!!} ⟩
+  ⊨[ x ∷ ρ /x]ᵢ ir
+    ∎ 
+  where open ≡-Reasoning
+
+⊝⊝a≡a : ∀ {i} (a : Linear i) → ⊝ (⊝ a) ≡ a
+⊝⊝a≡a (cs ∷+ k) = begin 
+  (Vec.map -_ (Vec.map -_ cs)) ∷+ (- (- k))
+    ≡⟨ cong (_ ∷+_) (IntProp.doubleNeg k) ⟩
+  (Vec.map -_ (Vec.map -_ cs)) ∷+ k
+    ≡⟨ cong (_∷+ k) (sym (VecProp.map-∘ -_ -_ cs)) ⟩
+  (Vec.map (-_ ∘ -_) cs) ∷+ k
+    ≡⟨ cong (_∷+ k) (VecProp.map-cong IntProp.doubleNeg cs) ⟩
+  (Vec.map id cs) ∷+ k
+    ≡⟨ cong (_∷+ k) (VecProp.map-id cs) ⟩
+  cs ∷+ k
+    ∎
+  where open ≡-Reasoning
 \end{code}
    
 %<*norrish-inner-header>
 \begin{code}
-module norrish-inner (i : ℕ) (ρ : Env i) (xs : List ℤ)
-                     (l : Constraint (suc i) LowerBound)
-                     (u : Constraint (suc i) UpperBound)
-                     where
+module Norrish {i : ℕ} (ρ : Env i) (lu : Pair (suc i)) where
+  l = proj₁ lu
+  u = proj₂ lu
   α = head (proj₁ l)
   a = ⊝ (tail (proj₁ l))
   0<α = proj₂ l
@@ -404,30 +432,38 @@ module norrish-inner (i : ℕ) (ρ : Env i) (xs : List ℤ)
   0<β | +_ _ | +≤+ ()
   0<β | -[1+_] n | z = +≤+ (Nat.s≤s Nat.z≤n)
   n = a/α ρ l
+
+  [a≤αx,]≡l : α x+ (⊝ a) ≡ proj₁ l
+  [a≤αx,]≡l with proj₁ l
+  ... | (c x+ cs +ℤ k) = cong (c x+_) (⊝⊝a≡a (cs ∷+ k))
+
+  [bx≤β,]≡u : (- β) x+ b ≡ proj₁ u
+  [bx≤β,]≡u with proj₁ u
+  ... | (c x+ cs +ℤ k) = cong (_x+ (cs ∷+ k)) (IntProp.doubleNeg c)
+  
 \end{code}
 %</norrish-inner-header>
 
+%<*goal-example>
 \begin{code}
-  0≤[α-1][β-1] : (+ 0) ≤ (α - + 1) * (β - + 1)
-  0≤[α-1][β-1] with α       | 0<α 
-  0≤[α-1][β-1] | -[1+_] _   | ()
-  0≤[α-1][β-1] | +_ zero    | +≤+ ()
-  0≤[α-1][β-1] | +_ (suc n) | _ with β       | 0<β
-  0≤[α-1][β-1] | +_ (suc n) | _ | -[1+_] m   | ()
-  0≤[α-1][β-1] | +_ (suc n) | _ | +_ zero    | +≤+ ()
-  0≤[α-1][β-1] | +_ (suc n) | _ | +_ (suc m) | _ rewrite IntProp.+◃n≡+n (n Nat.* m) = +≤+ Nat.z≤n
-
-  [α-1][β-1] : ℤ
-  [α-1][β-1] = (α - + 1) * (β - + 1)
-  
   aβ≤αb : Linear i
   aβ≤αb = ((α ⊛ b) ⊝ (β ⊛ a))
+\end{code}
+%</goal-example>
 
-  aβ≤αβx≤αb : List (Linear (suc i))
-  aβ≤αβx≤αb = ((α * β) x+ ∅) ⊝ (β ⊛ (0x+ a))
-            ∷ (α ⊛ (0x+ b)) ⊝ ((α * β) x+ ∅)
-            ∷ []
+\begin{code}
+  [α-1][β-1] : ℤ
+  [α-1][β-1] = (α - + 1) * (β - + 1)
 
+  ⊨0≤[α-1][β-1] : (+ 0) ≤ [α-1][β-1]
+  ⊨0≤[α-1][β-1] with α       | 0<α 
+  ⊨0≤[α-1][β-1] | -[1+_] _   | ()
+  ⊨0≤[α-1][β-1] | +_ zero    | +≤+ ()
+  ⊨0≤[α-1][β-1] | +_ (suc n) | _ with β       | 0<β
+  ⊨0≤[α-1][β-1] | +_ (suc n) | _ | -[1+_] m   | ()
+  ⊨0≤[α-1][β-1] | +_ (suc n) | _ | +_ zero    | +≤+ ()
+  ⊨0≤[α-1][β-1] | +_ (suc n) | _ | +_ (suc m) | _ rewrite IntProp.+◃n≡+n (n Nat.* m) = +≤+ Nat.z≤n
+  
   αβn<aβ≤αb<αβ[n+1] : List (Linear i)
   αβn<aβ≤αb<αβ[n+1] = ((β ⊛ a) ⊝ (# (α * β * n)) ⊝ (# (+ 1)))
                     ∷ (α ⊛ b) ⊝ (β ⊛ a)
@@ -441,31 +477,87 @@ module norrish-inner (i : ℕ) (ρ : Env i) (xs : List ℤ)
   β≤aβ-αβn = (β ⊛ a) ⊝ (# (α * β * n)) ⊝ (# β)
 
   αb-aβ<[α-1][β-1] : Linear i
-  αb-aβ<[α-1][β-1] = (# [α-1][β-1]) ⊝ (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# (+ 1))
+  αb-aβ<[α-1][β-1] = (# [α-1][β-1]) ⊝ aβ≤αb ⊝ (# (+ 1))
 \end{code}
 
-%<*goal-example>
 \begin{code}
-  [α-1][β-1]≤αb-aβ : Linear i
-  [α-1][β-1]≤αb-aβ = (α ⊛ b) ⊝ (β ⊛ a) ⊝ (# ((α - + 1) * (β - + 1)))
+  α≡1∨β≡1→[α-1][β-1]≡0 : (α ≡ + 1 ⊎ β ≡ + 1) → [α-1][β-1] ≡ + 0
+  α≡1∨β≡1→[α-1][β-1]≡0 (inj₁ α≡1) rewrite α≡1 = refl
+  α≡1∨β≡1→[α-1][β-1]≡0 (inj₂ β≡1) rewrite β≡1 | IntProp.*-zeroʳ (α - + 1) = refl
+  
+  a≤αx⇒aβ≤αβx : (x : ℤ)
+              → ⊨[ x ∷ ρ /x] (α x+ (⊝ a))
+              → ⊨[ ρ /x] ((# (α * β * x)) ⊝ (β ⊛ a))
+  a≤αx⇒aβ≤αβx x ⊨a≤αx with β       | 0<β
+  a≤αx⇒aβ≤αβx x ⊨a≤αx | -[1+_] n   | ()
+  a≤αx⇒aβ≤αβx x ⊨a≤αx | +_ zero    | +≤+ ()
+  a≤αx⇒aβ≤αβx x ⊨a≤αx | +_ (suc n) | z = begin
+    + 0
+      ≡⟨ sym (IntProp.*-zeroˡ (+ suc n)) ⟩
+    (+ 0) * (+ suc n)
+      ≤⟨ IntProp.*-+-right-mono n ⊨a≤αx ⟩
+    ([ x ∷ ρ /x] (α x+ (⊝ a))) * (+ suc n)
+      ≡⟨⟩
+    (α * x + [ ρ /x] (⊝ a)) * (+ suc n)
+      ≡⟨ IntProp.distribʳ (+ suc n) (α * x) ([ ρ /x] (⊝ a)) ⟩
+    α * x * (+ suc n) + ([ ρ /x] (⊝ a)) * (+ suc n)
+      ≡⟨ cong (λ ⊚ → α * x * (+ suc n) + ⊚) (IntProp.*-comm ([ ρ /x] (⊝ a)) (+ suc n)) ⟩
+    α * x * (+ suc n) + (+ suc n) * ([ ρ /x] (⊝ a)) 
+      ≡⟨ cong (λ ⊚ → α * x * (+ suc n) + ⊚) (sym ([ ρ /x]-* (+ suc n) (⊝ a))) ⟩
+    α * x * (+ suc n) + ([ ρ /x] ((+ suc n) ⊛ (⊝ a)))
+      ≡⟨ cong (λ ⊚ → ⊚ * (+ suc n) + _) (IntProp.*-comm α x) ⟩
+    x * α * (+ suc n) + ([ ρ /x] ((+ suc n) ⊛ (⊝ a)))
+      ≡⟨ cong (λ ⊚ → ⊚ + _) (IntProp.*-assoc x α (+ suc n)) ⟩
+    x * (α * (+ suc n)) + ([ ρ /x] ((+ suc n) ⊛ (⊝ a)))
+      ≡⟨ cong (λ ⊚ → ⊚ + _) (IntProp.*-comm x (α * (+ suc n))) ⟩
+    (α * (+ suc n)) * x + ([ ρ /x] ((+ suc n) ⊛ (⊝ a)))
+      ≡⟨ {!!} ⟩
+    [ ρ /x] ((# (α * (+ suc n) * x)) ⊝ ((+ suc n) ⊛ a))
+      ∎
+    where open ≤-Reasoning
+              
+  postulate βx≤b⇒αβx≤αb : (x : ℤ)
+                        → ⊨[ x ∷ ρ /x] ((- β) x+ b)
+                        → ⊨[ ρ /x] ((α ⊛ b) ⊝ (# (α * β * x)))
+
+  ⊨real-shadow : (α ≡ + 1 ⊎ β ≡ + 1) → (x : ℤ)
+               → ⊨[ x ∷ ρ /x] (α x+ (⊝ a))
+               → ⊨[ x ∷ ρ /x] ((- β) x+ b)
+               → ⊨[ ρ /x] (aβ≤αb ⊝ (# [α-1][β-1]))
+  ⊨real-shadow α≡1∨β≡1 x a≤αx βx≤b = begin
+    + 0
+      ≤⟨ ⊨[ ρ /x]-trans (β ⊛ a) (# (α * β * x)) (α ⊛ b) (a≤αx⇒aβ≤αβx x a≤αx ) (βx≤b⇒αβx≤αb x βx≤b) ⟩
+    [ ρ /x] aβ≤αb
+      ≡⟨ sym (IntProp.+-identityʳ _) ⟩
+    [ ρ /x] aβ≤αb + (+ 0)
+      ≡⟨ cong (λ ⊚ → [ ρ /x] aβ≤αb + ⊚) (sym [ ρ /x]#0≡0) ⟩
+    [ ρ /x] aβ≤αb + [ ρ /x] (# (+ 0))
+      ≡⟨ sym ([ ρ /x]-+ aβ≤αb (# (+ 0))) ⟩
+    [ ρ /x] (aβ≤αb ⊕ (# (+ 0)))
+      ≡⟨ cong (λ ⊚ → [ ρ /x] (aβ≤αb ⊕ ⊚)) (sym (⊝#n≡#-n (+ 0))) ⟩
+    [ ρ /x] (aβ≤αb ⊝ (# (+ 0)))
+      ≡⟨ cong (λ ⊚ → [ ρ /x] (aβ≤αb ⊝ (# ⊚))) (sym (α≡1∨β≡1→[α-1][β-1]≡0 α≡1∨β≡1)) ⟩
+    [ ρ /x] (aβ≤αb ⊝ (# [α-1][β-1]))
+      ∎
+    where open ≤-Reasoning
+
 \end{code}
-%</goal-example>
 
 %<*norrish-subgoal-1>
 \begin{code}
-  ⊨βa≤αb : ⊨[ ρ /x] [α-1][β-1]≤αb-aβ → ⊨[ ρ /x] aβ≤αb
+  ⊨βa≤αb : ⊨[ ρ /x] (aβ≤αb ⊝ (# [α-1][β-1])) → ⊨[ ρ /x] aβ≤αb
   ⊨βa≤αb ⊨ds = begin 
     + 0
       ≤⟨ ⊨ds ⟩
-    [ ρ /x]↓ (aβ≤αb ⊝ (# [α-1][β-1]))
-      ≡⟨ cong (λ ⊚ → [ ρ /x]↓ (aβ≤αb ⊕ ⊚)) (⊝#n≡#-n [α-1][β-1]) ⟩
-    [ ρ /x]↓ (aβ≤αb ⊕ (# (- [α-1][β-1])))
-      ≡⟨ [ ρ /x]↓-distr _ _ ⟩
-    [ ρ /x]↓ aβ≤αb + [ ρ /x]↓ (# (- [α-1][β-1]))
-      ≡⟨ cong (λ ⊚ → [ ρ /x]↓ aβ≤αb + ⊚) ([_/x]↓-# ρ _) ⟩
-    [ ρ /x]↓ aβ≤αb + (- [α-1][β-1])
-      ≤⟨ 0≤n→m-n≤m _ _ 0≤[α-1][β-1]  ⟩
-    [ ρ /x]↓ aβ≤αb
+    [ ρ /x] (aβ≤αb ⊝ (# [α-1][β-1]))
+      ≡⟨ cong (λ ⊚ → [ ρ /x] (aβ≤αb ⊕ ⊚)) (⊝#n≡#-n [α-1][β-1]) ⟩
+    [ ρ /x] (aβ≤αb ⊕ (# (- [α-1][β-1])))
+      ≡⟨ [ ρ /x]-+ _ _ ⟩
+    [ ρ /x] aβ≤αb + [ ρ /x] (# (- [α-1][β-1]))
+      ≡⟨ cong (λ ⊚ → [ ρ /x] aβ≤αb + ⊚) ([_/x]-# ρ _) ⟩
+    [ ρ /x] aβ≤αb + (- [α-1][β-1])
+      ≤⟨ 0≤n→m-n≤m _ _ ⊨0≤[α-1][β-1]  ⟩
+    [ ρ /x] aβ≤αb
       ∎
     where open ≤-Reasoning
 \end{code}
@@ -473,8 +565,9 @@ module norrish-inner (i : ℕ) (ρ : Env i) (xs : List ℤ)
 
 %<*norrish-subgoal-2>
 \begin{code}
-  ⊨αβn<aβ≤αb<αβ[n+1] : ⊨[ ρ /x] aβ≤αb
-                     → ¬ (∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]ₚ (l , u)))
+  ⊨αβn<aβ≤αb<αβ[n+1] : {xs : List ℤ}
+                     → ⊨[ ρ /x] aβ≤αb
+                     → ¬ (∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]ₚ lu))
                      → All ⊨[ ρ /x] αβn<aβ≤αb<αβ[n+1]
 \end{code}
 %</norrish-subgoal-2>
@@ -484,23 +577,20 @@ module norrish-inner (i : ℕ) (ρ : Env i) (xs : List ℤ)
     where
       open ≤-Reasoning
 
-      -- ⊭aβ≤αβx≤αb : ¬ ⊨ ((α * β) x+∅ ⊝ ⇑1 (β ⊛ a) ∷ ⇑1 (α ⊛ b) ⊝ ((α * β) x+∅) ∷ [])
-      -- ⊭aβ≤αβx≤αb ρ' (⊨p₃ ∷ ⊨p₄ ∷ []) = ⊭p₂ ρ' ({!!} ∷ {!!} ∷ [])
-
       r₁ = begin
         + 0
           ≤⟨ {!!} ⟩
-        [ ρ /x]↓ ((β ⊛ a) ⊝ (# (α * β * n)) ⊝ (# (+ 1)))
+        [ ρ /x] ((β ⊛ a) ⊝ (# (α * β * n)) ⊝ (# (+ 1)))
           ∎
       r₂ = begin
         + 0
           ≤⟨ {!!} ⟩
-        [ ρ /x]↓ ((α ⊛ b) ⊝ (β ⊛ a))
+        [ ρ /x] ((α ⊛ b) ⊝ (β ⊛ a))
           ∎
       r₃ = begin
         + 0
           ≤⟨ {!!} ⟩
-        [ ρ /x]↓ ((# (α * β * (n + + 1))) ⊝ (α ⊛ b) ⊝ (# (+ 1)))
+        [ ρ /x] ((# (α * β * (n + + 1))) ⊝ (α ⊛ b) ⊝ (# (+ 1)))
           ∎
 \end{code}
 
@@ -515,7 +605,7 @@ module norrish-inner (i : ℕ) (ρ : Env i) (xs : List ℤ)
   ⊨α≤αβ[n+1]-αb (⊨p₁ ∷ ⊨p₂ ∷ ⊨p₃ ∷ []) = begin 
     + 0
       ≤⟨ {!!} ⟩
-    [ ρ /x]↓ α≤αβ[n+1]-αb
+    [ ρ /x] α≤αβ[n+1]-αb
       ∎
     where open ≤-Reasoning
 \end{code}
@@ -531,7 +621,7 @@ module norrish-inner (i : ℕ) (ρ : Env i) (xs : List ℤ)
   ⊨β≤aβ-αβn (⊨p₁ ∷ ⊨p₂ ∷ ⊨p₃ ∷ []) = begin 
     + 0
       ≤⟨ {!!} ⟩
-    [ ρ /x]↓ β≤aβ-αβn
+    [ ρ /x] β≤aβ-αβn
       ∎
     where open ≤-Reasoning
 \end{code}
@@ -540,7 +630,7 @@ module norrish-inner (i : ℕ) (ρ : Env i) (xs : List ℤ)
 \begin{code}
   ⊭[α-1][β-1]≤αb-aβ : ⊨[ ρ /x] α≤αβ[n+1]-αb
                     → ⊨[ ρ /x] β≤aβ-αβn
-                    → ⊨[ ρ /x] [α-1][β-1]≤αb-aβ
+                    → ⊨[ ρ /x] (aβ≤αb ⊝ (# [α-1][β-1]))
                     → ⊥
 \end{code}
 %</norrish-subgoal-5>
@@ -578,51 +668,39 @@ search-space ρ lus | Δ₀ | -[1+ n ] = []
 \end{code}
 %</search-space>
 
-\begin{code}
-module _ {i : ℕ} (ρ : Env i) (xs : List ℤ) where
-\end{code}
-
 %<*norrish-type>
 \begin{code}
-  norrish : (lu : Pair (suc i))
-          → ¬ ∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]ₚ lu)
-          → ¬ ⊨[ ρ /x] (dark-shadow lu)
+norrish : ∀ {i} (ρ : Env i) (xs : List ℤ) (lu : Pair (suc i))
+        → ¬ ∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]ₚ lu)
+        → ¬ ⊨[ ρ /x] (dark-shadow lu)
 \end{code}
 %</norrish-type>
 
 %<*norrish>
 \begin{code}
-  norrish (l , u) ⊭xs ⊨Ωlu = proof
-    where
-      open norrish-inner i ρ xs l u
-      proof : ⊥
-      proof with ⊨αβn<aβ≤αb<αβ[n+1] (⊨βa≤αb ⊨Ωlu ) ⊭xs
-      proof | ps = ⊭[α-1][β-1]≤αb-aβ (⊨α≤αβ[n+1]-αb ps) (⊨β≤aβ-αβn ps) ⊨Ωlu
+norrish {i} ρ xs lu ⊭xs ⊨Ωlu =
+  let ps = ⊨αβn<aβ≤αb<αβ[n+1] (⊨βa≤αb ⊨Ωlu ) ⊭xs
+   in ⊭[α-1][β-1]≤αb-aβ (⊨α≤αβ[n+1]-αb ps) (⊨β≤aβ-αβn ps) ⊨Ωlu
+  where open Norrish ρ lu 
 \end{code}
 %</norrish>
 
-%<*contradiction-adaptation>
+%<*by-contradiction-type>
 \begin{code}
-  postulate ∀lus∃xs⇒∃xs∀lus : (lus : List (Pair (suc i)))
-                            → (∀[ lus ] (λ lu → ∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]ₚ lu)))
-                            → (∃[ xs ] (λ x → ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ))
-
-  ∀xs→¬∀lus⇒∃lus→¬∃xs : (lus : List (Pair (suc i)))
-                      → (∀[ xs ] λ x → ¬ ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
-                      → (∃[ lus ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
-
-  ∀xs→¬∀lus⇒∃lus→¬∃xs lus = begin
-    (∀[ xs ] λ x → ¬ ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
-      ⇒⟨ AllProp.All¬⇒¬Any ⟩
-    (¬ ∃[ xs ] λ x → ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
-      ⇒⟨ (λ ¬∃xs∀lus ∀lus∃xs → ¬∃xs∀lus (∀lus∃xs⇒∃xs∀lus lus ∀lus∃xs)) ⟩
-    (¬ ∀[ lus ] λ lu → ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
-      ⇒⟨ AllProp.¬All⇒Any¬ (λ lu → any (λ x → ⟦ lu ⟧[ x ∷ ρ /x]ₚ) xs) lus ⟩
-    (∃[ lus ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
-      ∎
-    where open ⇒-Reasoning
+by-contradiction : ∀ {i} (ρ : Env i) (xs : List ℤ) (lus : List (Pair (suc i)))
+                 → (⊨Ωlus : All ⊨[ ρ /x] (omega lus))
+                 → (∀[ xs ] λ x → ¬ ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
+                 → ⊥
 \end{code}
-%</contradiction-adaptation>
+%</by-contradiction-type>
+
+%<*by-contradiction>
+\begin{code}
+by-contradiction {i} ρ xs lus ⊨Ωlus ∀xs¬∀lus =
+  ¬∃lus→¬∃xs lus ⊨Ωlus (∀xs→¬∀lus⇒∃lus→¬∃xs ∀xs¬∀lus)
+  where
+\end{code}
+%</by-contradiction>
 
 %<*contradiction-search>
 \begin{code}
@@ -632,26 +710,31 @@ module _ {i : ℕ} (ρ : Env i) (xs : List ℤ) where
              → ⊥
 
   ¬∃lus→¬∃xs [] [] ()
-  ¬∃lus→¬∃xs (lu ∷ lus) (⊨Ωlu ∷ ⊨Ωlus) (here ¬∃xs)       = norrish lu ¬∃xs ⊨Ωlu
+  ¬∃lus→¬∃xs (lu ∷ lus) (⊨Ωlu ∷ ⊨Ωlus) (here ¬∃xs)       = norrish ρ xs lu ¬∃xs ⊨Ωlu
   ¬∃lus→¬∃xs (lu ∷ lus) (⊨Ωlu ∷ ⊨Ωlus) (there ∃lus→¬∃xs) = ¬∃lus→¬∃xs lus ⊨Ωlus ∃lus→¬∃xs
 \end{code}
 %</contradiction-search>
 
-%<*by-contradiction-type>
+%<*contradiction-adaptation>
 \begin{code}
-  by-contradiction : (lus : List (Pair (suc i)))
-                   → (⊨Ωlus : All ⊨[ ρ /x] (omega lus))
-                   → (∀[ xs ] λ x → ¬ ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
-                   → ⊥
-\end{code}
-%</by-contradiction-type>
+  postulate ∀lus∃xs⇒∃xs∀lus : (∀[ lus ] (λ lu → ∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]ₚ lu)))
+                            → (∃[ xs ] (λ x → ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ))
 
-%<*by-contradiction>
-\begin{code}
-  by-contradiction lus ⊨Ωlus ∀xs¬∀lus =
-    ¬∃lus→¬∃xs lus ⊨Ωlus (∀xs→¬∀lus⇒∃lus→¬∃xs lus ∀xs¬∀lus)
+  ∀xs→¬∀lus⇒∃lus→¬∃xs : (∀[ xs ] λ x → ¬ ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
+                      → (∃[ lus ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
+
+  ∀xs→¬∀lus⇒∃lus→¬∃xs = begin
+    (∀[ xs ] λ x → ¬ ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
+      ∼⟨ AllProp.All¬⇒¬Any ⟩
+    (¬ ∃[ xs ] λ x → ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
+      ∼⟨ (λ ¬∃xs∀lus ∀lus∃xs → ¬∃xs∀lus (∀lus∃xs⇒∃xs∀lus ∀lus∃xs)) ⟩
+    (¬ ∀[ lus ] λ lu → ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
+      ∼⟨ AllProp.¬All⇒Any¬ (λ lu → any (λ x → ⟦ lu ⟧[ x ∷ ρ /x]ₚ) xs) lus ⟩
+    (∃[ lus ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
+      ∎
+    where open ⇒-Reasoning
 \end{code}
-%</by-contradiction>
+%</contradiction-adaptation>
 
 %<*find-x>
 \begin{code}
@@ -718,13 +801,7 @@ prepend-x : ∀ {i} (ρ : Env i) (x : ℤ) (irs : List (Constraint (suc i) Irrel
           → All ⊨[ x ∷ ρ /x]ᵢ irs
 
 prepend-x ρ x [] [] = []
-prepend-x ρ x (ir ∷ irs) (⊨Ωir ∷ ⊨Ωirs) = one ρ x ir ⊨Ωir ∷ (prepend-x ρ x irs ⊨Ωirs)
-  where
-  one : ∀ {i} (ρ : Env i) (x : ℤ) (ir : Constraint (suc i) Irrelevant)
-      → (⊨[ ρ /x] ∘ tail ∘ proj₁) ir
-      → ⊨[ x ∷ ρ /x]ᵢ ir
-
-  one x ir ⊨Ωir = {!!}
+prepend-x ρ x (ir ∷ irs) (⊨Ωir ∷ ⊨Ωirs) rewrite ⊨cs≡⊨0∷cs ρ x ir = ⊨Ωir ∷ (prepend-x ρ x irs ⊨Ωirs)
 \end{code}
 %</prepend-x>
 
@@ -732,7 +809,7 @@ prepend-x ρ x (ir ∷ irs) (⊨Ωir ∷ ⊨Ωirs) = one ρ x ir ⊨Ωir ∷ (pr
 \begin{code}
 foo : ∀ {i} (x : ℤ) (ρ : Env i) (lus : List (Pair (suc i))) → All ⊨[ x ∷ ρ /x]ₚ lus → All ⊨[ ρ /x] (omega lus)
 foo x ρ [] [] = []
-foo x ρ ((l , u) ∷ lus) ((⊨l , ⊨u) ∷ ⊨lus) = {!!}
+foo x ρ (lu ∷ lus) (⊨lu ∷ ⊨lus) = {!!} ∷ (foo x ρ lus ⊨lus)
 
 unsat : ∀ {i} (as : List (Linear i)) → ⟦ as ⟧Ω ≡ unsatisfiable → ⊨ as → ⊥
 unsat {zero} as ep with all ⟦_⟧[ [] /x] as
