@@ -784,8 +784,10 @@ pairs as = let lius = partition as in ×-list (proj₁ lius) (proj₂ (proj₂ l
 irrels : ∀ {i} (as : List (Linear (suc i))) → List (Constraint (suc i) Irrelevant) 
 irrels as = proj₁ (proj₂ (partition as))
 
-_⊎?_ : {!!}
-_⊎?_ = {!!}
+_⊎?_ : {A : Set} {P Q : A → Set} {a : A} → Dec (P a) → Dec (Q a) → Dec (P a ⊎ Q a)
+_⊎?_ (no ¬p) (no ¬q) = no λ { (inj₁ p) → ¬p p ; (inj₂ q) → ¬q q}
+_⊎?_ (yes p) _       = yes (inj₁ p)
+_⊎?_ _       (yes q) = yes (inj₂ q)
 
 ∀α≡1∨-β≡-1 : ∀ {i} (lus : List (Pair (suc i))) → Set
 ∀α≡1∨-β≡-1 lus = All (λ lu → head (proj₁ (proj₁ lu)) ≡ + 1 ⊎ head (proj₁ (proj₂ lu)) ≡ - + 1) lus
@@ -831,6 +833,13 @@ prepend-x : ∀ {i} (ρ : Env i) (x : ℤ) (irs : List (Constraint (suc i) Irrel
 
 prepend-x ρ x [] [] = []
 prepend-x ρ x (ir ∷ irs) (⊨Ωir ∷ ⊨Ωirs) rewrite ⊨cs≡⊨0∷cs ρ x ir = ⊨Ωir ∷ (prepend-x ρ x irs ⊨Ωirs)
+
+strip-x : ∀ {i} (ρ : Env i) (x : ℤ) (irs : List (Constraint (suc i) Irrelevant))
+        → All ⊨[ x ∷ ρ /x]ᵢ irs
+        → All ⊨[ ρ /x] (elim-irrel irs)
+
+strip-x ρ x [] [] = []
+strip-x ρ x (ir ∷ irs) (⊨ir ∷ ⊨irs) rewrite sym (⊨cs≡⊨0∷cs ρ x ir) = ⊨ir ∷ (strip-x ρ x irs ⊨irs)
 \end{code}
 %</prepend-x>
 
@@ -861,11 +870,18 @@ foo x ρ [] [] [] = []
 foo x ρ (lu@(((cl x+ csl +ℤ kl) , _) , ((cu x+ csu +ℤ ku) , _)) ∷ lus) (t ∷ ts) ((⊨l , ⊨u) ∷ ⊨lus) =
   Norrish.⊨real-shadow ρ lu x t ⊨l ⊨u ∷ (foo x ρ lus ts ⊨lus)
 
-tangle : ∀ {i} {P : Linear (suc i) → Set} (as : List (Linear (suc i)))
-       → All (λ lu → P (proj₁ (proj₁ lu)) × P (proj₁ (proj₂ lu))) (pairs as)
-       → All (λ i → P (proj₁ i)) (irrels as)
-       → All P as
-tangle = {!!}
+postulate tangle : ∀ {i} {P : Linear (suc i) → Set} (as : List (Linear (suc i)))
+                 → All (λ lu → P (proj₁ (proj₁ lu)) × P (proj₁ (proj₂ lu))) (pairs as)
+                 → All (λ i → P (proj₁ i)) (irrels as)
+                 → All P as
+
+postulate untangleʳ : ∀ {i} {P : Linear (suc i) → Set} (as : List (Linear (suc i)))
+                   → All P as
+                   → All (λ lu → P (proj₁ (proj₁ lu)) × P (proj₁ (proj₂ lu))) (pairs as)
+
+postulate untangleˡ : ∀ {i} {P : Linear (suc i) → Set} (as : List (Linear (suc i)))
+                   → All P as
+                   → All (λ i → P (proj₁ i)) (irrels as)
 
 unsat : ∀ {i} (as : List (Linear i)) → ⟦ as ⟧Ω ≡ unsatisfiable → ⊨ as → ⊥
 unsat {zero} as ep with all ⟦_⟧[ [] /x] as
@@ -877,7 +893,7 @@ unsat {suc i} as () | satisfiable | _
 unsat {suc i} as ep | unsatisfiable | j with ∀α≡1∨-β≡-1? (pairs as)
 unsat {suc i} as () | unsatisfiable | j | no ¬∀α≡1∨-β≡-1
 unsat {suc i} as ep | unsatisfiable | >[ eq ]< | yes ∀α≡1∨-β≡-1 with unsat (eliminate as) eq
-... | z = λ { (x ∷ ρ , ⊨as) → z (ρ , AllProp.++⁺ {!!} (foo x ρ (pairs as) ∀α≡1∨-β≡-1 {!⊨as!}))}
+... | z = λ { (x ∷ ρ , ⊨as) → z (ρ , AllProp.++⁺ (strip-x ρ x (irrels as) (untangleˡ as ⊨as)) (foo x ρ (pairs as) ∀α≡1∨-β≡-1 (untangleʳ as ⊨as)))}
 
 
 sat : ∀ {i} (as : List (Linear i)) → ⟦ as ⟧Ω ≡ satisfiable → ⊨ as
