@@ -45,8 +45,13 @@ module ≡-Reasoning = Relation.Binary.PropositionalEquality.≡-Reasoning
 ∃[_]_ : ∀ {a p} {A : Set a} → List A → (A → Set p) → Set (p ℓ⊔ a)
 ∃[ xs ] P = Any P xs 
 
-×-list : {X Y : Set}(xs : List X)(ys : List Y) → List (X × Y)
-×-list xs = List.concat ∘ List.map (λ y → List.map (_, y) xs)
+×-list-inner : {X Y : Set} → List X → Y → List (X × Y)
+×-list-inner [] y = []
+×-list-inner (x ∷ xs) y = (x , y) ∷ ×-list-inner xs y
+
+×-list : {X Y : Set} → List X → List Y → List (X × Y)
+×-list xs [] = []
+×-list xs (y ∷ ys) = ×-list-inner xs y ++ ×-list xs ys
 \end{code}
 
 %<*formula>
@@ -215,7 +220,6 @@ norm-form (x [ r ] y) = 0≤ norm-rel r (norm-atom x) (norm-atom y) ∧ [] E ∷
 \end{code}
 %</normalisation>
 
-%<*constraints>
 \begin{code}
 Irrelevant : ∀ {i} → Linear i → Set
 Irrelevant {zero} a = ⊥
@@ -228,13 +232,23 @@ LowerBound {suc n} a = + 0 < head a
 UpperBound : ∀ {i} → Linear i → Set
 UpperBound {zero} a = ⊥
 UpperBound {suc n} a = + 0 > head a
+\end{code}
 
+%<*constraint>
+\begin{code}
 Constraint : (i : ℕ) (P : Linear i → Set) → Set
 Constraint i P = Σ (Linear i) P
+\end{code}
+%</constraint>
 
+%<*pair>
+\begin{code}
 Pair : (i : ℕ) → Set
 Pair i = Constraint i LowerBound × Constraint i UpperBound
+\end{code}
+%</pair>
 
+\begin{code}
 partition : ∀ {i} → List (Linear (suc i))
            → List (Constraint (suc i) LowerBound)
            × List (Constraint (suc i) Irrelevant)
@@ -245,7 +259,6 @@ partition (a ∷ as) | Tri.tri< 0>c _ _ | ls , is , us = (a , 0>c) ∷ ls , is ,
 partition (a ∷ as) | Tri.tri≈ _ 0=c _ | ls , is , us = ls , (a , 0=c) ∷ is , us
 partition (a ∷ as) | Tri.tri> _ _ 0<c | ls , is , us = ls , is , (a , 0<c) ∷ us
 \end{code}
-%</constraints>
 
 %<*evaluation
 \begin{code}
@@ -390,15 +403,25 @@ k-out (cs ∷+ k) = begin
 [ x ∷ ρ /x]#0≡0 rewrite [ ρ /x]#0≡0 = refl
 
 0≤n→m-n≤m : (m : ℤ) (n : ℤ) → (+ 0) ≤ n → m - n ≤ m
-0≤n→m-n≤m = {!!}
+0≤n→m-n≤m m (-[1+_] n) ()
+0≤n→m-n≤m (+_ m) (+_ n) 0≤n = {!!}
+0≤n→m-n≤m (-[1+_] m) (+_ n) 0≤n = {!!}
 
 ⊨cs≡⊨0∷cs : ∀ {i} (ρ : Env i) (x : ℤ) (ir : Constraint (suc i) Irrelevant)
            → (⊨[ ρ /x] ∘ tail ∘ proj₁) ir ≡ ⊨[ x ∷ ρ /x]ᵢ ir
 
-⊨cs≡⊨0∷cs ρ x ir@(c x+ cs +ℤ k , 0=c) = begin 
+⊨cs≡⊨0∷cs ρ x (c x+ cs +ℤ k , 0=c) = begin 
   ⊨[ ρ /x] (cs ∷+ k)
-    ≡⟨ {!!} ⟩
-  ⊨[ x ∷ ρ /x]ᵢ ir
+    ≡⟨ cong (λ ⊚ → + 0 ≤ ⊚) (sym (IntProp.+-identityˡ ([ ρ /x] (cs ∷+ k)))) ⟩
+  + 0 ≤ (+ 0) + [ ρ /x] (cs ∷+ k)
+    ≡⟨ cong (λ ⊚ → + 0 ≤ ⊚ + [ ρ /x] (cs ∷+ k)) (sym (IntProp.*-zeroˡ x)) ⟩
+  + 0 ≤ (+ 0) * x + [ ρ /x] (cs ∷+ k)
+    ≡⟨ cong (λ ⊚ → + 0 ≤ ⊚ * x + _) 0=c ⟩
+  + 0 ≤ c * x + [ ρ /x] (cs ∷+ k)
+    ≡⟨⟩
+  + 0 ≤ [ x ∷ ρ /x] (c x+ cs +ℤ k)
+    ≡⟨⟩
+  ⊨[ x ∷ ρ /x]ᵢ (c x+ cs +ℤ k , 0=c)
     ∎ 
   where open ≡-Reasoning
 
@@ -423,24 +446,18 @@ module Norrish {i : ℕ} (ρ : Env i) (lu : Pair (suc i)) where
   l = proj₁ lu
   u = proj₂ lu
   α = head (proj₁ l)
-  a = ⊝ (tail (proj₁ l))
+  -a = tail (proj₁ l)
+  a = ⊝ -a
   0<α = proj₂ l
-  β = - (head (proj₁ u))
+  -β = head (proj₁ u)
+  β = - -β
   b = tail (proj₁ u)
+  0>-β = proj₂ u
   0<β : + 0 < β
-  0<β with head (proj₁ u) | proj₂ u
+  0<β with -β | 0>-β
   0<β | +_ _ | +≤+ ()
   0<β | -[1+_] n | z = +≤+ (Nat.s≤s Nat.z≤n)
   n = a/α ρ l
-
-  [a≤αx,]≡l : α x+ (⊝ a) ≡ proj₁ l
-  [a≤αx,]≡l with proj₁ l
-  ... | (c x+ cs +ℤ k) = cong (c x+_) (⊝⊝a≡a (cs ∷+ k))
-
-  [bx≤β,]≡u : (- β) x+ b ≡ proj₁ u
-  [bx≤β,]≡u with proj₁ u
-  ... | (c x+ cs +ℤ k) = cong (_x+ (cs ∷+ k)) (IntProp.doubleNeg c)
-  
 \end{code}
 %</norrish-inner-header>
 
@@ -481,12 +498,12 @@ module Norrish {i : ℕ} (ρ : Env i) (lu : Pair (suc i)) where
 \end{code}
 
 \begin{code}
-  α≡1∨β≡1→[α-1][β-1]≡0 : (α ≡ + 1 ⊎ β ≡ + 1) → [α-1][β-1] ≡ + 0
-  α≡1∨β≡1→[α-1][β-1]≡0 (inj₁ α≡1) rewrite α≡1 = refl
-  α≡1∨β≡1→[α-1][β-1]≡0 (inj₂ β≡1) rewrite β≡1 | IntProp.*-zeroʳ (α - + 1) = refl
+  α≡1∨-β≡-1→[α-1][β-1]≡0 : (α ≡ + 1 ⊎ -β ≡ - + 1) → [α-1][β-1] ≡ + 0
+  α≡1∨-β≡-1→[α-1][β-1]≡0 (inj₁ α≡1) rewrite α≡1 = refl
+  α≡1∨-β≡-1→[α-1][β-1]≡0 (inj₂ -β≡-1) rewrite -β≡-1 | IntProp.*-zeroʳ (α - + 1) = refl
   
   a≤αx⇒aβ≤αβx : (x : ℤ)
-              → ⊨[ x ∷ ρ /x] (α x+ (⊝ a))
+              → ⊨[ x ∷ ρ /x] (α x+ -a)
               → ⊨[ ρ /x] ((# (α * β * x)) ⊝ (β ⊛ a))
   a≤αx⇒aβ≤αβx x ⊨a≤αx with β       | 0<β
   a≤αx⇒aβ≤αβx x ⊨a≤αx | -[1+_] n   | ()
@@ -496,35 +513,38 @@ module Norrish {i : ℕ} (ρ : Env i) (lu : Pair (suc i)) where
       ≡⟨ sym (IntProp.*-zeroˡ (+ suc n)) ⟩
     (+ 0) * (+ suc n)
       ≤⟨ IntProp.*-+-right-mono n ⊨a≤αx ⟩
-    ([ x ∷ ρ /x] (α x+ (⊝ a))) * (+ suc n)
+    ([ x ∷ ρ /x] (α x+ -a)) * (+ suc n)
       ≡⟨⟩
-    (α * x + [ ρ /x] (⊝ a)) * (+ suc n)
-      ≡⟨ IntProp.distribʳ (+ suc n) (α * x) ([ ρ /x] (⊝ a)) ⟩
-    α * x * (+ suc n) + ([ ρ /x] (⊝ a)) * (+ suc n)
-      ≡⟨ cong (λ ⊚ → α * x * (+ suc n) + ⊚) (IntProp.*-comm ([ ρ /x] (⊝ a)) (+ suc n)) ⟩
-    α * x * (+ suc n) + (+ suc n) * ([ ρ /x] (⊝ a)) 
-      ≡⟨ cong (λ ⊚ → α * x * (+ suc n) + ⊚) (sym ([ ρ /x]-* (+ suc n) (⊝ a))) ⟩
-    α * x * (+ suc n) + ([ ρ /x] ((+ suc n) ⊛ (⊝ a)))
+    (α * x + [ ρ /x] -a) * (+ suc n)
+      ≡⟨ IntProp.distribʳ (+ suc n) (α * x) ([ ρ /x] -a) ⟩
+    α * x * (+ suc n) + ([ ρ /x] -a) * (+ suc n)
+      ≡⟨ cong (λ ⊚ → α * x * (+ suc n) + ⊚) (IntProp.*-comm ([ ρ /x] -a) (+ suc n)) ⟩
+    α * x * (+ suc n) + (+ suc n) * ([ ρ /x] -a) 
+      ≡⟨ cong (λ ⊚ → α * x * (+ suc n) + ⊚) (sym ([ ρ /x]-* (+ suc n) -a)) ⟩
+    α * x * (+ suc n) + ([ ρ /x] ((+ suc n) ⊛ -a))
       ≡⟨ cong (λ ⊚ → ⊚ * (+ suc n) + _) (IntProp.*-comm α x) ⟩
-    x * α * (+ suc n) + ([ ρ /x] ((+ suc n) ⊛ (⊝ a)))
+    x * α * (+ suc n) + ([ ρ /x] ((+ suc n) ⊛ -a))
       ≡⟨ cong (λ ⊚ → ⊚ + _) (IntProp.*-assoc x α (+ suc n)) ⟩
-    x * (α * (+ suc n)) + ([ ρ /x] ((+ suc n) ⊛ (⊝ a)))
+    x * (α * (+ suc n)) + ([ ρ /x] ((+ suc n) ⊛ -a))
       ≡⟨ cong (λ ⊚ → ⊚ + _) (IntProp.*-comm x (α * (+ suc n))) ⟩
-    (α * (+ suc n)) * x + ([ ρ /x] ((+ suc n) ⊛ (⊝ a)))
+    (α * (+ suc n)) * x + ([ ρ /x] ((+ suc n) ⊛ -a))
       ≡⟨ {!!} ⟩
     [ ρ /x] ((# (α * (+ suc n) * x)) ⊝ ((+ suc n) ⊛ a))
       ∎
     where open ≤-Reasoning
               
   postulate βx≤b⇒αβx≤αb : (x : ℤ)
-                        → ⊨[ x ∷ ρ /x] ((- β) x+ b)
+                        → ⊨[ x ∷ ρ /x] (-β x+ b)
                         → ⊨[ ρ /x] ((α ⊛ b) ⊝ (# (α * β * x)))
+\end{code}
 
-  ⊨real-shadow : (α ≡ + 1 ⊎ β ≡ + 1) → (x : ℤ)
-               → ⊨[ x ∷ ρ /x] (α x+ (⊝ a))
-               → ⊨[ x ∷ ρ /x] ((- β) x+ b)
+%<*real-shadow>
+\begin{code}
+  ⊨real-shadow : (x : ℤ) → (α ≡ + 1 ⊎ -β ≡ - + 1)
+               → ⊨[ x ∷ ρ /x] (α x+ -a)
+               → ⊨[ x ∷ ρ /x] (-β x+ b)
                → ⊨[ ρ /x] (aβ≤αb ⊝ (# [α-1][β-1]))
-  ⊨real-shadow α≡1∨β≡1 x a≤αx βx≤b = begin
+  ⊨real-shadow x α≡1∨-β≡-1 a≤αx βx≤b = begin
     + 0
       ≤⟨ ⊨[ ρ /x]-trans (β ⊛ a) (# (α * β * x)) (α ⊛ b) (a≤αx⇒aβ≤αβx x a≤αx ) (βx≤b⇒αβx≤αb x βx≤b) ⟩
     [ ρ /x] aβ≤αb
@@ -536,12 +556,12 @@ module Norrish {i : ℕ} (ρ : Env i) (lu : Pair (suc i)) where
     [ ρ /x] (aβ≤αb ⊕ (# (+ 0)))
       ≡⟨ cong (λ ⊚ → [ ρ /x] (aβ≤αb ⊕ ⊚)) (sym (⊝#n≡#-n (+ 0))) ⟩
     [ ρ /x] (aβ≤αb ⊝ (# (+ 0)))
-      ≡⟨ cong (λ ⊚ → [ ρ /x] (aβ≤αb ⊝ (# ⊚))) (sym (α≡1∨β≡1→[α-1][β-1]≡0 α≡1∨β≡1)) ⟩
+      ≡⟨ cong (λ ⊚ → [ ρ /x] (aβ≤αb ⊝ (# ⊚))) (sym (α≡1∨-β≡-1→[α-1][β-1]≡0 α≡1∨-β≡-1)) ⟩
     [ ρ /x] (aβ≤αb ⊝ (# [α-1][β-1]))
       ∎
     where open ≤-Reasoning
-
 \end{code}
+%</real-shadow>
 
 %<*norrish-subgoal-1>
 \begin{code}
@@ -670,15 +690,15 @@ search-space ρ lus | Δ₀ | -[1+ n ] = []
 
 %<*norrish-type>
 \begin{code}
-norrish : ∀ {i} (ρ : Env i) (xs : List ℤ) (lu : Pair (suc i))
-        → ¬ ∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]ₚ lu)
-        → ¬ ⊨[ ρ /x] (dark-shadow lu)
+⊨norrish : ∀ {i} (ρ : Env i) (xs : List ℤ) (lu : Pair (suc i))
+         → ¬ ∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]ₚ lu)
+         → ¬ ⊨[ ρ /x] (dark-shadow lu)
 \end{code}
 %</norrish-type>
 
 %<*norrish>
 \begin{code}
-norrish {i} ρ xs lu ⊭xs ⊨Ωlu =
+⊨norrish ρ xs lu ⊭xs ⊨Ωlu =
   let ps = ⊨αβn<aβ≤αb<αβ[n+1] (⊨βa≤αb ⊨Ωlu ) ⊭xs
    in ⊭[α-1][β-1]≤αb-aβ (⊨α≤αβ[n+1]-αb ps) (⊨β≤aβ-αβn ps) ⊨Ωlu
   where open Norrish ρ lu 
@@ -710,7 +730,7 @@ by-contradiction {i} ρ xs lus ⊨Ωlus ∀xs¬∀lus =
              → ⊥
 
   ¬∃lus→¬∃xs [] [] ()
-  ¬∃lus→¬∃xs (lu ∷ lus) (⊨Ωlu ∷ ⊨Ωlus) (here ¬∃xs)       = norrish ρ xs lu ¬∃xs ⊨Ωlu
+  ¬∃lus→¬∃xs (lu ∷ lus) (⊨Ωlu ∷ ⊨Ωlus) (here ¬∃xs)       = ⊨norrish ρ xs lu ¬∃xs ⊨Ωlu
   ¬∃lus→¬∃xs (lu ∷ lus) (⊨Ωlu ∷ ⊨Ωlus) (there ∃lus→¬∃xs) = ¬∃lus→¬∃xs lus ⊨Ωlus ∃lus→¬∃xs
 \end{code}
 %</contradiction-search>
@@ -758,29 +778,38 @@ data Result : Set where
 elim-irrel : ∀ {i} → List (Constraint (suc i) Irrelevant) → List (Linear i)
 elim-irrel = List.map (tail ∘ proj₁)
 
-exact-α : ∀ {i} → Decidable {A = Constraint (suc i) LowerBound} λ l → + 1 ≡ head (proj₁ l)
-exact-α l = + 1 ≟ head (proj₁ l)
+pairs : ∀ {i} (as : List (Linear (suc i))) → List (Pair (suc i)) 
+pairs as = let lius = partition as in ×-list (proj₁ lius) (proj₂ (proj₂ lius))
 
-exact-β : ∀ {i} → Decidable {A = Constraint (suc i) UpperBound} λ l → - + 1 ≡ head (proj₁ l)
-exact-β l = - + 1 ≟ head (proj₁ l)
+irrels : ∀ {i} (as : List (Linear (suc i))) → List (Constraint (suc i) Irrelevant) 
+irrels as = proj₁ (proj₂ (partition as))
+
+_⊎?_ : {!!}
+_⊎?_ = {!!}
+
+∀α≡1∨-β≡-1 : ∀ {i} (lus : List (Pair (suc i))) → Set
+∀α≡1∨-β≡-1 lus = All (λ lu → head (proj₁ (proj₁ lu)) ≡ + 1 ⊎ head (proj₁ (proj₂ lu)) ≡ - + 1) lus
+
+∀α≡1∨-β≡-1? : ∀ {i} → Decidable {A = List (Pair (suc i))} ∀α≡1∨-β≡-1
+∀α≡1∨-β≡-1? lus = all (λ lu → (head (proj₁ (proj₁ lu)) ≟ + 1) ⊎? (head (proj₁ (proj₂ lu)) ≟ - + 1)) lus
 \end{code}
 
 %<*elimination>
 \begin{code}
-interpret : ∀ {i} → List (Constraint (suc i) LowerBound)
-                  → List (Constraint (suc i) UpperBound)
-                  → Result → Result
-interpret ls us unsatisfiable with all exact-α ls | all exact-β us
-... | no _ | no _ = undecided
-... | _    | _    = unsatisfiable
-interpret ls us r = r
+eliminate : ∀ {i} → List (Linear (suc i)) → List (Linear i)
+eliminate as = elim-irrel (irrels as) ++ omega (pairs as)
+       
+interpret : ∀ {i} → List (Pair (suc i)) → Result → Result
+interpret lus unsatisfiable with ∀α≡1∨-β≡-1? lus
+...                         | yes _ = unsatisfiable
+...                         | no _  = undecided
+interpret lus r = r
 
 ⟦_⟧Ω : ∀ {i} → List (Linear i) → Result
 ⟦_⟧Ω {zero} as with all ⟦_⟧[ [] /x] as
 ...            | yes p = satisfiable
 ...            | no ¬p = unsatisfiable
-⟦_⟧Ω {suc i} as with partition as
-...             | ls , is , us = interpret ls us ⟦ elim-irrel is ++ omega (×-list ls us) ⟧Ω 
+⟦_⟧Ω {suc i} as = interpret (pairs as) ⟦ eliminate as ⟧Ω 
 \end{code}
 %</elimination>
 
@@ -807,45 +836,64 @@ prepend-x ρ x (ir ∷ irs) (⊨Ωir ∷ ⊨Ωirs) rewrite ⊨cs≡⊨0∷cs ρ 
 
 %<*correct>
 \begin{code}
-foo : ∀ {i} (x : ℤ) (ρ : Env i) (lus : List (Pair (suc i))) → All ⊨[ x ∷ ρ /x]ₚ lus → All ⊨[ ρ /x] (omega lus)
-foo x ρ [] [] = []
-foo x ρ (lu ∷ lus) (⊨lu ∷ ⊨lus) = {!!} ∷ (foo x ρ lus ⊨lus)
+tangle-×ˡ : {A B : Set} {P : A → Set} {Q : B → Set} (xs : List A) (ys : List B)
+          → All P xs → All (λ {(x , y) → P x ⊎ Q y}) (×-list xs ys)
+tangle-×ˡ xs [] Pxs = []
+tangle-×ˡ {A} {B} {P} {Q} xs (y ∷ ys) Pxs = AllProp.++⁺ (inner y xs Pxs) (tangle-×ˡ xs ys Pxs)
+  where
+  inner : (y : B) (xs : List A) → All P xs → All (λ {(x , y) → P x ⊎ Q y}) (×-list-inner xs y)
+  inner y [] [] = []
+  inner y (x ∷ xs) (px ∷ Pxs) = (inj₁ px) ∷ (inner y xs Pxs)
+
+tangle-×ʳ : {A B : Set} {P : A → Set} {Q : B → Set} (xs : List A) (ys : List B)
+          → All Q ys → All (λ {(x , y) → P x ⊎ Q y}) (×-list xs ys)
+tangle-×ʳ xs [] [] = []
+tangle-×ʳ {A} {B} {P} {Q} xs (y ∷ ys) (Qy ∷ Qys) = AllProp.++⁺ (inner y xs Qy) (tangle-×ʳ xs ys Qys)
+  where
+  inner : (y : B) (xs : List A) → Q y → All (λ {(x , y) → P x ⊎ Q y}) (×-list-inner xs y)
+  inner y [] Qy = []
+  inner y (x ∷ xs) Qy = (inj₂ Qy) ∷ (inner y xs Qy)
+
+foo : ∀ {i} (x : ℤ) (ρ : Env i) (lus : List (Pair (suc i)))
+    → All (λ {((l , _) , (u , _)) → head l ≡ + 1 ⊎ head u ≡ - + 1}) lus
+    → All ⊨[ x ∷ ρ /x]ₚ lus → All ⊨[ ρ /x] (omega lus)
+foo x ρ [] [] [] = []
+foo x ρ (lu@(((cl x+ csl +ℤ kl) , _) , ((cu x+ csu +ℤ ku) , _)) ∷ lus) (t ∷ ts) ((⊨l , ⊨u) ∷ ⊨lus) =
+  Norrish.⊨real-shadow ρ lu x t ⊨l ⊨u ∷ (foo x ρ lus ts ⊨lus)
+
+tangle : ∀ {i} {P : Linear (suc i) → Set} (as : List (Linear (suc i)))
+       → All (λ lu → P (proj₁ (proj₁ lu)) × P (proj₁ (proj₂ lu))) (pairs as)
+       → All (λ i → P (proj₁ i)) (irrels as)
+       → All P as
+tangle = {!!}
 
 unsat : ∀ {i} (as : List (Linear i)) → ⟦ as ⟧Ω ≡ unsatisfiable → ⊨ as → ⊥
 unsat {zero} as ep with all ⟦_⟧[ [] /x] as
 unsat {zero} as () | yes p
 unsat {zero} as ep | no ¬p = λ {([] , ⊨as) → ¬p ⊨as}
-unsat {suc i} as ep with partition as
-... | ls , irs , us with ×-list ls us
-... | lus with ⟦ elim-irrel irs ++ omega lus ⟧Ω | inspect ⟦_⟧Ω (elim-irrel irs ++ omega lus)
-unsat {suc i} as () | ls , irs , us | lus | undecided | _
-unsat {suc i} as () | ls , irs , us | lus | satisfiable | _
-unsat {suc i} as ep | ls , irs , us | lus | unsatisfiable | j with all exact-α ls
-unsat {suc i} as ep | ls , irs , us | lus | unsatisfiable | >[ eq ]< | yes ∀α≡1 with unsat (elim-irrel irs ++ omega lus) eq
-... | z = λ { ((x ∷ ρ) , ⊨smth) → z (ρ , {!!})}
+unsat {suc i} as ep with ⟦ eliminate as ⟧Ω | inspect ⟦_⟧Ω (eliminate as)
+unsat {suc i} as () | undecided | _
+unsat {suc i} as () | satisfiable | _
+unsat {suc i} as ep | unsatisfiable | j with ∀α≡1∨-β≡-1? (pairs as)
+unsat {suc i} as () | unsatisfiable | j | no ¬∀α≡1∨-β≡-1
+unsat {suc i} as ep | unsatisfiable | >[ eq ]< | yes ∀α≡1∨-β≡-1 with unsat (eliminate as) eq
+... | z = λ { (x ∷ ρ , ⊨as) → z (ρ , AllProp.++⁺ {!!} (foo x ρ (pairs as) ∀α≡1∨-β≡-1 {!⊨as!}))}
 
-unsat {suc i} as ep | ls , irs , us | lus | unsatisfiable | j | no _ with all exact-β us
-unsat {suc i} as ep | ls , irs , us | lus | unsatisfiable | j | no _ | yes ∀β≡1 = {!!}
-unsat {suc i} as () | ls , irs , us | lus | unsatisfiable | j | no _ | no _
 
 sat : ∀ {i} (as : List (Linear i)) → ⟦ as ⟧Ω ≡ satisfiable → ⊨ as
 sat {zero} as ep with all ⟦_⟧[ [] /x] as
 sat {zero} as ep | yes p = [] , p
 sat {zero} as () | no ¬p
-sat {suc i} as ep with partition as
-... | ls , irs , us with ×-list ls us
-... | lus with ⟦ elim-irrel irs ++ omega lus ⟧Ω | inspect ⟦_⟧Ω (elim-irrel irs ++ omega lus)
-sat {suc i} as () | ls , irs , us | lus | undecided | _
-sat {suc i} as ep | ls , irs , us | lus | unsatisfiable | _ with all exact-α ls
-sat {suc i} as () | ls , irs , us | lus | unsatisfiable | _ | yes _
-sat {suc i} as ep | ls , irs , us | lus | unsatisfiable | _ | no _  with all exact-β us
-sat {suc i} as () | ls , irs , us | lus | unsatisfiable | _ | no _  | yes p
-sat {suc i} as () | ls , irs , us | lus | unsatisfiable | _ | no _  | no _ 
-sat {suc i} as ep | ls , irs , us | lus | satisfiable  | >[ eq ]< with sat (elim-irrel irs ++ omega lus) eq
-sat {suc i} as ep | ls , irs , us | lus | _ | _ | ρ , ⊨Ωas with AllProp.++⁻ (elim-irrel irs) ⊨Ωas
-sat {suc i} as ep | ls , irs , us | lus | _ | _ | ρ , ⊨Ωas | ⊨Ωirs , ⊨Ωlus with find-x ρ lus ⊨Ωlus
-sat {suc i} as ep | ls , irs , us | lus | _ | _ | ρ , ⊨Ωas | ⊨Ωirs , ⊨Ωlus | x , ⊨lus with prepend-x ρ x irs ⊨Ωirs
-... | ⊨irs = {!!}
+sat {suc i} as ep with ⟦ eliminate as ⟧Ω | inspect ⟦_⟧Ω (eliminate as)
+sat {suc i} as () | undecided | _
+sat {suc i} as ep | unsatisfiable | _ with ∀α≡1∨-β≡-1? (pairs as)
+sat {suc i} as () | unsatisfiable | _ | yes _
+sat {suc i} as () | unsatisfiable | _ | no _ 
+sat {suc i} as ep | satisfiable  | >[ eq ]< with sat (eliminate as) eq
+sat {suc i} as ep | _ | _ | ρ , ⊨Ωas with AllProp.++⁻ (elim-irrel (irrels as)) ⊨Ωas
+sat {suc i} as ep | _ | _ | ρ , ⊨Ωas | ⊨Ωirs , ⊨Ωlus with find-x ρ (pairs as) ⊨Ωlus
+sat {suc i} as ep | _ | _ | ρ , ⊨Ωas | ⊨Ωirs , ⊨Ωlus | x , ⊨lus with prepend-x ρ x (irrels as) ⊨Ωirs
+... | ⊨irs = (x ∷ ρ) , (tangle as ⊨lus ⊨irs)
 
 ⟦_⟧Ω-correct : ∀ {i} (as : List (Linear i)) → ⟦ as ⟧Ω-Correct
 ⟦_⟧Ω-correct as with ⟦ as ⟧Ω | inspect ⟦_⟧Ω as
