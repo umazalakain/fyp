@@ -774,7 +774,7 @@ find-x ρ lus ⊨↓lus | xs = search (λ x → all ⟦_⟧[ x ∷ ρ /x]ₚ lus
 \end{code}
 %</find-x>
 
-\subsection{Correctness}
+\subsection{Soundness}
 
 %<*result>
 \begin{code}
@@ -810,11 +810,11 @@ data Result : Set where
 
 %<*correctness>
 \begin{code}
-⟦_⟧Ω-Correct : ∀ {i} (as : List (Linear i)) → Set
-⟦_⟧Ω-Correct as with ⟦ as ⟧Ω
-⟦_⟧Ω-Correct as | undecided      = ⊤
-⟦_⟧Ω-Correct as | satisfiable    = ⊨ as
-⟦_⟧Ω-Correct as | unsatisfiable  = ⊨ as → ⊥
+⟦_⟧Ω-Sound : ∀ {i} (as : List (Linear i)) → Set
+⟦_⟧Ω-Sound as with ⟦ as ⟧Ω
+⟦_⟧Ω-Sound as | undecided      = ⊤
+⟦_⟧Ω-Sound as | satisfiable    = ⊨ as
+⟦_⟧Ω-Sound as | unsatisfiable  = ⊨ as → ⊥
 \end{code}
 %</correctness>
 
@@ -891,10 +891,10 @@ sat {suc i} as ep | _ | _ | ρ , ⊨as↓ | ⊨irs↓ , ⊨lus↓ | x , ⊨lus |
 
 %<*correct>
 \begin{code}
-⟦_⟧Ω-correct : ∀ {i} (as : List (Linear i)) → ⟦ as ⟧Ω-Correct
-⟦_⟧Ω-correct as with ⟦ as ⟧Ω | inspect ⟦_⟧Ω as
-⟦_⟧Ω-correct as | undecided     | _        = tt
-⟦_⟧Ω-correct as | unsatisfiable | >[ eq ]< = unsat as eq
-⟦_⟧Ω-correct as | satisfiable   | >[ eq ]< = sat as eq
+⟦_⟧Ω-sound : ∀ {i} (as : List (Linear i)) → ⟦ as ⟧Ω-Sound
+⟦_⟧Ω-sound as with ⟦ as ⟧Ω | inspect ⟦_⟧Ω as
+⟦_⟧Ω-sound as | undecided     | _        = tt
+⟦_⟧Ω-sound as | unsatisfiable | >[ eq ]< = unsat as eq
+⟦_⟧Ω-sound as | satisfiable   | >[ eq ]< = sat as eq
 \end{code}
 %</correct>
