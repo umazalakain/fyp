@@ -86,7 +86,7 @@ data Formula (i : ℕ) : Set where
   _[_]_          : Atom i → Rel → Atom i → Formula i
   _∧'_ _∨'_ _⇒'_ : Formula i → Formula i → Formula i
   ¬'_            : Formula i             → Formula i
-  -- New variable introduction
+  -- Introduction of new variables
   ∃'_ ∀'_        : Formula (suc i)       → Formula i
 \end{code}
 %</formula>
@@ -257,25 +257,18 @@ UpperBound {zero} a = ⊥
 UpperBound {suc n} a = + 0 > head a
 \end{code}
 
-%<*constraint>
-\begin{code}
-Constraint : (i : ℕ) (P : Linear i → Set) → Set
-Constraint i P = Σ (Linear i) P
-\end{code}
-%</constraint>
-
 %<*pair>
 \begin{code}
 Pair : (i : ℕ) → Set
-Pair i = Constraint i LowerBound × Constraint i UpperBound
+Pair i = Σ (Linear i) LowerBound × Σ (Linear i) UpperBound
 \end{code}
 %</pair>
 
 \begin{code}
 partition : ∀ {i} → List (Linear (suc i))
-           → List (Constraint (suc i) LowerBound)
-           × List (Constraint (suc i) Irrelevant)
-           × List (Constraint (suc i) UpperBound)
+           → List (Σ (Linear (suc i)) LowerBound)
+           × List (Σ (Linear (suc i)) Irrelevant)
+           × List (Σ (Linear (suc i)) UpperBound)
 partition [] = [] , [] , []
 partition (a ∷ as) with IntProp.<-cmp (+ 0) (head a) | partition as
 partition (a ∷ as) | Tri.tri< 0>c _ _ | ls , is , us = (a , 0>c) ∷ ls , is , us
@@ -285,7 +278,7 @@ partition (a ∷ as) | Tri.tri> _ _ 0<c | ls , is , us = ls , is , (a , 0<c) ∷
 -- Must not pattern match so that we live a useful trail for unification
 pairs : ∀ {i} (as : List (Linear (suc i))) → List (Pair (suc i)) 
 pairs as = let lius = partition as in ×-list (proj₁ lius) (proj₂ (proj₂ lius))
-irrels : ∀ {i} (as : List (Linear (suc i))) → List (Constraint (suc i) Irrelevant) 
+irrels : ∀ {i} (as : List (Linear (suc i))) → List (Σ (Linear (suc i)) Irrelevant) 
 irrels as = proj₁ (proj₂ (partition as))
 \end{code}
 
@@ -301,7 +294,7 @@ omega = List.map dark-shadow
 %</dark-shadow>
 
 \begin{code}
-elim-irrel : ∀ {i} → List (Constraint (suc i) Irrelevant) → List (Linear i)
+elim-irrel : ∀ {i} → List (Σ (Linear (suc i)) Irrelevant) → List (Linear i)
 elim-irrel = List.map (tail ∘ proj₁)
 
 eliminate : ∀ {i} → List (Linear (suc i)) → List (Linear i)
@@ -332,7 +325,7 @@ Env i = Vec ℤ i
 ⊨[_/x]ₚ : ∀ {i} → Env i → Pair i → Set
 ⊨[ ρ /x]ₚ ((l , _) , (u , _)) = ⊨[ ρ /x] l × ⊨[ ρ /x] u
 
-⊨[_/x]ᵢ : ∀ {i} → Env i → Constraint i Irrelevant → Set
+⊨[_/x]ᵢ : ∀ {i} → Env i → Σ (Linear i) Irrelevant → Set
 ⊨[ ρ /x]ᵢ (ir , _) = ⊨[ ρ /x] ir
 \end{code}
 
@@ -443,7 +436,7 @@ Env i = Vec ℤ i
 ⊝#n≡#-n : ∀ {i} → (n : ℤ) → ⊝_ {i} (# n) ≡ # (- n)
 ⊝#n≡#-n {i} n rewrite VecProp.map-replicate -_ (+ 0) i = refl
 
-⊨cs≡⊨0∷cs : ∀ {i} (x : ℤ) (ρ : Env i) (ir : Constraint (suc i) Irrelevant)
+⊨cs≡⊨0∷cs : ∀ {i} (x : ℤ) (ρ : Env i) (ir : Σ (Linear (suc i)) Irrelevant)
            → (⊨[ ρ /x] ∘ tail ∘ proj₁) ir ≡ ⊨[ x ∷ ρ /x]ᵢ ir
 
 ⊨cs≡⊨0∷cs x ρ (c x+ cs +ℤ k , 0=c) = begin 
@@ -476,12 +469,12 @@ Env i = Vec ℤ i
   where open ≡-Reasoning
 
 -- div requires an implicit proof showing its divisor is non-zero
-a/α : ∀ {i} → Env i → Constraint (suc i) LowerBound → ℤ
+a/α : ∀ {i} → Env i → Σ (Linear (suc i)) LowerBound → ℤ
 a/α ρ (+_ zero x+ -cs +ℤ -k , (_≤_.+≤+ ()))
 a/α ρ (+_ (suc α-1) x+ -cs +ℤ -k , lb) = let a = - [ ρ /x] (-cs ∷+ -k) in sign a ◃ (∣ a ∣ div suc α-1)
 a/α ρ (-[1+ n ] x+ -cs +ℤ -k , ())
 
-b/β : ∀ {i} → Env i → Constraint (suc i) UpperBound → ℤ
+b/β : ∀ {i} → Env i → Σ (Linear (suc i)) UpperBound → ℤ
 b/β ρ (+_ c x+ cs +ℤ k , _≤_.+≤+ ())
 b/β ρ (-[1+ β-1 ] x+ cs +ℤ k , ub) = let b = [ ρ /x] (cs ∷+ k) in sign b ◃ (∣ b ∣ div suc β-1)
 \end{code}
@@ -636,8 +629,8 @@ module Norrish {i : ℕ} (ρ : Env i) (lu : Pair (suc i)) where
     [ ρ /x] (aβ≤αb ⊕ (# (- [α-1][β-1])))
       ≡⟨ [ ρ /x]-⊕ _ _ ⟩
     [ ρ /x] aβ≤αb + [ ρ /x] (# (- [α-1][β-1]))
-      ≡⟨ cong (λ ⊚ → [ ρ /x] aβ≤αb + ⊚) ([_/x]-# ρ _) ⟩
-    [ ρ /x] aβ≤αb + (- [α-1][β-1])
+      ≡⟨ cong (λ ⊚ → [ ρ /x] aβ≤αb + ⊚) ([ ρ /x]-# _) ⟩
+    [ ρ /x] aβ≤αb - [α-1][β-1]
       ≤⟨ 0≤n→m-n≤m _ _ ⊨0≤[α-1][β-1]  ⟩
     [ ρ /x] aβ≤αb
       ∎
@@ -698,13 +691,13 @@ module Norrish {i : ℕ} (ρ : Env i) (lu : Pair (suc i)) where
 
 %<*search-space>
 \begin{code}
-start : ∀ {i} → Env i → List (Constraint (suc i) LowerBound) → ℤ
+start : ∀ {i} → Env i → List (Σ (Linear (suc i)) LowerBound) → ℤ
 start ρ ls = List.foldr _⊔_ (+ 0) (List.map (a/α ρ) ls)
 
-stop : ∀ {i} → Env i → List (Constraint (suc i) UpperBound) → ℤ
+stop : ∀ {i} → Env i → List (Σ (Linear (suc i)) UpperBound) → ℤ
 stop ρ us = List.foldr _⊓_ (+ 0) (List.map (b/β ρ) us)
 
-search-space : ∀ {i} → Env i → (lus : List (Pair (suc i))) → List ℤ
+search-space : ∀ {i} → Env i → List (Pair (suc i)) → List ℤ
 search-space ρ lus with start ρ (List.map proj₁ lus)
 search-space ρ lus | Δ₀ with stop ρ (List.map proj₂ lus) - Δ₀
 search-space ρ lus | Δ₀ | + n = List.applyUpTo (λ i → + i + Δ₀) n 
@@ -715,8 +708,8 @@ search-space ρ lus | Δ₀ | -[1+ n ] = []
 %<*by-contradiction-type>
 \begin{code}
 by-contradiction : ∀ {i} (ρ : Env i) (xs : List ℤ) (lus : List (Pair (suc i)))
-                 → (⊨lus↓ : ∀[ omega lus ] ⊨[ ρ /x])
-                 → (∀[ xs ] λ x → ¬ ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
+                 → ∀[ omega lus ] ⊨[ ρ /x]
+                 → ∀[ xs ] (λ x → ¬ ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
                  → ⊥
 \end{code}
 %</by-contradiction-type>
@@ -732,8 +725,8 @@ by-contradiction {i} ρ xs lus ⊨lus↓ ∀xs¬∀lus =
 %<*contradiction-search>
 \begin{code}
   ¬∃lus→¬∃xs : (lus : List (Pair (suc i)))
-             → (⊨lus↓ : ∀[ omega lus ] ⊨[ ρ /x])
-             → (∃[ lus ] λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
+             → ∀[ omega lus ] ⊨[ ρ /x]
+             → ∃[ lus ] (λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
              → ⊥
 
   ¬∃lus→¬∃xs [] [] ()
@@ -827,14 +820,14 @@ data Result : Set where
 ⊨Ωlus x ρ (lu@(((_ x+ _ +ℤ _) , _) , ((_ x+ _ +ℤ _) , _)) ∷ lus) (t ∷ ts) ((⊨l , ⊨u) ∷ ⊨lus) =
   Norrish.⊨real-shadow ρ lu x t ⊨l ⊨u ∷ (⊨Ωlus x ρ lus ts ⊨lus)
 
-prepend-x : ∀ {i} (x : ℤ) (ρ : Env i) (irs : List (Constraint (suc i) Irrelevant))
+prepend-x : ∀ {i} (x : ℤ) (ρ : Env i) (irs : List (Σ (Linear (suc i)) Irrelevant))
           → ∀[ elim-irrel irs ] ⊨[ ρ /x]
           → ∀[ irs ] ⊨[ x ∷ ρ /x]ᵢ
 
 prepend-x x ρ [] [] = []
 prepend-x x ρ (ir ∷ irs) (⊨ir↓ ∷ ⊨irs↓) rewrite ⊨cs≡⊨0∷cs x ρ ir = ⊨ir↓ ∷ (prepend-x x ρ irs ⊨irs↓)
 
-strip-x : ∀ {i} (x : ℤ) (ρ : Env i) (irs : List (Constraint (suc i) Irrelevant))
+strip-x : ∀ {i} (x : ℤ) (ρ : Env i) (irs : List (Σ (Linear (suc i)) Irrelevant))
         → ∀[ irs ] ⊨[ x ∷ ρ /x]ᵢ
         → ∀[ elim-irrel irs ] ⊨[ ρ /x]
 
@@ -848,11 +841,11 @@ postulate entangle : ∀ {i} {P : Linear (suc i) → Set} (as : List (Linear (su
                    → ∀[ pairs as ] (λ lu → P (proj₁ (proj₁ lu)) × P (proj₁ (proj₂ lu)))
                    → ∀[ as ] P
 
-postulate untangleˡ : ∀ {i} {P : Linear (suc i) → Set} (as : List (Linear (suc i)))
+postulate untangleⁱ : ∀ {i} {P : Linear (suc i) → Set} (as : List (Linear (suc i)))
                    → ∀[ as ] P
                    → ∀[ irrels as ] (λ i → P (proj₁ i))
 
-postulate untangleʳ : ∀ {i} {P : Linear (suc i) → Set} (as : List (Linear (suc i)))
+postulate untangleᵖ : ∀ {i} {P : Linear (suc i) → Set} (as : List (Linear (suc i)))
                    → ∀[ as ] P
                    → ∀[ pairs as ] (λ lu → P (proj₁ (proj₁ lu)) × P (proj₁ (proj₂ lu)))
 \end{code}
@@ -870,8 +863,8 @@ unsat {suc i} as () | unsatisfiable | _        | no ¬∀α≡1∨-β≡-1
 unsat {suc i} as ep | unsatisfiable | >[ eq ]< | yes ∀α≡1∨-β≡-1 with unsat (eliminate as) eq
 unsat {suc i} as ep | unsatisfiable | >[ eq ]< | yes ∀α≡1∨-β≡-1 | ⊨as↓→⊥ = λ {
   (x ∷ ρ , ⊨as) → ⊨as↓→⊥ (ρ , AllProp.++⁺
-    (strip-x x ρ (irrels as) (untangleˡ as ⊨as))
-    (⊨Ωlus x ρ (pairs as) ∀α≡1∨-β≡-1 (untangleʳ as ⊨as)))}
+    (strip-x x ρ (irrels as) (untangleⁱ as ⊨as))
+    (⊨Ωlus x ρ (pairs as) ∀α≡1∨-β≡-1 (untangleᵖ as ⊨as)))}
 
 sat : ∀ {i} (as : List (Linear i)) → ⟦ as ⟧Ω ≡ satisfiable → ⊨ as
 sat {zero} as ep with all ⟦_⟧[ [] /x] as
@@ -898,3 +891,8 @@ sat {suc i} as ep | _ | _ | ρ , ⊨as↓ | ⊨irs↓ , ⊨lus↓ | x , ⊨lus |
 ⟦_⟧Ω-sound as | satisfiable   | >[ eq ]< = sat as eq
 \end{code}
 %</correct>
+
+\begin{code}
+example₁ : List (Linear 2)
+example₁ = (((+ 2) ∷ ((- + 4) ∷ [])) ∷+ (+ 0)) ∷ (((- + 2) ∷ ((- + 4) ∷ [])) ∷+ (+ 0)) ∷ []
+\end{code}
