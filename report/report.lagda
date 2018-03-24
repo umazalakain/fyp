@@ -240,7 +240,7 @@ lens.
 relationship between machine programs and formal proofs, illustrated
 with accompainying Agda programs. The chapter includes a short
 introduction to programming in Agda, and establishes some of the base
-ground required for formal verification.
+ground required to perform formal verification in Agda.
 
 \autoref{ch:monoids} starts with a simple example: a fully-verified
 solver for equations on monoids. \autoref{ch:rings} comments on a more
@@ -260,7 +260,14 @@ of the project's process.
 \label{ch:background}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\todo{Present sections and their thoughtfulness}
+This chapter briefly introduces the case for the use of type-checkers
+as theorem verifiers. After that, a succint primer on programming in
+Agda is given. In itself, such introduction is probably not entirely
+sufficient to get the unexperienced reader comfortable reading Agda
+code. Only more in-depth reading and hands-on practice are likely to
+achieve that. Nevertheless, it is my hope that it leaves them with
+enough understanding to intuitively grasp some of the ideas put
+forward in other sections of this report.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Proofs as programs; propositions as types}
@@ -352,7 +359,7 @@ depend on a value — model predicate logics containing quantifiers.
 \end{code}
 
 Proofs should not suffer from the halting problem — they should be
-rejected if they don't clearly show that they will eventually reach
+rejected if they don't clearly show that they eventually reach
 termination. If we consider programs to be proofs, programs for which
 termination cannot be verified should be rejected.
 
@@ -549,9 +556,9 @@ of it further refines the types in context.
 \end{code}
 
 If the type-checker can see that a type is impossible to construct,
-pattern matching on it will render the case absurd, and thus you do
-not need to provide a definition for it. Dependent types grant a level
-of precision that makes handling erroneous input uncessary.
+pattern matching on it renders the case absurd, and thus you do not
+need to provide a definition for it. Dependent types grant a level of
+precision that makes handling erroneous input uncessary.
 
 \begin{code}
     -- The successor of an even number cannot be even
@@ -611,7 +618,7 @@ side. \cite{Oury2008} contains other interesting examples of views.
 
 Intensional equality judges two terms equal based on how they were
 constructed. Two terms with identical behaviour but of different
-construction will be considered different.
+construction are considered different.
 
 \AgdaHide{
 \begin{code}
@@ -817,7 +824,7 @@ This project uses Agda-Stdlib as its sole dependency.
 
 To avoid Russell's paradox, Agda introduces a hierarchy of universes
 ~\AgdaPrimitiveType{Set}~\AgdaSymbol{:}~\AgdaPrimitiveType{Set₁}~\AgdaSymbol{:}~\AgdaPrimitiveType{Set₂}\ldots~
-where ~\AgdaPrimitiveType{Set}~ is the set of all small types like
+where ~\AgdaPrimitiveType{Set}~ is the type of all small types like
 ~\AgdaDatatype{Bool}~ or ~\AgdaDatatype{ℕ}.
 
 \subsubsection{Postulates and safe mode}
@@ -839,13 +846,13 @@ postulates may lead to inconsistencies:
     LEM | () 
 \end{code}
 
-Executing Agda with the \texttt{--safe} switch deactivates those
+Executing Agda with the \texttt{{-}{-}safe} switch deactivates those
 features that may lead to inconsistencies, like postulates, accepting
 unsolved proofs or
 ~\AgdaPrimitiveType{Set}~\AgdaSymbol{:}~\AgdaPrimitiveType{Set}.
 Unfortunately, Agda's standard library does not quarentine unsafe
-definitions so any module depending on it (albeit not using any of the
-unsafe features) will be considered unsafe too. There is
+definitions, so any module that depends on it is considered unsafe too
+— albeit not using any of its unsafe features. There is
 \href{https://github.com/agda/agda-stdlib/issues/143}{work in
 progress} to address that.
 
@@ -853,7 +860,13 @@ progress} to address that.
 \section{Problem solvers and their domains}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\todo{Forward reference backgrounds}
+This report presents evidence providing problem solvers for three
+distinct domains — namely monoids, commutative rings, and Presburger
+arithmetic. The background and the work related to each of these
+domains is relevant only to itself. For that reason, and because I
+judge it beneficial to have those introductory sections close to work
+depending on them, I present the background of each problem in the
+chapter dedicated to it.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Solving monoids}
@@ -956,7 +969,7 @@ From here on, I work with a concrete monoid (\AgdaBound{monoid}) on a
 concrete carrier \AgdaBound{M}. This results in all of the definitions
 inside of the module having \AgdaBound{M} and \AgdaBound{monoid}
 defined. When called from the outside of this module, these
-definitions will have
+definitions have
 \AgdaSymbol{\{}\AgdaBound{M}~\AgdaSymbol{:}~\AgdaPrimitiveType{Set}\AgdaSymbol{\}}~\AgdaSymbol{(}\AgdaBound{monoid}~\AgdaSymbol{:}~\AgdaRecord{Monoid}~\AgdaBound{M}\AgdaSymbol{)}
 prepended to their type. I then make the insides of \AgdaBound{monoid}
 directly accessible by opening it as if it were a module.
@@ -1106,7 +1119,7 @@ expressiveness of Presburger arithmetic.
 \end{align}
 
 To out knowledge, there is no implementation of a decision procedure
-for Presburger arithmetic written in Agda. In this chapter, we will
+for Presburger arithmetic written in Agda. In this chapter, I
 introduce two decision procedures on integers, and partially implement
 and verify correct one of them.
 
@@ -1142,7 +1155,7 @@ module _ where
       suc m' , inj₂ (cong suc (cong (_+ 1) (sym (+-suc m' (m' + 0)))))
 \end{code}
 
-I will define Presburger predicates as any formulae built using the
+I define Presburger predicates as any formulae built using the
 following syntax:
 
 \ExecuteMetaData[Presburger.tex]{formula}
@@ -1227,11 +1240,11 @@ integers, and requires the input formula to be put in disjunctive
 normal form.
 
 This section starts by implementing a normalisation procedure that
-puts input formulae into their equivalent normal forms. It will then
-take a leap and implement variable elimination for quantifier-free
+puts input formulae into their equivalent normal forms. It then takes
+a leap and implements variable elimination for quantifier-free
 formulae and verify it sound by transforming a proof by contradiction
-by Norrish into a constructive proof. Finally, it will provide the
-reader with some usage examples and outline future work.
+by Norrish into a constructive proof. Finally, it provides the reader
+with some usage examples and outlines future work.
 
 This section is significantly based on the material found in
 \cite{Norrish2003} and \cite{Norrish2006}.
@@ -1578,9 +1591,9 @@ lowest upper bound.
 what the search space is? what happens if the search space is always
 set to [0]?}
 
-The proof outlined by Norrish will be used as a guarantee of success
-for the search. However, while Norrish's proof by contradiction is on
-individual constraint pairs\ldots
+The proof outlined by Norrish is be used as a guarantee for the
+success of the search. However, while Norrish's proof by contradiction
+is on individual constraint pairs\ldots
 
 \ExecuteMetaData[Presburger.tex]{norrish-type}
 
@@ -1731,10 +1744,9 @@ implementation in Agda:
 \subsubsection{Delivering soundness}
 
 The elimination process has to be shown to preserve both
-unsatisfiability and satisfiability. I will not reproduce their
-proofs here, they are rather bulky. Instead, I will comment on their
-logic; although I recommend reading their code alongside my
-explanation.
+unsatisfiability and satisfiability. I do not reproduce their proofs
+here, they are rather bulky. Instead, I comment on their logic, but I
+do recommend reading their code alongside my explanation.
 
 \ExecuteMetaData[Presburger.tex]{correct}
 
