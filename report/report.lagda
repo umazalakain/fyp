@@ -69,6 +69,13 @@
 % Intertext with less vertical space
 \usepackage{mathtools}
 
+% License
+\usepackage[
+    type={CC},
+    modifier={by-sa},
+    version={3.0},
+]{doclicense}
+
 \begin{document}
 % Always use § for references to document structures
 \renewcommand{\chapterautorefname}{\S}
@@ -174,6 +181,17 @@ Needless to say, this project, of little importance to anyone but me,
 is based on large amounts of previous science and countless hours of
 accumulated human effort. To all those people who have kept the candle
 burning, I am forever grateful.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% License
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\vfill{}
+\doclicenseThis
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% TOC
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \tableofcontents
 
