@@ -357,15 +357,15 @@ Env i = Vec ℤ i
 [ x ∷ ρ /x]-⊕ ((ca ∷ csa) ∷+ ka) ((cb ∷ csb) ∷+ kb)
   rewrite [ ρ /x]-⊕ (csa ∷+ ka) (csb ∷+ kb) = begin 
   (ca + cb) * x + ([ ρ /x] (csa ∷+ ka) + [ ρ /x] (csb ∷+ kb))
-    ≡⟨ cong (λ ⊚ → ⊚ + _) (IntProp.distribʳ x ca cb) ⟩
+    ≡⟨ cong (λ ● → ● + _) (IntProp.distribʳ x ca cb) ⟩
   (ca * x + cb * x) + ([ ρ /x] (csa ∷+ ka) + [ ρ /x] (csb ∷+ kb))
     ≡⟨ IntProp.+-assoc (ca * x) (cb * x) _ ⟩
   ca * x + (cb * x + ([ ρ /x] (csa ∷+ ka) + [ ρ /x] (csb ∷+ kb)))
-    ≡⟨ cong (λ ⊚ → ca * x + ⊚) (sym (IntProp.+-assoc (cb * x) _ _)) ⟩
+    ≡⟨ cong (λ ● → ca * x + ●) (sym (IntProp.+-assoc (cb * x) _ _)) ⟩
   ca * x + (cb * x + [ ρ /x] (csa ∷+ ka) + [ ρ /x] (csb ∷+ kb))
-    ≡⟨ cong (λ ⊚ → ca * x + (⊚ + _)) (IntProp.+-comm (cb * x) ([ ρ /x] (csa ∷+ ka))) ⟩
+    ≡⟨ cong (λ ● → ca * x + (● + _)) (IntProp.+-comm (cb * x) ([ ρ /x] (csa ∷+ ka))) ⟩
   ca * x + ([ ρ /x] (csa ∷+ ka) + cb * x + [ ρ /x] (csb ∷+ kb))
-    ≡⟨ cong (λ ⊚ → ca * x + ⊚) (IntProp.+-assoc ([ ρ /x] (csa ∷+ ka)) (cb * x) _) ⟩
+    ≡⟨ cong (λ ● → ca * x + ●) (IntProp.+-assoc ([ ρ /x] (csa ∷+ ka)) (cb * x) _) ⟩
   ca * x + ([ ρ /x] (csa ∷+ ka) + (cb * x + [ ρ /x] (csb ∷+ kb)))
     ≡⟨ sym (IntProp.+-assoc (ca * x) ([ ρ /x] (csa ∷+ ka)) _) ⟩
   (ca * x + [ ρ /x] (csa ∷+ ka)) + (cb * x + [ ρ /x] (csb ∷+ kb))
@@ -377,11 +377,11 @@ Env i = Vec ℤ i
 [ x ∷ ρ /x]-⊛ n ((c ∷ cs) ∷+ k)
   rewrite [ ρ /x]-⊛ n (cs ∷+ k) = begin
   n * c * x + n * [ ρ /x] (cs ∷+ k)
-    ≡⟨ cong (λ ⊚ → ⊚ + _) (IntProp.*-assoc n c x) ⟩
+    ≡⟨ cong (λ ● → ● + _) (IntProp.*-assoc n c x) ⟩
   n * (c * x) + n * [ ρ /x] (cs ∷+ k)
-    ≡⟨ cong (λ ⊚ → ⊚ + _) (IntProp.*-comm n (c * x)) ⟩
+    ≡⟨ cong (λ ● → ● + _) (IntProp.*-comm n (c * x)) ⟩
   c * x * n + n * [ ρ /x] (cs ∷+ k)
-    ≡⟨ cong (λ ⊚ → c * x * n + ⊚) (IntProp.*-comm n _) ⟩
+    ≡⟨ cong (λ ● → c * x * n + ●) (IntProp.*-comm n _) ⟩
   c * x * n + [ ρ /x] (cs ∷+ k) * n
     ≡⟨ sym (IntProp.distribʳ n (c * x) _) ⟩
   (c * x + [ ρ /x] (cs ∷+ k)) * n
@@ -395,13 +395,13 @@ Env i = Vec ℤ i
 [_/x]-⊝ [] ([] ∷+ k) = refl
 [_/x]-⊝ (x ∷ ρ) (c x+ cs +ℤ k) = begin 
   (- c) * x + [ ρ /x] (Vec.map -_ cs ∷+ (- k))
-    ≡⟨ cong (λ ⊚ → (- c) * x + ⊚) ([ ρ /x]-⊝ (cs ∷+ k)) ⟩
+    ≡⟨ cong (λ ● → (- c) * x + ●) ([ ρ /x]-⊝ (cs ∷+ k)) ⟩
   (- c) * x + (- [ ρ /x] (cs ∷+ k))
-    ≡⟨ cong (λ ⊚ → ⊚ * x + _) (sym (IntProp.-1*n≡-n c)) ⟩
+    ≡⟨ cong (λ ● → ● * x + _) (sym (IntProp.-1*n≡-n c)) ⟩
   (- + 1) * c * x + (- [ ρ /x] (cs ∷+ k))
-    ≡⟨ cong (λ ⊚ → ⊚ + _) (IntProp.*-assoc (- + 1) c x) ⟩
+    ≡⟨ cong (λ ● → ● + _) (IntProp.*-assoc (- + 1) c x) ⟩
   (- + 1) * (c * x) + (- [ ρ /x] (cs ∷+ k))
-    ≡⟨ cong (λ ⊚ → ⊚ + _) (IntProp.-1*n≡-n (c * x)) ⟩
+    ≡⟨ cong (λ ● → ● + _) (IntProp.-1*n≡-n (c * x)) ⟩
   (- (c * x) + - [ ρ /x] (cs ∷+ k))
     ≡⟨ sym (IntProp.neg-distrib-+ (c * x) _) ⟩
   - (c * x + [ ρ /x] (cs ∷+ k))
@@ -441,11 +441,11 @@ Env i = Vec ℤ i
 
 ⊨cs≡⊨0∷cs x ρ (c x+ cs +ℤ k , 0=c) = begin 
   ⊨[ ρ /x] (cs ∷+ k)
-    ≡⟨ cong (λ ⊚ → + 0 ≤ ⊚) (sym (IntProp.+-identityˡ ([ ρ /x] (cs ∷+ k)))) ⟩
+    ≡⟨ cong (λ ● → + 0 ≤ ●) (sym (IntProp.+-identityˡ ([ ρ /x] (cs ∷+ k)))) ⟩
   + 0 ≤ (+ 0) + [ ρ /x] (cs ∷+ k)
-    ≡⟨ cong (λ ⊚ → + 0 ≤ ⊚ + [ ρ /x] (cs ∷+ k)) (sym (IntProp.*-zeroˡ x)) ⟩
+    ≡⟨ cong (λ ● → + 0 ≤ ● + [ ρ /x] (cs ∷+ k)) (sym (IntProp.*-zeroˡ x)) ⟩
   + 0 ≤ (+ 0) * x + [ ρ /x] (cs ∷+ k)
-    ≡⟨ cong (λ ⊚ → + 0 ≤ ⊚ * x + _) 0=c ⟩
+    ≡⟨ cong (λ ● → + 0 ≤ ● * x + _) 0=c ⟩
   + 0 ≤ c * x + [ ρ /x] (cs ∷+ k)
     ≡⟨⟩
   + 0 ≤ [ x ∷ ρ /x] (c x+ cs +ℤ k)
@@ -555,31 +555,31 @@ module Norrish {i : ℕ} (ρ : Env i) (lu : Pair (suc i)) where
     (+ 0) * (+ suc n)
       ≤⟨ IntProp.*-+-right-mono n ⊨a≤αx ⟩
     ([ x ∷ ρ /x] (α x+ -a)) * (+ suc n)
-      ≡⟨ cong (λ ⊚ → (α * x + [ ρ /x] ⊚) * (+ suc n)) (sym (⊝⊝a≡a -a)) ⟩
+      ≡⟨ cong (λ ● → (α * x + [ ρ /x] ●) * (+ suc n)) (sym (⊝⊝a≡a -a)) ⟩
     (α * x + [ ρ /x] (⊝ a)) * (+ suc n)
-      ≡⟨ cong (λ ⊚ → (α * x + ⊚) * (+ suc n)) ([ ρ /x]-⊝ a) ⟩
+      ≡⟨ cong (λ ● → (α * x + ●) * (+ suc n)) ([ ρ /x]-⊝ a) ⟩
     (α * x + - [ ρ /x] a) * (+ suc n)
       ≡⟨ IntProp.distribʳ (+ suc n) (α * x) (- [ ρ /x] a) ⟩
     α * x * (+ suc n) + (- [ ρ /x] a) * (+ suc n)
-      ≡⟨ cong  (λ ⊚ → α * x * (+ suc n) + ⊚ * (+ suc n)) (sym (IntProp.-1*n≡-n ([ ρ /x] a))) ⟩
+      ≡⟨ cong  (λ ● → α * x * (+ suc n) + ● * (+ suc n)) (sym (IntProp.-1*n≡-n ([ ρ /x] a))) ⟩
     α * x * (+ suc n) + (- + 1) * ([ ρ /x] a) * (+ suc n)
-      ≡⟨ cong (λ ⊚ → α * x * (+ suc n) + ⊚) (IntProp.*-assoc (- + 1) ([ ρ /x] a) (+ suc n)) ⟩
+      ≡⟨ cong (λ ● → α * x * (+ suc n) + ●) (IntProp.*-assoc (- + 1) ([ ρ /x] a) (+ suc n)) ⟩
     α * x * (+ suc n) + (- + 1) * (([ ρ /x] a) * (+ suc n))
-      ≡⟨ cong (λ ⊚ → α * x * (+ suc n) + ⊚) (IntProp.-1*n≡-n (([ ρ /x] a) * (+ suc n))) ⟩
+      ≡⟨ cong (λ ● → α * x * (+ suc n) + ●) (IntProp.-1*n≡-n (([ ρ /x] a) * (+ suc n))) ⟩
     α * x * (+ suc n) + - (([ ρ /x] a) * (+ suc n))
-      ≡⟨ cong (λ ⊚ → α * x * (+ suc n) + - ⊚) (IntProp.*-comm ([ ρ /x] a) (+ suc n)) ⟩
+      ≡⟨ cong (λ ● → α * x * (+ suc n) + - ●) (IntProp.*-comm ([ ρ /x] a) (+ suc n)) ⟩
     α * x * (+ suc n) + - ((+ suc n) * ([ ρ /x] a))
-      ≡⟨ cong (λ ⊚ → α * x * (+ suc n) + - ⊚) (sym ([ ρ /x]-⊛ (+ suc n) a)) ⟩
+      ≡⟨ cong (λ ● → α * x * (+ suc n) + - ●) (sym ([ ρ /x]-⊛ (+ suc n) a)) ⟩
     α * x * (+ suc n) + - [ ρ /x] ((+ suc n) ⊛ a)
-      ≡⟨ cong (λ ⊚ → ⊚ * (+ suc n) + _) (IntProp.*-comm α x) ⟩
+      ≡⟨ cong (λ ● → ● * (+ suc n) + _) (IntProp.*-comm α x) ⟩
     x * α * (+ suc n) + - [ ρ /x] ((+ suc n) ⊛ a)
-      ≡⟨ cong (λ ⊚ → ⊚ + _) (IntProp.*-assoc x α (+ suc n)) ⟩
+      ≡⟨ cong (λ ● → ● + _) (IntProp.*-assoc x α (+ suc n)) ⟩
     x * (α * (+ suc n)) + - [ ρ /x] ((+ suc n) ⊛ a)
-      ≡⟨ cong (λ ⊚ → ⊚ + _) (IntProp.*-comm x (α * (+ suc n))) ⟩
+      ≡⟨ cong (λ ● → ● + _) (IntProp.*-comm x (α * (+ suc n))) ⟩
     α * (+ suc n) * x + - [ ρ /x] ((+ suc n) ⊛ a)
-      ≡⟨ cong (λ ⊚ → α * (+ suc n) * x + ⊚) (sym ([ ρ /x]-⊝ ((+ suc n) ⊛ a))) ⟩
+      ≡⟨ cong (λ ● → α * (+ suc n) * x + ●) (sym ([ ρ /x]-⊝ ((+ suc n) ⊛ a))) ⟩
     α * (+ suc n) * x + [ ρ /x] ⊝ ((+ suc n) ⊛ a)
-      ≡⟨ cong (λ ⊚ → ⊚ + _) (sym ([ ρ /x]-# (α * (+ suc n) * x))) ⟩
+      ≡⟨ cong (λ ● → ● + _) (sym ([ ρ /x]-# (α * (+ suc n) * x))) ⟩
     [ ρ /x] (# (α * (+ suc n) * x)) + [ ρ /x] ⊝ ((+ suc n) ⊛ a)
       ≡⟨ sym ([ ρ /x]-⊕ _ _) ⟩
     [ ρ /x] ((# (α * (+ suc n) * x)) ⊝ ((+ suc n) ⊛ a))
@@ -605,13 +605,13 @@ module Norrish {i : ℕ} (ρ : Env i) (lu : Pair (suc i)) where
     [ ρ /x] aβ≤αb
       ≡⟨ sym (IntProp.+-identityʳ _) ⟩
     [ ρ /x] aβ≤αb + (+ 0)
-      ≡⟨ cong (λ ⊚ → [ ρ /x] aβ≤αb + ⊚) (sym ([ ρ /x]-# (+ 0))) ⟩
+      ≡⟨ cong (λ ● → [ ρ /x] aβ≤αb + ●) (sym ([ ρ /x]-# (+ 0))) ⟩
     [ ρ /x] aβ≤αb + [ ρ /x] (# (+ 0))
       ≡⟨ sym ([ ρ /x]-⊕ aβ≤αb (# (+ 0))) ⟩
     [ ρ /x] (aβ≤αb ⊕ (# (+ 0)))
-      ≡⟨ cong (λ ⊚ → [ ρ /x] (aβ≤αb ⊕ ⊚)) (sym (⊝#n≡#-n (+ 0))) ⟩
+      ≡⟨ cong (λ ● → [ ρ /x] (aβ≤αb ⊕ ●)) (sym (⊝#n≡#-n (+ 0))) ⟩
     [ ρ /x] (aβ≤αb ⊝ (# (+ 0)))
-      ≡⟨ cong (λ ⊚ → [ ρ /x] (aβ≤αb ⊝ (# ⊚))) (sym (α≡1∨-β≡-1→[α-1][β-1]≡0 α≡1∨-β≡-1)) ⟩
+      ≡⟨ cong (λ ● → [ ρ /x] (aβ≤αb ⊝ (# ●))) (sym (α≡1∨-β≡-1→[α-1][β-1]≡0 α≡1∨-β≡-1)) ⟩
     [ ρ /x] (aβ≤αb ⊝ (# [α-1][β-1]))
       ∎
     where open ≤-Reasoning
@@ -625,11 +625,11 @@ module Norrish {i : ℕ} (ρ : Env i) (lu : Pair (suc i)) where
     + 0
       ≤⟨ ⊨ds ⟩
     [ ρ /x] (aβ≤αb ⊝ (# [α-1][β-1]))
-      ≡⟨ cong (λ ⊚ → [ ρ /x] (aβ≤αb ⊕ ⊚)) (⊝#n≡#-n [α-1][β-1]) ⟩
+      ≡⟨ cong (λ ● → [ ρ /x] (aβ≤αb ⊕ ●)) (⊝#n≡#-n [α-1][β-1]) ⟩
     [ ρ /x] (aβ≤αb ⊕ (# (- [α-1][β-1])))
       ≡⟨ [ ρ /x]-⊕ _ _ ⟩
     [ ρ /x] aβ≤αb + [ ρ /x] (# (- [α-1][β-1]))
-      ≡⟨ cong (λ ⊚ → [ ρ /x] aβ≤αb + ⊚) ([ ρ /x]-# _) ⟩
+      ≡⟨ cong (λ ● → [ ρ /x] aβ≤αb + ●) ([ ρ /x]-# _) ⟩
     [ ρ /x] aβ≤αb - [α-1][β-1]
       ≤⟨ 0≤n→m-n≤m _ _ ⊨0≤[α-1][β-1]  ⟩
     [ ρ /x] aβ≤αb

@@ -157,36 +157,7 @@ module _ {M : Set} (monoid : Monoid M) where
 \end{code}
 %</solution>
 
-%<*solve-type>
-\begin{code}
-  solve : ∀ {n} (eqn : Eqn n) → Solution eqn
-\end{code}
-%</solve-type>
-
-%<*eval-commutes-type>
-\begin{code}
-  eval-commutes : ∀ {n} → (e : Expr n) → (ρ : Env n)
-                  → ⟦ e ⟧ ρ ≡ ⟦ normalise e ⇓⟧ ρ
-\end{code}
-%</eval-commutes-type>
-
-%<*solve>
-\begin{code}
-  solve (e₁ ≡' e₂) with (normalise e₁) ≟ (normalise e₂)
-  ...            | no  _  = tt
-  ...            | yes eq = λ ρ → 
-    ⟦ e₁ ⟧ ρ
-      ≡⟨ eval-commutes e₁ ρ ⟩
-    ⟦ normalise e₁ ⇓⟧ ρ
-      ≡⟨ cong (λ e₌ → ⟦ e₌ ⇓⟧ ρ) eq  ⟩
-    ⟦ normalise e₂ ⇓⟧ ρ
-      ≡⟨ sym (eval-commutes e₂ ρ) ⟩
-    ⟦ e₂ ⟧ ρ
-      ∎
-\end{code}
-%</solve>
-
-%<*eval-commutes>
+%<*eval-homo>
 \begin{code}
   eval-homo : ∀ {n} (e₁ e₂ : NormalForm n) → (ρ : Env n)
               → ⟦ e₁ ⇓⟧ ρ · ⟦ e₂ ⇓⟧ ρ ≡ ⟦ e₁ ++ e₂ ⇓⟧ ρ
@@ -196,19 +167,52 @@ module _ {M : Set} (monoid : Monoid M) where
     ((lookup i ρ) · ⟦ e₁ ⇓⟧ ρ) · ⟦ e₂ ⇓⟧ ρ
       ≡⟨ law-·-· _ _ _ ⟩
     (lookup i ρ) · (⟦ e₁ ⇓⟧ ρ · ⟦ e₂ ⇓⟧ ρ)
-      ≡⟨ cong (_·_ (lookup i ρ)) (eval-homo e₁ e₂ ρ) ⟩
+      ≡⟨ cong (λ ● → lookup i ρ · ●) (eval-homo e₁ e₂ ρ) ⟩
     (lookup i ρ) · ⟦ e₁ ++ e₂ ⇓⟧ ρ
       ∎
+\end{code}
+%</eval-homo>
 
-  -- eval-commutes : ∀ {n} → (e : Expr n) → (ρ : Env n)
-  --                 → ⟦ e ⟧ ρ ≡ ⟦ normalise e ⇓⟧ ρ
+%<*eval-commutes>
+\begin{code}
+  eval-commutes : ∀ {n} → (e : Expr n) → (ρ : Env n)
+                → ⟦ e ⟧ ρ ≡ ⟦ normalise e ⇓⟧ ρ
+
   eval-commutes ε'         ρ = refl
   eval-commutes (var' x)   ρ = law-·-ε (lookup x ρ)
-  eval-commutes (e₁ ·' e₂) ρ rewrite eval-commutes e₁ ρ
-                                     | eval-commutes e₂ ρ
-                                     = eval-homo (normalise e₁) (normalise e₂) ρ
+  eval-commutes (e₁ ·' e₂) ρ = begin 
+    ⟦ e₁ ⟧ ρ · ⟦ e₂ ⟧ ρ
+      ≡⟨ cong (λ ● → ● · _) (eval-commutes e₁ ρ) ⟩
+    ⟦ normalise e₁ ⇓⟧ ρ · ⟦ e₂ ⟧ ρ
+      ≡⟨ cong (λ ● → _ · ●) (eval-commutes e₂ ρ) ⟩
+    ⟦ normalise e₁ ⇓⟧ ρ · ⟦ normalise e₂ ⇓⟧ ρ
+      ≡⟨ eval-homo (normalise e₁) (normalise e₂) ρ ⟩
+    ⟦ normalise e₁ ++ normalise e₂ ⇓⟧ ρ
+      ∎
 \end{code}
 %</eval-commutes>
+
+%<*solve-type>
+\begin{code}
+  solve : ∀ {n} (eqn : Eqn n) → Solution eqn
+\end{code}
+%</solve-type>
+
+%<*solve>
+\begin{code}
+  solve (e₁ ≡' e₂) with (normalise e₁) ≟ (normalise e₂)
+  ...            | no  _  = tt
+  ...            | yes eq = λ ρ → 
+    ⟦ e₁ ⟧ ρ
+      ≡⟨ eval-commutes e₁ ρ ⟩
+    ⟦ normalise e₁ ⇓⟧ ρ
+      ≡⟨ cong (λ ● → ⟦ ● ⇓⟧ ρ) eq  ⟩
+    ⟦ normalise e₂ ⇓⟧ ρ
+      ≡⟨ sym (eval-commutes e₂ ρ) ⟩
+    ⟦ e₂ ⟧ ρ
+      ∎
+\end{code}
+%</solve>
 
 %<*eqn1-auto>
 \begin{code}

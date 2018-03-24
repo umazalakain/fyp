@@ -38,9 +38,6 @@
   SmallCapsFeatures={Letters=SmallCaps},
 ]{XITS}
 
-% Less margins
-\usepackage{fullpage}
-
 % List customization
 \usepackage[inline]{enumitem}
 
@@ -702,9 +699,9 @@ report.
       ((zero + (l + zero)) + (n + zero)) + m
         ≡⟨⟩ -- Needs no justification, both types immediately unify
       ((l + zero) + (n + zero)) + m
-        ≡⟨ cong (λ ⊚ → (⊚ + (n + zero)) + m) (prf₆ l) ⟩
+        ≡⟨ cong (λ ● → (● + (n + zero)) + m) (prf₆ l) ⟩
       (l + (n + zero)) + m
-        ≡⟨ cong (λ ⊚ → (l + ⊚) + m) (prf₆ n) ⟩
+        ≡⟨ cong (λ ● → (l + ●) + m) (prf₆ n) ⟩
       (l + n) + m
         ∎ 
 \end{code}
@@ -801,7 +798,7 @@ This project uses Agda-Stdlib as its sole dependency.
 \subsubsection{Universes}
 
 To avoid Russell's paradox, Agda introduces a hierarchy of universes
-~\AgdaPrimitiveType{Set}~\AgdaSymbol{:}~\AgdaPrimitiveType{Set₁}~\AgdaSymbol{:}~\AgdaPrimitiveType{Set₂}\ldots
+~\AgdaPrimitiveType{Set}~\AgdaSymbol{:}~\AgdaPrimitiveType{Set₁}~\AgdaSymbol{:}~\AgdaPrimitiveType{Set₂}\ldots~
 where ~\AgdaPrimitiveType{Set}~ is the set of all small types like
 ~\AgdaDatatype{Bool}~ or ~\AgdaDatatype{ℕ}.
 
@@ -845,11 +842,11 @@ progress} to address that.
 \label{ch:monoids}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Monoids are common algebraic structures involved in many problems. A
+Monoids are common algebraic structures found in many problems. A
 monoid solver is an automated proof generator which can be used to
 prove an equation on monoids. Constructing such a solver is a good
 first approach to proof automation: it lacks the complexity of many
-other problems while it has their same high-level structure.
+other problems but still has their same high-level structure.
 
 \todo{Boutin's paper}
 
@@ -859,17 +856,17 @@ other problems while it has their same high-level structure.
 
 \href{https://agda.github.io/agda-stdlib/Algebra.html#1079}{Agda-Stdlib's
 definition of a monoid} is based on notions about many other algebraic
-structures, and is therefore fairly complex. We will instead use our
-own definition, which is entirely self-contained and fairly simple.
+structures, and is therefore fairly complex. Instead, I present a
+self-contained and fairly simple definition:
 
 \ExecuteMetaData[Monoids.tex]{monoid}
 
 \AgdaRef{M}, the set on which the monoid is defined, is often referred
 to as the carrier. $(ℕ, +, 0)$ and $(ℕ, ·, 1)$ are both examples of
-monoids. Note however that these also happen to be commutative, while
-monoids need not be — more on solving commutative monoids later. An
-example of a non-commutative monoid are lists together with the
-concatenation operation:
+monoids. These examples also happen to be commutative, while monoids
+need not be — more on solving commutative monoids later. An example of
+a non-commutative monoid are lists together with the concatenation
+operation:
 
 \ExecuteMetaData[Monoids.tex]{list-monoid}
 
@@ -895,21 +892,21 @@ normalised into a canonical form. The characteristics that make two
 propositions definitionally distinct — when they are, in fact, equal
 in meaning — can be eliminated. It is crucial that this process —
 normalisation — guarantees the preservation of meaning. After
-normalisation, the two results can be compared: if they are equal, so
-must the original propositions be. This is the sketch of the procedure
-we are implementing.
+normalisation, two results can be compared: if they are equal, so must
+the original propositions be. This is the sketch of the decision
+procedure.
 
 The procedure requires some notion of the equation it is trying to
-solve. We use an abstract syntax tree to represent equations and
+solve. I use an abstract syntax tree to represent equations and
 finite indices to refer to variables — the
 type \AgdaDatatype{Fin}~\AgdaBound{n} contains \AgdaBound{n} distinct
-values. Moreover, we use a type parameter on \AgdaRef{Eqn} to
+values. Moreover, I use a type parameter on \AgdaRef{Eqn} to
 \textit{push in} this limitation on the number of indices.
 
 \ExecuteMetaData[Monoids.tex]{expr}
 
-Let us use an example to help us come up with a suitable normal
-form. Consider the following two expressions:
+Consider the following two expressions:
+
 \begin{align*}
     P &= ((ε · x) · (x · y))  &  Q &= ((x · x) · y) \\
     \intertext{Neutral elements do not have any meaning and can be
@@ -919,17 +916,17 @@ form. Consider the following two expressions:
     not have any meaning and can be removed:}
     P &= x · x · y            &  Q &= x · x · y     \\
 \end{align*}
-We can now see that both propositions are equal. It is important to
-note that these are not commutative monoids, and that thus the order
-of the elements matters.
+Both propositions can now be seen to be equal. It is important to keep
+in mind that these are not commutative monoids, and that thus the
+order of the elements matters.
 
 Lists are a suitable data structure for representing flat elements —
 indices here — that can appear multiple times and whose order
-carries meaning. If we were dealing with commutative monoids, where
-order does not carry meaning, a matrix of indices and the number of
-occurrences of each could be represented as a vector of integers —
-where the position in the vector represents the index and the content
-represents the number of occurrences.
+carries meaning. In the case of commutative monoids, where order does
+not carry meaning, a matrix of indices and the number of occurrences
+of each could be represented as a vector of integers — where the
+position in the vector represents the index and the content represents
+the number of occurrences.
 
 \ExecuteMetaData[Monoids.tex]{normal-form}
 
@@ -937,67 +934,63 @@ The normalising function ignores neutral elements and preserves order:
 
 \ExecuteMetaData[Monoids.tex]{normalise}
 
-From here on, we will work with a concrete monoid (\AgdaBound{monoid})
-on a concrete carrier \AgdaBound{M}. This results in all of the
-definitions inside of the module having \AgdaBound{M} and
-\AgdaBound{monoid} defined. When called from the outside of this
-module, these definitions will have
+From here on, I work with a concrete monoid (\AgdaBound{monoid}) on a
+concrete carrier \AgdaBound{M}. This results in all of the definitions
+inside of the module having \AgdaBound{M} and \AgdaBound{monoid}
+defined. When called from the outside of this module, these
+definitions will have
 \AgdaSymbol{\{}\AgdaBound{M}~\AgdaSymbol{:}~\AgdaPrimitiveType{Set}\AgdaSymbol{\}}~\AgdaSymbol{(}\AgdaBound{monoid}~\AgdaSymbol{:}~\AgdaRecord{Monoid}~\AgdaBound{M}\AgdaSymbol{)}
-prepended to their type. We can also make the insides of
-\AgdaBound{monoid} directly accessible by opening it as if it were a
-module.
+prepended to their type. I then make the insides of \AgdaBound{monoid}
+directly accessible by opening it as if it were a module.
 
 \begin{AgdaAlign}
 
 \ExecuteMetaData[Monoids.tex]{monoid-module}
 
-To evaluate an expression we need a concrete assignment for the
-variables contained within. We call this an environment. An
+To evaluate an expression, a concrete assignment for the variables
+contained within is needed. This is often called an environment. An
 environment is a lookup table where each of the indices has an
-associated value in the carrier \AgdaBound{M}.
-The size of \AgdaDatatype{Fin}~\AgdaBound{n} is equal to the size
-of \AgdaDatatype{Vec}~\AgdaBound{M}~\AgdaBound{n}, and so we can
-define a bijection between \AgdaDatatype{Fin}~\AgdaBound{n}
-and \AgdaDatatype{Vec}~\AgdaBound{M}~\AgdaBound{n}.
+associated value in the carrier \AgdaBound{M}.  The size of
+\AgdaDatatype{Fin}~\AgdaBound{n} is equal to the size of
+\AgdaDatatype{Vec}~\AgdaBound{M}~\AgdaBound{n}.
 
 \ExecuteMetaData[Monoids.tex]{env}
 
-Once we have expressions, normal forms end environments, we can define
-what the evaluation of both — expressions and normal forms — is. Note
-that both definitions rule out expressions and normal forms with more
-indices than the environment contains — every index within the
-expression has to have a corresponding value in the environment.
+Now that expressions, normal forms and environments are defined,
+their evaluation can be defined too. Note that both definitions rule
+out expressions and normal forms with more indices than the
+environment contains — every index in the expression has to have a
+corresponding value in the environment.
 
 \ExecuteMetaData[Monoids.tex]{evaluation}
 
-We are finally ready to make our claim: an equation on monoids holds
-provided that both sides of the equation match after
-normalisation. We cannot make any claims in the other direction — if
-both sides do not equal after normalisation the equation must be
-false. This can most clearly be seen by taking the unit type (the type
-with a single value) as carrier of the monoid: all equations are true,
-yet the monoid laws allow to prove only some of them. Because we
-cannot make any interesting claims, we can claim true the trivial.
+Bellow, the formal specification of soundness of the decision
+procedure. If two monoids are decided equal, given any environment
+they must evaluate to an equal value. However, no no claims can be
+made if they are not decided equal: the carrier may have properties
+other than the monoidal. (Take, for instance, the natural numbers with
+addition, where $a + b$ is equivalent to $b + a$.)
 
 \ExecuteMetaData[Monoids.tex]{solution}
 
-We define decidable equality of normal forms (here \AgdaRef{\_≟\_})
-by relying on the definitions of decidable equality of lists and
-finite indices.
+The decidable equality of normal forms (here \AgdaFunction{\_≟\_}) is
+defined as the decidable equality of lists that relies on the
+decidable equality of finite indices.
 
-\AgdaRef{Solution}~ returns an appropriate per-equation specification
-for every ~\AgdaDatatype{Eqn}~\AgdaBound{n}. We must now prove that we
-are able to meet such specifications.
+\AgdaRef{Solution}~ is a specification defined for a given
+equation. Such specification must be met for all equations:
 
 \ExecuteMetaData[Monoids.tex]{solve-type}
 
-The crux of such a proof is to show that the evaluation of an
-expression can be decomposed into the normalisation into a normal form
-and its posterior evaluation.
+If the evaluation of an expression can be shown to be decomposable
+into its normalisation followed by the evaluation of such normal form,
+then by congruence of functions, an equivalence of normal forms
+implies an equivalence of terms after evaluation:
 
-\ExecuteMetaData[Monoids.tex]{eval-commutes-type}
+\ExecuteMetaData[Monoids.tex]{solve}
 
-Put in a diagrammatic form, we must show that the following commutes:
+Put in a diagrammatic form, the following diagram must be shown to
+commute:
 
 \begin{figure}[h]
 \centering
@@ -1012,19 +1005,14 @@ Put in a diagrammatic form, we must show that the following commutes:
 \caption{\AgdaSymbol{∀}~\AgdaBound{e}~\AgdaBound{ρ}~\AgdaSymbol{→}~\AgdaFunction{eval-commutes}~\AgdaBound{e}~\AgdaBound{ρ}}
 \end{figure}
 
-Once we are able to show that they are, indeed, extensionally equal,
-we can translate the evaluation of expressions into the evaluation of
-normal forms, and then use congruence to proof that two equal normal
-forms must evaluate to equal values.
-
-\ExecuteMetaData[Monoids.tex]{solve}
-
-Showing \AgdaRef{eval-commutes} is done inductively and it requires a
-proof that concatenation of normal forms (\AgdaRef{\_++\_}) preserves
-the structure of monoids. Note that these proofs, perhaps
-unsurprisingly, use all of the monoid laws.
+This proof is inductively defined and depends on another proof showing
+that normalisation preserves a monoid's structure.
 
 \ExecuteMetaData[Monoids.tex]{eval-commutes}
+
+Unsurprisingly, together these two proofs use all of the monoid laws.
+
+\ExecuteMetaData[Monoids.tex]{eval-homo}
 
 \end{AgdaAlign}
 
@@ -1032,13 +1020,14 @@ unsurprisingly, use all of the monoid laws.
 \section{Results and usage}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-We can now automatically generate proofs for arbitrary equations on monoids:
+Proofs for arbitrary equations on monoids can automatically be
+generated now:
 
 \ExecuteMetaData[Monoids.tex]{eqn1-auto}
 
-However, we still need to manually build the expressions representing
-the target theorem. This includes handling the indices referring to
-variables appropriatly. As shown by \cite{Bove2009} at
+However, the user still needs to manually build the expressions
+that represent the target theorem. This includes handling the indices
+referring to variables appropriatly. As shown by \cite{Bove2009} at
 \url{http://www.cse.chalmers.se/~ulfn/code/tphols09/}, index
 referrences can be set up automatically, partially alleviating this
 problem and resulting in the following usage:
@@ -1135,12 +1124,12 @@ module _ where
       suc m' , inj₂ (cong suc (cong (_+ 1) (sym (+-suc m' (m' + 0)))))
 \end{code}
 
-We will define Presburger predicates as any formulae built using the
+I will define Presburger predicates as any formulae built using the
 following syntax:
 
 \ExecuteMetaData[Presburger.tex]{formula}
 
-We use de Bruijn indices \cite{Bruijn1972} to refer to bindings by
+I use de Bruijn indices \cite{Bruijn1972} to refer to bindings by
 their proximity: a variable with index \AgdaNumber{0} refers to the
 variable introduced by the most immediate binding to the left; index
 \AgdaBound{n} refers to the variable introduced \AgdaBound{n} bindings
@@ -1193,16 +1182,15 @@ domains; the unsatisfiability onto subset domains, as noted in
 Some Presburger formulae are valid on integers but invalid on natural
 numbers: $∃x.\:x+1=0$. Others are valid on rational numbers but
 invalid on integers: $∃x.\:2x=1$. When considering which decision
-procedures to explore, we immediately discarted the ones acting on
-real numbers — irrational numbers are not straightforward to handle in
+procedures to explore, I immediately discarted the ones acting on real
+numbers — irrational numbers are not straightforward to handle in
 constructive mathematics. The most well-documented procedures are on
 integers, and the usage of integer Presburger arithmetic is common
-enough for an automated solver to be of great value. Given that we can
-solve problems on integers, we just need add a condition $0 \leq x$ to
-every existential quantifier if we want to solve problems on natural
-numbers.
+enough for an automated solver to be of great value. Given a solver
+for problems on integers, one just needs add the condition $0 \leq x$
+to every existential quantifier to solve problems on natural numbers.
 
-We chose the Omega Test and Cooper's Algorithm as the two integer
+I chose the Omega Test and Cooper's Algorithm as the two integer
 decision procedures to explore. Michael Norrish depicts in
 \cite{Norrish2003} the state of affairs concerning the implementation
 of Presburger arithmetic deciding procedures by proof assistants. He
@@ -1216,15 +1204,15 @@ assistant HOL. A later talk gives additional details.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The Omega Test was first introduced in \cite{Pugh1991}. It adapts
-Fourier-Motzkin elimination — acting on real numbers — to integers,
-and requires the input formula to be put in disjunctive normal
-form.
+Fourier-Motzkin elimination — which acts on real numbers — to
+integers, and requires the input formula to be put in disjunctive
+normal form.
 
 This section starts by implementing a normalisation procedure that
 puts input formulae into their equivalent normal forms. It will then
 take a leap and implement variable elimination for quantifier-free
-formulae, then verify it sound by transforming a proof by
-contradiction into a constructive proof. Finally, it will provide the
+formulae and verify it sound by transforming a proof by contradiction
+by Norrish into a constructive proof. Finally, it will provide the
 reader with some usage examples and outline future work.
 
 This section is significantly based on the material found in
@@ -1267,12 +1255,12 @@ Operations on ~\AgdaDatatype{Atom}s are evaluated into linear
 transformations of the form $ax + by + \ldots + cz + k$. As a
 consequence of limiting the domain to the integers, all constraints
 are translated into a canonical form $0 \leq ax + by + \ldots + cz +
-k$. We will use a single type to represent them both, and a
-parameter on that type to keep record of the number of variables
-within. A vector of that same length will contain the coefficients
-$ax + by + \ldots + cz$, where each coefficient's index is a de Bruijn
-index indicating the distance in bindings to where that variable was
-introduced. An additional constant will be used to represent $k$.
+k$. I use a single type to represent them both, and a parameter on
+that type to keep record of the number of variables within. A vector
+of that same length contains the coefficients $ax + by + \ldots + cz$,
+where each coefficient's index is a de Bruijn index indicating the
+distance in bindings to where that variable was introduced. An
+additional constant is used to represent $k$.
 
 \ExecuteMetaData[Presburger.tex]{linear}
 
@@ -1288,9 +1276,9 @@ p = q    &\equiv 0 \leq q - p \land 0 \leq p - q
   
 Divide terms and their negations are special cases. The Omega Test
 produces them as a byproduct of its main theorem and uses a specific
-algorithm to eliminate them, as we will later see. However, we will
-not implement such a procedure and we will limit ourselves to naively
-normalising divide terms into linear constraints:
+algorithm to eliminate them, as shown later. However, I do not
+implement such a procedure (discussed later) so I normalise divide
+terms into constraints by introducing a new existential quantifier:
 
 \begin{align*}
 n ∣ a &\equiv ∃x.\:nx = a \\
@@ -1329,7 +1317,7 @@ them. For the exact procedure see the accompainying code.
 \subsection{Elimination}
 
 Once normalisation has taken place, the elimination process is ran
-recursively on quantifier-free sub-formulae. The heart of it is an
+recursively on quantifier-free sub-formulae. The heart of this is an
 equivalence theorem that eliminates the variable bound by the
 innermost existential quantifier:
 
@@ -1363,11 +1351,11 @@ $\alpha \equiv 1 \lor \beta \equiv 1$ —, the theorem reduces to the
 ∃x.L(x) ∧ U(x) \equiv \bigvee_{i,j} a_i \beta_j \leq \alpha_i b_j
 \end{align*}
 
-Our initial intention was to implement and verify the complete
-theorem. However, we quickly found out about the complexity introduced
+My initial intention was to implement and verify the complete
+theorem. However, I quickly found out about the complexity introduced
 by splinters. Each splinter introduces a new existential
 quantifier. This quantifier is then eliminated by the following
-terminating method, based on the Euclidean algorithm for the
+terminating method based on the Euclidean algorithm for the
 computation of greatest common divisors:
 
 \begin{align}
@@ -1411,12 +1399,12 @@ to satisfy.
 
 After some initial exploratory programming, given the complexity
 they entail, both in terms of implementation and verification, and
-taking time constraints into account, we decided to discard
+taking time constraints into account, I decided to discard
 implementing splinters. Other interactive theorem provers like Coq,
 HOL or Isabelle, limit the completeness of their implementations too,
 often just to the real shadow.
 
-This decision left us with two components:
+This decision left me with two components:
 
 \begin{description}
 
@@ -1440,8 +1428,8 @@ and $b$ as per Pugh:
 \ExecuteMetaData[Presburger.tex]{dark-shadow}
 
 The dark shadow reduces to the real shadow when all $\alpha_i$ or all
-$\beta_j$ are $1$. We use the function ~\AgdaFunction{dark-shadow}~
-for both computations, and then interpret the results accordingly.
+$\beta_j$ are $1$. I use the function ~\AgdaFunction{dark-shadow}~ for
+both computations, and then interpret the results accordingly.
 Unsatisfiability can only be asserted if the real shadow's
 precondition is met. If it is not,
 ~\AgdaInductiveConstructor{unsatisfiable}~ needs to be interpreted as
@@ -1463,14 +1451,14 @@ procedure presented above. The exact specification follows:
 No proof is required if the procedure is incapable of deciding the
 input; an environment satisfying the input is required if the input is
 decided satisfiable; a function showing the inadequacy of any given
-environment is required if the input is decided unsatisfiable. Our
+environment is required if the input is decided unsatisfiable. The
 goal is to satisfy this predicate for any conjunction of constraints.
 (The meaning of ~\AgdaFunction{⊨}~ is explained below.)
 
 \subsubsection{Preamble}
 
 Although their definitions are available in the source code
-accompanying this report, we aim to provide the reader with an
+accompanying this report, my aim is to provide the reader with an
 intuition of the meaning of some of the different symbols used in this
 subsection.
 
@@ -1528,16 +1516,16 @@ subsection.
 
 The goal is to prove that the elimination performed by the dark shadow
 preserves satisfiability: whenever a formula is satisfiable after
-applying dark shadow elimination to it, it must have been satisfiable
-before elimination too.
+applying dark shadow elimination to it, it must be shown to be
+satisfiable before elimination too.
 
 \begin{equation*}
 \bigwedge_{i,j} (\alpha_i - 1)(\beta_i - 1) \leq \alpha_i b_j - a_i \beta_j
 \implies ∃x. L(x) \land U(x)
 \end{equation*}
 
-The original proof then proceeds by induction on every $L(x) × U(x)$
-pair, for which the proof obligation is fulfilled resorting to a proof by
+The original proof proceeds by induction on every $L(x) × U(x)$ pair,
+where the proof obligation is fulfilled resorting to a proof by
 contradiction:
 
 \begin{equation*}
@@ -1553,16 +1541,15 @@ finite set, a proof by contradiction — showing that it cannot be that
 $P$ is false for every element — can be used to build a terminating
 search function that is guaranteed to find an element satisfying $P$.
 
-Below we present such a generalised search function, searching within
-a finate list for elements satisfying a decidable predicate.
+Below I present such a generalised search function, searching within a
+finate list for elements satisfying a decidable predicate.
 
 \ExecuteMetaData[Presburger.tex]{search}
 
-In the case that concerns us, the search is for some $x$ that
-satisfies a conjunction of constraints of form $a \leq \alpha x \land
-\beta x \leq b$, with $\alpha$ and $\beta$ positive and non-zero. For
-every constraint, $x$ must be bound between
-$\left\lfloor\frac{a}{α}\right\rfloor$ and
+In this case, the search is for some $x$ that satisfies a conjunction
+of constraints of form $a \leq \alpha x \land \beta x \leq b$, with
+$\alpha$ and $\beta$ positive and non-zero. For every constraint, $x$
+must be bound between $\left\lfloor\frac{a}{α}\right\rfloor$ and
 $\left\lceil\frac{b}{β}\right\rceil$; the conjunction of all
 constraints must be bound between such highest lower bound and such
 lowest upper bound.
@@ -1584,12 +1571,12 @@ entire conjunction of constraint pairs.
 
 \ExecuteMetaData[Presburger.tex]{by-contradiction-type}
 
-Nevertheless, the premise we must prove false (informally,
-$∀x.¬∀lu.⊨ₓlu$) is equivalent to the form $∃lu.¬∃x.⊨ₓlu$ — every $l$
-is paired with every $u$. This later form is suitable to be fed into
-Norrish's proof by contradiction, which for any $lu$ expects
-$¬∃x.⊨ₓlu$. The difference is that we will execute Norrish's proof
-only once. Note that the unsolved postulate is the same justification
+Nevertheless, the premise that must be proven false (informally,
+$∀x.¬∀lu.⊨ₓlu$) is equivalent to the form $∃lu.¬∃x.⊨ₓlu$ — where every
+$l$ is paired with every $u$. This later form is suitable to be fed
+into Norrish's proof by contradiction, which for any $lu$ expects
+$¬∃x.⊨ₓlu$. The difference is that Norrish's proof is used only
+once. Note that the unsolved postulate is the same justification
 required by Norrish's initial induction. The proof is a one-way
 implication, but bi-implication can be shown.
 
@@ -1597,10 +1584,10 @@ implication, but bi-implication can be shown.
 
 \ExecuteMetaData[Presburger.tex]{contradiction-adaptation}
 
-Finally, we must search for that $lu$ pair for which $¬∃x.⊨ₓlu$,
-execute Norrish's proof on it, derive
-~\AgdaBound{⊨Ωlu}~\AgdaSymbol{→}~\AgdaDatatype{⊥}~ and apply it to
-~\AgdaBound{⊨Ωlu}.
+Finally, the $lu$ pair for which $¬∃x.⊨ₓlu$ must be found,
+Norrish's proof executed on it and
+~\AgdaBound{⊨Ωlu}~\AgdaSymbol{→}~\AgdaDatatype{⊥}~ derived and applied
+to ~\AgdaBound{⊨Ωlu}.
 
 \ExecuteMetaData[Presburger.tex]{contradiction-search}
 
@@ -1616,9 +1603,9 @@ of the search for $x$:
 
 \subsubsection{Norrish}
 
-Below, we briefly reproduce Norrish's proof of soundness for the
-dark shadow. For every pair of lower bound and upper bound
-constraints, it has to be shown that:
+Below, I briefly reproduce Norrish's proof of soundness for the dark
+shadow. For every pair of lower bound and upper bound constraints, it
+has to be shown that:
 
 \begin{equation*}
 (\alpha - 1)(\beta - 1) \leq \alpha b - a \beta \implies
@@ -1647,32 +1634,32 @@ b$. Similarly, $\beta \leq a \beta - \alpha \beta i$. Infer $\alpha +
 $\alpha b - a \beta < \alpha \beta - \alpha - \beta + 1$, which
 contradicts the first assumption.
 
-We do not intend to reproduce here the entire proof as written in
-Agda. In fact, time constraints and the low priority we assigned to
-filling in the details made us keep some sub-goals as unfinished
-postulates. Instead, we show how we split the main goal into smaller
-sub-goals and how we later put them back together. We also give an
+I do not intend to reproduce here the entire proof as written in
+Agda. In fact, time constraints and the low priority I assigned to
+filling in the details made me keep some sub-goals as unfinished
+postulates. Instead, I show how the main goal is split into smaller
+sub-goals and how those are later put back together. I also give an
 example of a finished sub-goal proof to show the reader what it looks
 like.
 
-We use a parametrised module for every proof that involves a particular
-lower bound and upper bound pair. We \textit{open} the constituents of
-the supplied pair so that we can refer to them more comfortably from
+I use a parametrised module for every proof that involves a particular
+lower bound and upper bound pair. I \textit{open} the constituents of
+the supplied pair so that I can refer to them more comfortably from
 within types.
 
 \begin{AgdaAlign}
 
 \ExecuteMetaData[Presburger.tex]{norrish-inner-header}
 
-We define the form of some sub-goals separately, so that we can later
+I define the form of some sub-goals separately, so that I can later
 refer to them from within multiple types too.
 
 \ExecuteMetaData[Presburger.tex]{goal-example}
 
-Next, a proof for one of the sub-goals, where we show that $(\alpha -
+Next, a proof for one of the sub-goals, where I show that $(\alpha -
 1)(\beta - 1) \leq \alpha b - a \beta$ implies $a \beta \leq \alpha b$
-when both $0 < \alpha$ and $0 < \beta$. Observations that are common
-requirements to multiple sub-goals have been abstracted away into
+when both $0 < \alpha$ and $0 < \beta$. Observations that are a common
+requirement to multiple sub-goals have been abstracted away into
 lemmas.
 
 \ExecuteMetaData[Presburger.tex]{norrish-subgoal-1}
@@ -1687,16 +1674,16 @@ The remaining sub-goals have been defined as:
 \end{itemize}
 \end{AgdaAlign}
 
-Putting them all together, we supply Norrish's proof:
+Putting them all together, I supply Norrish's proof:
 
 \ExecuteMetaData[Presburger.tex]{norrish-type}
 \ExecuteMetaData[Presburger.tex]{norrish}
 
 \subsubsection{Real shadow}
 
-The dark shadow preserves satisfiability. We must show that whenever
-the real shadow is applied, unsatisfiability too is preserved.  Where
-all $\alpha_i$ or all $\beta_i$ are $1$:
+The dark shadow preserves satisfiability. It must be shown that
+whenever the real shadow is applied, unsatisfiability is preserved
+too. Where all $\alpha_i$ or all $\beta_i$ are $1$:
 
 \begin{equation*}
 \neg \bigwedge_{i,j} (\alpha_i - 1)(\beta_j - 1) \leq \alpha_i b_j - a \beta_j
@@ -1705,7 +1692,7 @@ all $\alpha_i$ or all $\beta_i$ are $1$:
 
 That is, given arguments $\bigwedge_{i,j} (\alpha_i - 1)(\beta_j - 1)
 \leq \alpha_i b_j - a \beta_j \implies \bot$ and $∃x. L(x) \land U(x)$
-we must transform the latter into an argument suitable for the
+latter must be transformed into an argument suitable for the
 former. Using induction, the proof obligation can be reduced to a
 predicate on lower bound and upper bound pairs.
 
@@ -1717,8 +1704,8 @@ predicate on lower bound and upper bound pairs.
 The conjuncts on the LHS of the implication are appropriately
 multiplied to get $(∃x. a \beta \leq \alpha \beta x \land \alpha \beta
 x \leq \alpha b)$, then $a \beta \leq \alpha b$ by transitivity of
-$\leq$. The proof is concludes as $(\alpha - 1)(\beta - 1)$ reduces to
-$0$ when either $\alpha$ or $\beta$ are $1$. This is our
+$\leq$. The proof concludes as $(\alpha - 1)(\beta - 1)$ reduces to
+$0$ when either $\alpha$ or $\beta$ are $1$. This is my
 implementation in Agda:
 
 \ExecuteMetaData[Presburger.tex]{real-shadow}
@@ -1726,10 +1713,10 @@ implementation in Agda:
 \subsubsection{Delivering soundness}
 
 The elimination process has to be shown to preserve both
-unsatisfiability and satisfiability. We will not reproduce their
-proofs here, they are rather bulky. Instead, we will comment on their
-logic; we recommend reading their code alongside the explanation
-that follows below.
+unsatisfiability and satisfiability. I will not reproduce their
+proofs here, they are rather bulky. Instead, I will comment on their
+logic; although I recommend reading their code alongside my
+explanation.
 
 \ExecuteMetaData[Presburger.tex]{correct}
 
@@ -1749,17 +1736,17 @@ returns a proof that by doing so, satisfiability is preserved.
 
 \subsection{Future work}
 
-Although the present development is satisfactory in our view, room for
+Although the present development is satisfactory in my view, room for
 further work is extensive. Below is a to-do list, ordered by priority,
-of what our work after submission is likely to be.
+of what my work after submission is likely to be.
 
 \begin{description}
 
   \item [Removal of postulates] Currently several base lemmas remain
-  postulates and so do several lemmas used by Norrish.  Fulfilling
-  these is a priority and — we are confident — a very realistic
-  goal. Once completed, Agda can compile our program in safe mode:
-  after that the correctness of our program is proven beyond any
+  postulates and so do several lemmas used by Norrish. Fulfilling
+  these is a priority and — I am confident — a very realistic
+  goal. Once completed, Agda can compile the program in safe mode:
+  after that the correctness of the program is proven beyond any
   reasonable doubt.
 
   \item [Evaluation of normal forms] Input formulae need still be
@@ -1769,23 +1756,24 @@ of what our work after submission is likely to be.
   to be handled by the ``outer'' layer of soundness proof; the
   implementation of Norrish's proof would remain unchanged.
 
-  \item [Verification of the normalisation process] Because we had not
-  enough time to evaluate normal forms, we did not attempt to verify
-  normalisation correct. Although fairly labourious, we do not expect
+  \item [Verification of the normalisation process] Because I had not
+  enough time to evaluate normal forms, I did not attempt to verify
+  normalisation correct. Although fairly labourious, I do not expect
   this to be too challenging.
 
   \item [Quoting] Building input formulae automatically out of users'
   goals is a major usability improvement.
 
-  \item [Submission to the standard library] Submitting our
+  \item [Submission to the standard library] Submitting my
   development for inclusion in Agda's standard library would be the
-  culmination of our work. We expect this to entail considerable
-  communication and adaptation work.
+  culmination of this work. There is no guarantee this will happen
+  and, if it does, I expect it to entail considerable communication
+  and adaptation work.
   
   \item [Implementation and verification of splinters] Most proof
   assistants provide incomplete Presburger solvers that do not make
   use of splinters. Given the complexity of implementing and verifying
-  them, we judge this as an entirely optional goal.
+  them, this as an entirely optional goal.
   
 \end{description}
 
@@ -1793,7 +1781,7 @@ of what our work after submission is likely to be.
 \section{Cooper's Algorithm}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-During our initial research phase, we briefly considered Cooper's
+During my initial research phase, I briefly considered Cooper's
 Algorithm as a candidate for a verified Presburger arithmetic
 solver. First introduced in \cite{Cooper1972}, \cite{Norrish2003} and
 \cite{Chaieb2003} provide comprehensible reviews and discuss
@@ -1824,7 +1812,7 @@ applied to decide a formula unsatisfiable, partly verifying the
 theorem results in an incomplete procedure only capable of announcing
 the satisfiability of a formula. Verifying the whole theorem is
 considerably more complex than verifying the totality of the Omega
-Test, and we therefore discarted the more efficient Cooper's Algorithm
+Test, and I therefore discarted the more efficient Cooper's Algorithm
 in favour of the simpler Omega Test.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
