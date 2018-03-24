@@ -73,6 +73,11 @@
 \usepackage{mathtools}
 
 \begin{document}
+% Always use § for references to document structures
+\renewcommand{\chapterautorefname}{\S}
+\renewcommand{\sectionautorefname}{\S}
+\renewcommand{\subsectionautorefname}{\S}
+\renewcommand{\subsubsectionautorefname}{\S}
 
 \AgdaHide{
 \begin{code}
@@ -204,22 +209,40 @@ back. These decision procedures are often based on some meta-theory
 about the system, and thus can result in less rewriting steps than the
 repeated application of inference rules from inside the system.
 
-This project embarks upon constructing such solvers and proving them
-correct. Three different problems will be considered: the first two
-will involve solving equalities on algebraic structures, the third one
-deciding a first-order predicate logic — Presburger arithmetic. The
-aim is to better understand theorem proving as seen through the
-Curry-Howard lens.
+The four color theorem was the first notable problem to be solved with
+the help of a computer program. Since 1976, doubts of the correctness
+of such program remained until in 2005 Georges Gonthier dissipated
+them proving the theorem correct with a proof assistant.
 
-\todo{Four color theorem}
+This project embarks upon constructing verified proof generators.
+Three different problems are considered: the first two involve solving
+equalities on algebraic structures; the third deciding a first-order
+predicate logic — Presburger arithmetic. The aim is to better
+understand automated theorem proving as seen through the Curry-Howard
+lens.
 
-\todo{Main results}
-\todo{Comment on use cases}
-\todo{Link verification}
-\todo{Sections}
+\autoref{ch:background} provides a brief introduction to the
+relationship between machine programs and formal proofs, illustrated
+with accompainying Agda programs. The chapter includes a short
+introduction to programming in Agda, and establishes some of the base
+ground required for formal verification.
+
+\autoref{ch:monoids} starts with a simple example: a fully-verified
+solver for equations on monoids. \autoref{ch:rings} comments on a more
+involved solver for commutative rings found in Agda's standard
+library. This project then culminates in \autoref{ch:presburger},
+where a partial solver for Presburger arithmetic written in Agda is
+presented as a premier. With some additional work, I am optimistic of
+its inclusing into Agda's standard library.
+
+Closing, \autoref{ch:verification} reiterates the correctness that
+the precission of dependently typed specifications guarantee, and
+\autoref{ch:results} and \autoref{ch:conclusion} contain meta-analyses
+of the project's process.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Background}
+\label{ch:background}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \todo{Present sections and their thoughtfulness}
@@ -229,16 +252,18 @@ Curry-Howard lens.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 If a computer is to verify the proof of some proposition, there must
-exist some computational model for both proofs and propositions. One
+exist some computational model relating proofs and propositions. One
 such model was first devised by Haskell Curry \cite{Curry1934} and
 later strengthened by William Alvin Howard \cite{Howard1980a}. It
 establishes a two way correspondence between type theory and
-intuitionistic logic: propositions are isomorphic to types and proofs
+constructive logic: propositions are isomorphic to types and proofs
 are to programs; to prove a proposition is to construct a program
-inhabiting its corresponding type. Formal proofs can be verified by
-type-checkers.
+inhabiting its corresponding type; a proposition cannot be proven if a
+program of the corresponding type cannot be given. Type-checkers can
+verify formal proofs.
 
-\todo{Better intro, present code fragments}
+Ignoring — for now — any details specific to Agda, here are some
+examples relating types to logical propositions: 
 
 \AgdaHide{
 \begin{code}
@@ -255,16 +280,17 @@ module _ where
     -- Falsehood: an uninhabited type with no constructors
     data ⊥ : Set where
 
-    -- Disjunction
+    -- Disjunction, with two constructors
     data _⊎_ (A B : Set) : Set where
       inj₁ : A → A ⊎ B
       inj₂ : B → A ⊎ B
 
     module Laws {A : Set} where
-      -- Ex falso quodlibet
-      -- Agda can see there is no way of constructing ⊥
+      -- ⊥ is an initial object: from it, anything can be produced
+      -- There is no constructor for ⊥, pattern matching on the
+      -- argument renders the case absurd
       explosion : ⊥ → A
-      explosion () -- No need to provide a case
+      explosion ()
 
       -- Law of non-contradiction
       -- AKA implication elimination
@@ -272,20 +298,23 @@ module _ where
       lnc : A → (A → ⊥) → ⊥
       lnc a a→⊥ = a→⊥ a
 
-      -- No RAA in a constructive proof
+      -- No proof by contradiction in constructive mathematics
+      -- We need a witness in A, and we have none
       dne : ((A → ⊥) → ⊥) → A
-      dne f = {!!} -- We need to manufacture an A, but we have none
+      dne f = {!!} 
 
-      -- No LEM in a constructive proof
+      -- No law of excluded middle in constructive mathematics
+      -- To be or not to be demands a choice
+      -- Decidability is not universal
       lem : A ⊎ (A → ⊥)
-      lem = {!!} -- To be or not to be demands a choice
+      lem = {!!} 
 \end{code}
 
 Many variants exist on both sides of the isomorphism. The type theory
 of simply typed lambda calculus — where $→$ is the only type
 constructor — is in itself enough to model propositional logic. Type
-theories containing dependent types — where the definition of a type
-may depend on a value — model predicate logics containing quantifiers.
+theories with dependent types — where the definition of a type may
+depend on a value — model predicate logics containing quantifiers.
 \cite{Sorensen2006d} is an comprehensive introduction to these ideas.
 
 \begin{code}
@@ -312,13 +341,12 @@ rejected if they don't clearly show that they will eventually reach
 termination. If we consider programs to be proofs, programs for which
 termination cannot be verified should be rejected.
 
-One way of showing termination is by always making recursive calls on
+One way of showing termination is by making recursive calls on
 structurally smaller arguments. If data is defined inductively, this
 assures that a base case is always eventually reached, and that
-therefore recursion always eventually terminates.
+therefore recursion always eventually terminate.
 
 \begin{code}
-    -- Underscores show where the arguments go
     _+_ : ℕ → ℕ → ℕ
     zero + m = m            -- Base case of first argument
     suc n + m = suc (n + m) -- First argument gets smaller
@@ -338,44 +366,45 @@ defined} (functions must terminate and be defined for every possible
 case) language based on Per Martin-Löf's intuitionistic type
 theory. It was first developed by Catarina Coquand in 1999 and later
 rewriten by Ulf Norell in 2007. \cite{Norell2009} is an excellent
-introduction; more in-depth documentation can be found at
-\url{https://agda.readthedocs.io}. This section will briefly cover the
+introduction; more technical documentation can be found at
+\url{https://agda.readthedocs.io}. This section briefly covers the
 basics of what theorem proving in Agda looks like and, in the spirit
-of a tutorial, it will sometimes use the second person to avoid 
-excessive third person references like ``the user'' and ``the
-programmer''.
+of a tutorial, ocasionally uses the second person to avoid verbose
+references to a third person reader.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{The experience of programming in Agda}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Development in Agda happens inside Emacs, and is a two way
-conversation between the compiler and the programmer. Wherever a
-definition is required, you may instead write $?$ and request the
-type-checker to reload the file. A ``hole'' will appear where the $?$
-was. You can then:
+conversation between the compiler and you. Wherever a definition is
+required, you may instead write $?$ and request the type-checker to
+reload the file. A ``hole'' will appear where the $?$ was. You can
+then:
 
 \begin{itemize}[noitemsep]
-  \item examine the type of the goal;
+  \item examine the type of that goal;
   \item examine the types of the values in context;
-  \item examine the type of an arbitrary expression;
+  \item examine the type of any arbitrary expression;
   \item pattern match on a type;
-  \item supply a value, which may contain further holes;
+  \item supply a value, possibly containing further holes;
   \item attempt to refine the goal; or
-  \item attempt to automatically solve the goal.
+  \item attempt to solve the goal automatically.
 \end{itemize}
 
-This interactive way of programming, often described as ``hole
-driven'', allows you to work with partial definitions and receive
-constant feedback from the type-checker.
+This interactive way of programming is often described as ``hole
+driven''. Type-checking definitions before they writing them down
+promotes the construction of well-formed expressions — instead of the
+construction and subsequent debugging of malformed ones. Allowing holes
+in those definitions makes the development model realistic.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Some peculiarities}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-If an argument is named, subsequent arguments can depend on it.  If an
-argument can be inferred by the type-checker, you may choose to make
-it implicit by naming it and enclosing it in curly braces. Implicit
+For subsequent arguments to depend on it, an argument must be named.
+If an argument can be inferred by the type-checker, you may choose to
+make it implicit by naming it inside enclosing curly braces. Implicit
 arguments can later still be explicitly provided and pattern matched
 against. If the type of an argument can be inferred by the
 type-checker, you may omit it and use $∀$:
@@ -388,11 +417,11 @@ type-checker, you may omit it and use $∀$:
     prf₁ {suc (suc n)} = prf₁ {n}
 \end{code}
 
-Multiple arguments sharing the same type can be grouped by providing
-more than one name for them. With the exception of whitespace and a
-few special symbols, names in Agda may contain arbitrary unicode
+Multiple arguments sharing the same type can be grouped by giving
+using multiple names. With the exception of whitespace and a few
+special symbols, names in Agda may contain arbitrary unicode
 symbols. In addition, names can use underscores as placeholders for
-any arguments they might receive.
+their arguments.
 
 \begin{code}
     ∣_-_∣ : (x y : ℕ) → ℕ
@@ -401,7 +430,7 @@ any arguments they might receive.
     ∣ suc x - suc y ∣ = ∣ x - y ∣
 \end{code}
 
-An anonymous function can be provided wherever a function is
+An anonymous function can be provided where a function is
 expected. You can pattern match against its arguments by wrapping the
 arguments and body in curly brances.
 
@@ -436,7 +465,7 @@ Constructors can accept arguments, which may be recursive:
 
 Datatypes may accept parameters. If they do, every constructor in the
 datatype has to have that same parameter in its return type. Hence
-these parameters are named:
+these parameters need to be named:
 
 \begin{code}
     data List (A : Set) : Set where
@@ -444,10 +473,22 @@ these parameters are named:
       _∷_ : A → List A → List A
 \end{code}
 
-Moreover, datatypes can be indexed. Each of these indices is said to
-introduce a family of types. Constructors do not need to keep within
-the same index, and may in fact \textit{jump} from one to another.
-Parameters are forced on datatypes, but indices are a choice.
+Data types with a single constructor can be defined as records.
+Bellow, a record type where the type of one of the fields
+depends on the value of the other:
+
+\begin{code}
+    record Σ (A : Set) (B : A → Set) : Set where
+      constructor _,_
+      field
+        proj₁ : A
+        proj₂ : B proj₁
+\end{code}
+
+Datatypes can be indexed. Each of these indices is said to introduce a
+family of types. Constructors do not need to keep within the same
+index, and may in fact \textit{jump} from one to another. Parameters
+are forced on datatypes, but indices are a choice.
 
 \begin{code}
     -- Parametrised by A : Set, indexed by ℕ
@@ -456,22 +497,22 @@ Parameters are forced on datatypes, but indices are a choice.
         _∷_ : ∀ {n} → A → Vec A n → Vec A (suc n)
 \end{code}
 
-Whenever you pattern match against a datatype, it will split into
-those constructors capable of constructing that type:
+Pattern matching deconstructs a type by splitting it into those
+constructors capable of constructing it:
 
 \begin{code}
-    -- Vec A n matches both constructors
+    -- Both constructors match Vec A n
     map : {A B : Set}{n : ℕ} → (A → B) → Vec A n → Vec B n
     map f [] = []
     map f (x ∷ xs) = f x ∷ map f xs
 
-    -- Vec A (suc n) only matches _∷_
+    -- Only matches _∷_ matches Vec A (suc n)
     head : {A : Set}{n : ℕ} → Vec A (suc n) → A
     head (x ∷ xs) = x
 \end{code}
 
-In Agda, pattern matching drives computation, and every case result of
-it further refines the types in context.
+In Agda, computation is driven by pattern matching: every case result
+of it further refines the types in context.
 
 \begin{code}
     -- Note that xs, ys and the result have the same length
@@ -493,8 +534,9 @@ it further refines the types in context.
 \end{code}
 
 If the type-checker can see that a type is impossible to construct,
-pattern matching on it will render the case absurd, and thus you won't
-need to provide a definition for it.
+pattern matching on it will render the case absurd, and thus you do
+not need to provide a definition for it. Dependent types grant a level
+of precision that makes handling erroneous input uncessary.
 
 \begin{code}
     -- The successor of an even number cannot be even
@@ -506,9 +548,9 @@ need to provide a definition for it.
 
 The type-checker uses dot patterns to show that pattern matching on
 one argument uniquely implies another. If a value can be inferred by
-the type checker, you may replace it by an underscore. Additionally,
-underscores can be used as non-binded catch-alls outside of dot
-patterns on the left hand side of a definition.
+the type-checker, you may replace it by an underscore. Additionally,
+outside of dot patterns underscores can be used as non-binded
+catch-alls on the left hand side of a definition.
 
 \begin{code}
     -- Pattern matching on xs determines n
@@ -521,8 +563,8 @@ patterns on the left hand side of a definition.
 particular direction by allowing you to pattern match on arbitrary
 well-formed expressions on the left hand side of a definition. This
 may result in the refinement of the rest of the arguments. The
-following example is adapted from Agda-Stdlib and was originally
-presented in \cite{McBride2004}:
+following example is adapted from the standard library and was
+originally presented in \cite{McBride2004}:
 
 \begin{code}
     -- Ordering n m is a proof…
@@ -549,11 +591,12 @@ abstraction and ordinary case splitting on the right hand
 side. \cite{Oury2008} contains other interesting examples of views.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Reasoning tools}
+\subsection{Intensional equality}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Two terms of the same type are considered propositionally equal if
-they unify with each other:
+Intensional equality judges two terms equal based on how they were
+constructed. Two terms with identical behaviour but of different
+construction will be considered different.
 
 \AgdaHide{
 \begin{code}
@@ -573,16 +616,14 @@ they unify with each other:
 \end{code}
 }
 
-\AgdaRef{\_≡\_} is parametrised by an implicit type \AgdaBound{A} and
-a value \AgdaBound{x}~\AgdaSymbol{:}~\AgdaBound{A} and indexed by a
-value in \AgdaBound{A}. Given some fixed parameter \AgdaBound{x}, for
-every \AgdaBound{y}~\AgdaSymbol{:}~\AgdaBound{A} there is a
-type \AgdaBound{x}~\AgdaDatatype{≡}~\AgdaBound{y}. The
-constructor \AgdaRef{refl} is the only means of constructing a value
-of type \AgdaBound{x}~\AgdaDatatype{≡}~\AgdaBound{y} and crucially, it
-can only construct values
-where \AgdaBound{x}~\AgdaDatatype{≡}~\AgdaBound{x} after
-normalisation.
+In ~\AgdaBound{x}~\AgdaRef{≡}~\AgdaBound{y}, ~\AgdaBound{x}~ is the
+parameter and ~\AgdaBound{y}~ the index. The single constructor
+~\AgdaRef{refl}~ constructs types where the parameter ~\AgdaBound{x}~
+is provided as the index. This means that for
+~\AgdaBound{x}~\AgdaRef{≡}~\AgdaBound{y}~ to be well-formed, Agda has
+to be able to unify ~\AgdaBound{x}~ and ~\AgdaBound{y}: once both
+terms are normalised into a tree of constructors, they must be
+syntactically equal.
 
 \begin{code}
     -- Both sides normalise to suc (suc zero)
@@ -605,18 +646,18 @@ However, not all equations immediately unify. Consider the following:
     prf₅ : ∀ n → (n + zero) ≡ n
 \end{code}
 
-\AgdaBound{n} \AgdaFunction{+} \AgdaRef{zero} cannot
-normalise: because of how \AgdaRef{\_+\_} was defined, it needs to know
+\AgdaBound{n} \AgdaFunction{+} \AgdaRef{zero} cannot normalise: as a
+consequence of the definition of \AgdaRef{\_+\_}, it needs to be known
 whether \AgdaBound{n} was constructed with \AgdaRef{zero} or
-\AgdaRef{suc}. We can can advance the computation by pattern matching
+\AgdaRef{suc}. The computation can be advanced by pattern matching
 on \AgdaBound{n}. While the base case is now trivial
 (\AgdaRef{zero}~\AgdaFunction{+}~\AgdaRef{zero} unifies with
 \AgdaRef{zero}), the problem persists in the inductive case, where
 \AgdaRef{suc}~\AgdaSymbol{(}\AgdaBound{n}~\AgdaFunction{+}~\AgdaRef{zero}\AgdaSymbol{)}
 has to unify with \AgdaRef{suc}~\AgdaBound{n}. By recursing on the
-inductive hypothesis, we can unify
-\AgdaBound{n}~\AgdaFunction{+}~\AgdaRef{zero} with \AgdaBound{n}, and
-thus the remainder of the proof becomes trivial:
+inductive hypothesis and on the subject of such hypothesis,
+\AgdaBound{n}~\AgdaFunction{+}~\AgdaRef{zero} and \AgdaBound{n} can be
+unified:
 
 \begin{code}
     prf₅ zero = refl
@@ -624,8 +665,8 @@ thus the remainder of the proof becomes trivial:
     prf₅ (suc n) | .n          | refl = refl
 \end{code}
 
-This recursion on the induction hypothesis is common enough that there
-is special syntax for it:
+This recursion on the induction hypothesis is common enough that
+special syntax exists for it:
 
 \begin{code}
     prf₆ : ∀ n → (n + zero) ≡ n
@@ -633,97 +674,70 @@ is special syntax for it:
     prf₆ (suc n) rewrite prf₆ n = refl
 \end{code}
 
-Next, we introduce common reasoning tools enabling whiteboard-style
-reasoning, all part of
-\href{https://agda.github.io/agda-stdlib/Relation.Binary.PropositionalEquality.html#3767}{Agda-Stdlib}:
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Tools for reasoning}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\todo{Remove this, show an example}
+To aid reasoning, tools that enable whiteboard-style deductions have
+been developed. These functions exploit the transitivity of the binary
+relation they are defined for — may it be equality or other preorder
+relations like $≤$ or $⇒$. This style of reasoning, together with the
+congruent property of functions, is used profusely throught this
+report.
 
-\begin{code}
-    cong : {A B : Set}{x y : A} (f : A → B) → x ≡ y → f x ≡ f y
-    cong f refl = refl
-
-    module Reasoning {A : Set} where
-      -- x and y unify when we pattern match on the first argument
-      sym : ∀ {x y : A} → x ≡ y → y ≡ x
-      sym refl = refl
-
-      -- x and y unify when we pattern match on the first argument
-      -- y ≡ z then becomes x ≡ z
-      trans : ∀ {x y z : A} → x ≡ y → y ≡ z → x ≡ z
-      trans refl eq = eq
-
-      begin_ : ∀ {x y : A} → x ≡ y → x ≡ y
-      begin_ x≡y = x≡y
-
-      _≡⟨⟩_ : ∀ (x {y} : A) → x ≡ y → x ≡ y
-      _ ≡⟨⟩ x≡y = x≡y
-
-      _≡⟨_⟩_ : ∀ (x {y z} : A) → x ≡ y → y ≡ z → x ≡ z
-      _ ≡⟨ x≡y ⟩ y≡z = trans x≡y y≡z
-
-      _∎ : ∀ (x : A) → x ≡ x
-      _∎ _ = refl
-
-\end{code}
 \AgdaHide{
 \begin{code}
-      infix  3 _∎
-      infixr 2 _≡⟨⟩_ _≡⟨_⟩_
-      infix  1 begin_
+    open import Relation.Binary.PropositionalEquality using ()
+    open Relation.Binary.PropositionalEquality.≡-Reasoning
+\end{code}}
 
-    open Reasoning
+\begin{code}
+    cong : ∀ {A B : Set} (f : A → B) {x y} → x ≡ y → f x ≡ f y
+    cong f refl = refl
 \end{code}
-}
-
-You can now leave a record of type rewrites and their justifications:
 
 \begin{code}
     prf₇ : ∀ l n m → ((zero + (l + zero)) + (n + zero)) + m ≡ (l + n) + m
     prf₇ l n m = begin
-      (((zero + (l + zero)) + (n + zero)) + m)
-        ≡⟨⟩
-      (((l + zero) + (n + zero)) + m)
-        ≡⟨ cong (λ t → (t + (n + zero)) + m) (prf₆ l) ⟩
-      ((l + (n + zero)) + m)
-        ≡⟨ cong (λ t → (l + t) + m) (prf₆ n) ⟩
+      ((zero + (l + zero)) + (n + zero)) + m
+        ≡⟨⟩ -- Needs no justification, both types immediately unify
+      ((l + zero) + (n + zero)) + m
+        ≡⟨ cong (λ ⊚ → (⊚ + (n + zero)) + m) (prf₆ l) ⟩
+      (l + (n + zero)) + m
+        ≡⟨ cong (λ ⊚ → (l + ⊚) + m) (prf₆ n) ⟩
       (l + n) + m
         ∎ 
 \end{code}
-
-\todo{Explain Σ types somewhere}
-\todo{Comment on ≤-Reasoning, ⇒-Reasoning}
-\todo{Comment Set ≈ type}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Proof by reflection}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Procedures that generate proofs often require to a notion of what
+Proof generating procedures generally require some notion of what
 their target theorem is. This notion has to be translated — reflected
-— into a data structure in a source language that the procedure can
-manipulate. The proof that the procedure will then construct will
-depend on this data structure.
+— into a data structure that the procedure can manipulate to construct
+its target theorem. This is in contrast with proof assistants like
+Coq, which supply externally defined ``tactics'': in Agda, automated
+theorem provers need to be defined internally.
 
 \href{https://agda.readthedocs.io/en/latest/language/reflection.html}{
-The support for reflection that Agda offers} gives the programmer the
+The support for reflection offered by Agda} gives the programmer the
 ability to ``quote'' arbitrary parts of the program into abstract
-terms that represent them. In the other direction, these abstract
-terms can be procedurally built and later ``unquoted'' into concrete
-Agda code. Additionally, Agda also offers means to directly control
-type checking and unification.
+terms representing them. In the other direction, these abstract terms
+can be procedurally built and later ``unquoted'' into concrete Agda
+code. Additionally, Agda also offers means to directly control type
+checking and unification.
 
-\todo{Comment difference with Coq}
+Reflection is most commonly used to satisfy proof goals automatically.
+For this common use case, Agda provides ``macros'': functions that
+take their target quoted goal as an argument and hand back some
+computation that solves it.
 
-Reflection is most commonly used to create ``tactics'' that
-programmatically proof propositions. For this common use case, Agda
-provides ``macros'': functions that take as an argument the quoted
-hole they must solve and handle back some computation that solves
-it. The next example, extracted from Agda's documentation, shows how
-the macro ~\AgdaFunction{by-magic}~ uses ~\AgdaFunction{magic}~ to
-construct values of a given type. Note that ~\AgdaFunction{magic}~
-returns a ~\AgdaDatatype{Term}~ inside a ~\AgdaDatatype{TC}~ monad:
-this allows ~\AgdaFunction{magic}~ to throw type errors if the type
+The next example from Agda's documentation, shows how the macro
+~\AgdaFunction{by-magic}~ uses ~\AgdaFunction{magic}~ to construct
+values of a given type. Note that ~\AgdaFunction{magic}~ returns a
+~\AgdaDatatype{Term}~ inside a ~\AgdaDatatype{TC}~ monad: this allows
+~\AgdaFunction{magic}~ to throw type errors if the type that is
 supplied to it is outside of its problem domain.
 
 \AgdaHide{
@@ -736,8 +750,7 @@ module _ where
 }
 
 \begin{code}
-    magic : Type → TC Term
-    magic = {!!}
+    postulate magic : Type → TC Term
 
     macro
       by-magic : Term → TC ⊤
@@ -748,9 +761,9 @@ module _ where
 \end{code}
 
 Both \cite{Walt2012} and \cite{VanDerWalt2012} are in-depth
-introductions to Agda's reflection mechanisms and come with several
-example use cases. \cite{Kokke2015} uses reflection to, given a list
-of rules, conduct automatic first-order proof search on a goal type.
+introductions to Agda's reflection mechanism and come supplemented
+with examples. \cite{Kokke2015} uses reflection to, given a list of
+hints, conduct automatic first-order proof search on a goal type.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Builtins, Stdlib and Prelude}
@@ -759,27 +772,67 @@ of rules, conduct automatic first-order proof search on a goal type.
 Agda is distributed together with a
 \href{https://agda.readthedocs.io/en/latest/language/built-ins.html}{set
 of builtin data types and functions} found under the
-\AgdaModule{Agda.Builtin}~module. These builtin types get special
-treatment during compilation but can nevertheless be easily redefined
-and customised by the user. \AgdaModule{Agda.Builtin}~does not provide
-the user with any proofs of the properties related to the data types
-it contains.
+\AgdaModule{Agda.Builtin}~module. These builtins are then referenced
+by a set of directives (or \textit{pragmas}), so that Agda can, for
+instance, translate numerical literals into terms of type
+~\AgdaDatatype{ℕ}. \AgdaModule{Agda.Builtin}~does not provide
+any proofs of the properties related to its data types.
 
 The development of
 \href{https://github.com/agda/Agda-Stdlib}{Agda-Stdlib} happens in
-close coordination with Agda's. Unlike \AgdaModule{Agda.Builtin}'s
+close coordination to Agda's. Unlike \AgdaModule{Agda.Builtin}'s
 conservative approach, Agda-Stdlib provides a large library of
-commonly used data structures and functions. It abstracts
-aggressively which, together with its heavy use of unicode symbols and
-infix notation, can often result in code challenging for the
-unexperienced reader. Along with the data types it provides there come
-proofs for many of their common properties.
+commonly used data structures and functions. It abstracts aggressively
+which, together with its heavy use of unicode symbols and infix
+notation, can often result in code challenging to read for the
+unexperienced user. It contains a rather vast set of already proven
+theorems for all of its data types.
 
 In comparison,
 \href{https://github.com/ulfnorell/agda-prelude}{Agda-Prelude} is less
-abstract and more readable and efficient, but not as complete.  For
-that reason, this project will make use of the tools provided by
-Agda-Stdlib.
+abstract and more readable and efficient, but by far not as complete.
+
+This project uses Agda-Stdlib as its sole dependency.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Miscellanea}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsubsection{Universes}
+
+To avoid Russell's paradox, Agda introduces a hierarchy of universes
+~\AgdaPrimitiveType{Set}~\AgdaSymbol{:}~\AgdaPrimitiveType{Set₁}~\AgdaSymbol{:}~\AgdaPrimitiveType{Set₂}\ldots
+where ~\AgdaPrimitiveType{Set}~ is the set of all small types like
+~\AgdaDatatype{Bool}~ or ~\AgdaDatatype{ℕ}.
+
+\subsubsection{Postulates and safe mode}
+
+In Agda, any proposition can be introduced as a postulate. Some
+postulates may lead to inconsistencies:
+
+\AgdaHide{
+\begin{code}
+    open import Data.Sum using (_⊎_ ; inj₁)
+    open import Data.Unit using (tt)
+    open import Data.Empty using (⊥)
+\end{code}}
+
+\begin{code}
+    postulate ¬LEM : {A : Set} → A ⊎ (A → ⊥) → ⊥
+    LEM : {A : Set} → A ⊎ (A → ⊥)
+    LEM with ¬LEM (inj₁ tt)
+    LEM | () 
+\end{code}
+
+Executing Agda with the \texttt{--safe} switch deactivates those
+features that may lead to inconsistencies, like postulates, accepting
+unsolved proofs or
+~\AgdaPrimitiveType{Set}~\AgdaSymbol{:}~\AgdaPrimitiveType{Set}.
+Unfortunately, Agda's standard library does not quarentine unsafe
+definitions so any module depending on it (albeit not using any of the
+unsafe features) will be considered unsafe too. There is
+\href{https://github.com/agda/agda-stdlib/issues/143}{work in
+progress} to address that.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Problem solvers and their domains}
@@ -789,6 +842,7 @@ Agda-Stdlib.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Solving monoids}
+\label{ch:monoids}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Monoids are common algebraic structures involved in many problems. A
@@ -1002,6 +1056,7 @@ in the following example usage:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Solving commutative rings}
+\label{ch:rings}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1020,6 +1075,7 @@ in the following example usage:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Solving Presburger arithmetic}
+\label{ch:presburger}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 In 1929, Mojżesz Presburger presented and proved decidable a predicate
@@ -1773,11 +1829,13 @@ in favour of the simpler Omega Test.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Verification and validation}
+\label{ch:verification}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\todo{Dependent types, higher standards, no tests, we formally describe what correct is}
+\todo{Formal verification as opposed to anecdotical evidence (testing)}
+\todo{Formal specifications of correctness}
+\todo{Dependent types, higher precission}
 \todo{This report is type-checked}
-\todo{Formal verification is our business}
 
 %   Verification and Validation In this section you should outline the
 %   verification and validation procedures that you've adopted throughout the
@@ -1789,6 +1847,7 @@ in favour of the simpler Omega Test.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Results and evaluation}
+\label{ch:results}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %   Results and Evaluation The aim of this chapter is twofold. On one hand, it
@@ -1829,8 +1888,11 @@ dependent types, theorem proving
 Process:
 reading and interpreting papers, managing long-duration projects
 
+\section{Things I would do differently}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Summary and conclusions}
+\label{ch:conclusion}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %   Summary and Conclusions In the final chapter of your report, you should
