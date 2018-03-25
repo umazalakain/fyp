@@ -1,4 +1,4 @@
-\documentclass[12pt,a4paper]{scrreprt}
+\documentclass[12pt,a4paper,abstract=on,bibliography=openstyle]{scrreprt}
 
 \usepackage[english]{babel}
 
@@ -77,6 +77,7 @@
 ]{doclicense}
 
 \begin{document}
+
 % Always use § for references to document structures
 \renewcommand{\chapterautorefname}{\S}
 \renewcommand{\sectionautorefname}{\S}
@@ -136,21 +137,25 @@ module _ where
 
 \newpage
 
-%   Introductory Pages Before the chapters of your report, there should be a
-%   number of introductory pages. These should include:
-%   - the title page (which has a compulsory format),
-%   - a page giving an abstract of your work,
-%   - an acknowledgements page, and
-%   - a table of contents.
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{abstract}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\todo{check spelling}
-\todo{claims}
-% Proving certain theorems can be boring and we want to automate it
-% We don't want just the answer, we want a proof that it is the correct answer
+The Curry-Howard correspondence draws a direct link between logic and
+computation: propositions are modelled by types and proofs by
+programs; to prove a proposition is to construct a program inhabiting
+its corresponding type. Several computer-assisted theorem provers have
+been developed under this idea. They are not just used to verify human
+reasoning: they are also often capable of automatically generating
+proofs.
+
+This project considers the development of such automated theorem
+provers in Agda, a dependently typed programming language. As a
+warm-up, I present a verified solver for equations on monoids. Then, I
+comment on the solver for commutative rings included in Agda's
+standard library. Finally, I develop a verified decision procedure for
+Presburger arithmetic — a decidable first-order predicate logic.
+
 \end{abstract}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -199,17 +204,6 @@ burning, I am forever grateful.
 \chapter{Introduction}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%   Introduction This should briefly describe the problem which you
-%   set out to solve and should essentially summarise the rest of your
-%   report. The aim of an introduction is to convince the reader that
-%   they should read on, so it is very important that excessive detail
-%   is avoided at this stage.
-
-%   The introduction should include the list of objectives that you
-%   identified for the project, as well as a brief overview of the
-%   outcome. In its final part, the introduction will usually outline
-%   the structure of the rest of the report.
-
 Formal proofs construct theorems by applying the rules of a formal
 system. Computers can assist this process and make theorem proving a
 conversation between the human and the computer, which checks the
@@ -225,11 +219,11 @@ about the system, and thus can result in less rewriting steps than the
 repeated application of inference rules from inside the system.
 
 The four color theorem was the first notable problem to be solved with
-the help of a computer program. Since 1976, doubts of the correctness
-of such program remained until in 2005 Georges Gonthier dissipated
-them proving the theorem correct with a proof assistant.
+the help of a computer program. Since 1976, there remained doubts of
+the correctness of such program until in 2005 Georges Gonthier used a
+proof assistant to prove the theorem.
 
-This project embarks upon constructing verified proof generators.
+This project embarks upon constructing verified problem solvers.
 Three different problems are considered: the first two involve solving
 equalities on algebraic structures; the third deciding a first-order
 predicate logic — Presburger arithmetic. The aim is to better
@@ -240,51 +234,51 @@ lens.
 relationship between machine programs and formal proofs, illustrated
 with accompainying Agda programs. The chapter includes a short
 introduction to programming in Agda, and establishes some of the base
-ground required to perform formal verification in Agda.
+ground required for formal verification.
 
-\autoref{ch:monoids} starts with a simple example: a fully-verified
-solver for equations on monoids. \autoref{ch:rings} comments on a more
+\autoref{ch:monoids} starts with a simple example: a verified solver
+for equations on monoids. \autoref{ch:rings} comments on a more
 involved solver for commutative rings found in Agda's standard
-library. This project then culminates in \autoref{ch:presburger},
+library. This project then culminates with \autoref{ch:presburger},
 where a partial solver for Presburger arithmetic written in Agda is
-presented as a premier. With some additional work, I am optimistic of
-its inclusing into Agda's standard library.
+presented. With some additional work, I am optimistic of its inclusion
+into Agda's standard library.
 
-Closing, \autoref{ch:verification} reiterates the correctness that
-the precission of dependently typed specifications guarantee, and
-\autoref{ch:results} and \autoref{ch:conclusion} contain meta-analyses
-of the project's process.
+Concluding, \autoref{ch:verification} reiterates the correctness that
+the precision of dependently typed specifications is able to express,
+and \autoref{ch:results} and \autoref{ch:conclusion} contain
+meta-analyses of the project's development process.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Background}
 \label{ch:background}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-This chapter briefly introduces the case for the use of type-checkers
-as theorem verifiers. After that, a succint primer on programming in
-Agda is given. In itself, such introduction is probably not entirely
-sufficient to get the unexperienced reader comfortable reading Agda
-code. Only more in-depth reading and hands-on practice are likely to
-achieve that. Nevertheless, it is my hope that it leaves them with
-enough understanding to intuitively grasp some of the ideas put
-forward in other sections of this report.
+This chapter starts by briefly introducing the case behind the use of
+type-checkers as theorem verifiers. Next, a succint primer on
+programming in Agda is given. In itself, such introduction is probably
+not sufficient to get the unexperienced reader entirely comfortable
+reading Agda code. Only more in-depth reading and hands-on practice
+are likely to achieve that. Nevertheless, it is my hope that it
+facilitates enough understanding to intuitively grasp some of the
+ideas put forward in later sections of this report.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Proofs as programs; propositions as types}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-If a computer is to verify the proof of some proposition, there must
-exist some computational model relating proofs and propositions. One
+If a computer is to verify the proof of some proposition, some
+computational model relating proofs and propositions must exist. One
 such model was first devised by Haskell Curry \cite{Curry1934} and
 later strengthened by William Alvin Howard \cite{Howard1980a}. It
 establishes a two way correspondence between type theory and
 constructive logic: propositions are isomorphic to types and proofs
 are to programs; to prove a proposition is to construct a program
-inhabiting its corresponding type; a proposition cannot be proven if a
-program of the corresponding type cannot be given. Type-checkers can
-verify formal proofs.
+inhabiting its corresponding type; a proposition is not proven unless
+a program of the corresponding type is given. Type-checkers can verify
+formal proofs.
 
-Ignoring — for now — any details specific to Agda, here are some
+Ignoring — for now — all details specific to Agda, here are some
 examples relating types to logical propositions: 
 
 \AgdaHide{
@@ -336,7 +330,7 @@ Many variants exist on both sides of the isomorphism. The type theory
 of simply typed lambda calculus — where $→$ is the only type
 constructor — is in itself enough to model propositional logic. Type
 theories with dependent types — where the definition of a type may
-depend on a value — model predicate logics containing quantifiers.
+depend on a value — model predicate logics that contain quantifiers.
 \cite{Sorensen2006d} is an comprehensive introduction to these ideas.
 
 \begin{code}
@@ -360,13 +354,13 @@ depend on a value — model predicate logics containing quantifiers.
 
 Proofs should not suffer from the halting problem — they should be
 rejected if they don't clearly show that they eventually reach
-termination. If we consider programs to be proofs, programs for which
-termination cannot be verified should be rejected.
+termination. If programs are considered to be proofs, programs for
+which termination cannot be verified must be rejected.
 
 One way of showing termination is by making recursive calls on
 structurally smaller arguments. If data is defined inductively, this
 assures that a base case is always eventually reached, and that
-therefore recursion always eventually terminate.
+therefore recursion always eventually terminates.
 
 \begin{code}
     _+_ : ℕ → ℕ → ℕ
@@ -387,12 +381,13 @@ Agda is a \textbf{purely functional} (no side-effects)
 defined} (functions must terminate and be defined for every possible
 case) language based on Per Martin-Löf's intuitionistic type
 theory. It was first developed by Catarina Coquand in 1999 and later
-rewriten by Ulf Norell in 2007. \cite{Norell2009} is an excellent
-introduction; more technical documentation can be found at
-\url{https://agda.readthedocs.io}. This section briefly covers the
+rewriten by Ulf Norell in 2007. It compiles to multiple languages, but
+Haskell is regarded as its main backend. \cite{Norell2009} is an
+excellent introduction to Agda; technical documentation can be found
+at \url{https://agda.readthedocs.io}. This section briefly covers the
 basics of what theorem proving in Agda looks like and, in the spirit
 of a tutorial, ocasionally uses the second person to avoid verbose
-references to a third person reader.
+references to some third person programmer.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{The experience of programming in Agda}
@@ -1892,6 +1887,8 @@ in favour of the simpler Omega Test.
 %   the project. This will normally include the lessons learnt and explanations
 %   of any significant deviations from the original project plan.
 
+Learn by implosion, imagination, handwaving and precission
+
 \section{Organisation}
 
 \section{Things I learnt}
@@ -1906,12 +1903,13 @@ dependent types, theorem proving
 Process:
 reading and interpreting papers, managing long-duration projects
 
-\section{Things I would do differently}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Summary and conclusions}
 \label{ch:conclusion}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\todo{Link to future work for Presburger}
 
 %   Summary and Conclusions In the final chapter of your report, you should
 %   summarise how successful you were in achieving the original project
@@ -1925,17 +1923,14 @@ reading and interpreting papers, managing long-duration projects
 
 \begin{appendices}
 
+\chapter{Program listing}
+
 \todo{Link to the repo}
 
 % \chapter{Detailed Specification and Design}
 %   Appendix A - Detailed Specification and Design This appendix should contain
 %   the details of your project specification that were not included in the main
 %   body of your report.
-
-% \chapter{Detailed Test Strategy and Test Cases}
-%   Appendix B - Detailed Test Strategy and Test Cases This appendix should
-%   contain the details of the strategy you used to test your software, together
-%   with your tabulated and commented test results.
 
 % \chapter{User Guide}
 %   Appendix C - User Guide This appendix should provide a detailed description
