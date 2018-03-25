@@ -240,13 +240,13 @@ ground required for formal verification.
 for equations on monoids. \autoref{ch:rings} comments on a more
 involved solver for commutative rings found in Agda's standard
 library. This project then culminates with \autoref{ch:presburger},
-where a partial solver for Presburger arithmetic written in Agda is
+where the heart of a Presburger arithmetic solver written in Agda is
 presented. With some additional work, I am optimistic of its inclusion
 into Agda's standard library.
 
 Concluding, \autoref{ch:verification} reiterates the correctness that
 the precision of dependently typed specifications is able to express,
-and \autoref{ch:results} and \autoref{ch:conclusion} contain
+and \autoref{ch:evaluation} and \autoref{ch:conclusion} contain
 meta-analyses of the project's development process.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1078,6 +1078,8 @@ in the following example usage:
 \section{Problem description and specification}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\todo{All of rings}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Design and implementation}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1115,7 +1117,7 @@ expressiveness of Presburger arithmetic.
 
 To out knowledge, there is no implementation of a decision procedure
 for Presburger arithmetic written in Agda. In this chapter, I
-introduce two decision procedures on integers, and partially implement
+introduce two decision procedures on integers, and partly implement
 and verify correct one of them.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1622,6 +1624,8 @@ Put together, this satisfies the proof by contradiction:
 \ExecuteMetaData[Presburger.tex]{by-contradiction-type}
 \ExecuteMetaData[Presburger.tex]{by-contradiction}
 
+\todo{Comment somewhere on the definition of pairs and irrels and pattern matching}
+
 The proof by contradiction can then be used to guarantee the success
 of the search for $x$: 
 
@@ -1717,8 +1721,8 @@ too. Where all $\alpha_i$ or all $\beta_i$ are $1$:
 \end{equation*}
 
 That is, given arguments $\bigwedge_{i,j} (\alpha_i - 1)(\beta_j - 1)
-\leq \alpha_i b_j - a \beta_j \implies \bot$ and $∃x. L(x) \land U(x)$
-latter must be transformed into an argument suitable for the
+\leq \alpha_i b_j - a \beta_j \implies \bot$ and $∃x. L(x) \land U(x)$,
+the latter must be transformed into an argument suitable for the
 former. Using induction, the proof obligation can be reduced to a
 predicate on lower bound and upper bound pairs.
 
@@ -1728,11 +1732,10 @@ predicate on lower bound and upper bound pairs.
 \end{equation*}
 
 The conjuncts on the LHS of the implication are appropriately
-multiplied to get $(∃x. a \beta \leq \alpha \beta x \land \alpha \beta
-x \leq \alpha b)$, then $a \beta \leq \alpha b$ by transitivity of
+multiplied, then $a \beta \leq \alpha b$ by transitivity of
 $\leq$. The proof concludes as $(\alpha - 1)(\beta - 1)$ reduces to
-$0$ when either $\alpha$ or $\beta$ are $1$. This is my
-implementation in Agda:
+$0$ when either $\alpha$ or $\beta$ are $1$. Below, such a proof
+written in Agda.
 
 \ExecuteMetaData[Presburger.tex]{real-shadow}
 
@@ -1757,13 +1760,17 @@ application hands a proof of such satisfiability back. Given this
 proof, ~\AgdaFunction{find-x}~ adds a new $x$ to the environment, and
 returns a proof that by doing so, satisfiability is preserved.
 
-\subsection{Usage}
+\todo{Some remark on entangle and such}
+
+\subsection{Results and usage}
+
+\todo{Results and usage}
 
 \subsection{Future work}
 
-Although the present development is satisfactory in my view, room for
-further work is extensive. Below is a to-do list, ordered by priority,
-of what my work after submission is likely to be.
+Although the present development is in my view satisfactory, there is
+ample room for further work. Below is a to-do list, ordered by
+priority, of what my work after submission is likely to be.
 
 \begin{description}
 
@@ -1845,71 +1852,72 @@ in favour of the simpler Omega Test.
 \label{ch:verification}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\todo{Formal verification as opposed to anecdotical evidence (testing)}
-\todo{Formal specifications of correctness}
-\todo{Dependent types, higher precission}
-\todo{This report is type-checked}
+Dependent types facilitate definitions up to a great level of
+precision. These types are often used to accurately model
+specifications. A formal specification is then considered to have been
+met if a term inhabiting its corresponding type is supplied. No amount
+of anecdotal evidence (testing) can attain the grade of verification
+that formal proofs offer.
 
-%   Verification and Validation In this section you should outline the
-%   verification and validation procedures that you've adopted throughout the
-%   project to ensure that the final product satisfies its specification. In
-%   particular, you should outline the test procedures that you adopted during
-%   and after implementation. Your aim here is to convince the reader that the
-%   product has been thoroughly and appropriately verified. Detailed test
-%   results should, however, form a separate appendix at the end of the report.
+For exact details on the verification of the software developed for
+this report, I refer the reader to the corresponding sections in
+chapters \ref{ch:monoids}, \ref{ch:rings} and \ref{ch:presburger} and
+to the accompanying source code.
+
+Due to time contraints, some propositions in \ref{ch:presburger}
+remain postulates and therefore circumvent all verification. However,
+they are all relatively simple lemmas, and I am confident they could
+be satisfied given more time. If these postulates are accepted as
+truthful, the rest of the developed software follows as verified.
+
+This report and the accompanying source code are literate Agda
+files. They must be type-checked to get their syntax highlighted
+automatically. This occurs as part of the build process every time the
+report is built.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\chapter{Results and evaluation}
-\label{ch:results}
+\chapter{Overall evaluation}
+\label{ch:evaluation}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%   Results and Evaluation The aim of this chapter is twofold. On one hand, it
-%   aims to present the final outcome of the project – i.e., the system
-%   developed – in an appropriate way so that readers of your report can form a
-%   clear picture of the system operation and provided functionality without the
-%   need for a live demo. This would normally require the inclusion of
-%   screenshots and/or images of the system in operation, and indicative results
-%   generated by the system. On the other hand, this chapter also aims to
-%   present an appropriate evaluation of the project as whole, both in terms of
-%   the outcome and in terms of the process followed.
+This project set out to research the construction of evidence
+providing problem solvers. I selected three problems to explore:
+equations on monoids, for which I provide a completely verified
+solver; equations on commutative rings, for which I gained insight
+from an already existing solution; and Presburger arithmetic, for
+which I build a solution for the first time implemented in Agda.
 
-%   The evaluation of the outcome is expected to be primarily evidence-based,
-%   i.e., the result of either an experimental process, like usability tests and
-%   evaluations, performance-related measurements, etc., or a formal analysis,
-%   such as algorithmic and mathematical analysis of system properties, etc. The
-%   precise nature of the evaluation will depend on the project requirements.
-%   Please note that if you intend to carry out usability tests, you will need
-%   to first obtain approval from the Department's Ethics Committee - the
-%   section on Evaluation and Ethics Approval provides further detail.
+There exists no reasonable doubt about the correctness of the solver
+for monoids or, obviating postulates, the solver for Presburger
+arithmetic.
 
-%   The evaluation of the process is expected to be primarily a reflective
-%   examination of the planning, organisation, implementation and evaluation of
-%   the project. This will normally include the lessons learnt and explanations
-%   of any significant deviations from the original project plan.
+The research work involved in this work has been considerable —
+particularly during the problem selection phase. Although two
+deliverables were produced, this project was, in fact, primarily a
+research project. A plethora of little discoveries had to be made and
+often, progress was slow and irregular. As my supervisor well put it,
+my learning process was by implosion: I started with a multitude of
+ill-defined concepts and vague ideas and no sense of their
+relevance. They were gradually refined and made more precise.
 
-Learn by implosion, imagination, handwaving and precission
+I used my blog mostly to sketch new ideas and take notes. For
+organisation, I relied on my ever-present whiteboard, the source of
+any planning in my living.
 
-\section{Organisation}
-
-\section{Things I learnt}
-
-Related subjects: Category theory, abstract algebra, logic, problem
-solvers, bounded search, better judge the implications of problems
-
-Vehicle:
-Agda (pattern matching and unification), expressing precisely with
-dependent types, theorem proving
-
-Process:
-reading and interpreting papers, managing long-duration projects
-
+In the course of this project, and sometimes indirectly, I learned
+bits and pieces about abstract algebra, type theory, category theory
+and logic. I now better understand what it is to solve a problem
+constructively; how to structure proofs of correctness; how Agda's
+pattern matching and unification works; and what dependent types have
+to offer. Finally, the experience of interpreting and reproducing a
+scientific paper was invaluable.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Summary and conclusions}
 \label{ch:conclusion}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\todo{Link to future work for Presburger}
+\todo{Conclusion}
 
 %   Summary and Conclusions In the final chapter of your report, you should
 %   summarise how successful you were in achieving the original project
