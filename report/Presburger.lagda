@@ -3,8 +3,9 @@ module Presburger where
 
 open import Function using (id ; _∘_)
 open import Data.Fin using (Fin ; zero ; suc)
-open import Data.Integer hiding (suc)
+open import Data.Integer as Int hiding (suc)
 open import Data.Nat as Nat using (ℕ ; zero ; suc)
+open import Data.Nat.Divisibility as Div
 open import Data.Nat.DivMod using (_div_)
 open import Data.Sum using (_⊎_ ; inj₁ ; inj₂)
 open import Data.Vec as Vec using (Vec ; [] ; _∷_)
@@ -148,7 +149,7 @@ _⊝_ : ∀ {i} → Linear i → Linear i → Linear i
 a ⊝ b = a ⊕ (⊝ b)
 
 ⊘_ : ∀ {i} → Linear i → Linear i
-⊘_ a = (# (+ 1)) ⊝ a
+⊘_ a = (# (- + 1)) ⊝ a
 
 head : ∀ {i} → Linear (suc i) → ℤ
 head (c x+ cs +ℤ k) = c
@@ -203,7 +204,10 @@ _∨-dnf_ : ∀ {i} → DNF i → DNF i → DNF i
 _∨-dnf_ = _++_
 
 ¬-dnf_ : ∀ {i} → DNF i → DNF i
-¬-dnf_ = List.foldl (λ dnf conj → dnf ∧-dnf ¬-conjunction conj) []
+¬-dnf [] = []
+¬-dnf (x ∷ []) = ¬-conjunction x
+¬-dnf (x ∷ x' ∷ xs) = ¬-conjunction x ∧-dnf (¬-dnf (x' ∷ xs))
+-- ¬-dnf_ = List.foldl (λ dnf conj → dnf ∧-dnf ¬-conjunction conj) (\n
 
 _⇒-dnf_ : ∀ {i} → DNF i → DNF i → DNF i
 xs ⇒-dnf ys = (¬-dnf xs) ∨-dnf (xs ∧-dnf ys)
@@ -215,8 +219,8 @@ xs ⇒-dnf ys = (¬-dnf xs) ∨-dnf (xs ∧-dnf ys)
 ∀-dnf = ¬-dnf_ ∘ ∃-dnf_ ∘ ¬-dnf_
 
 norm-rel : ∀ {i} → Rel → Linear i → Linear i → List (Linear i)
-norm-rel <' l₁ l₂ = (l₂ ⊝ l₁) ⊕ (# (+ 1)) ∷ []
-norm-rel >' l₁ l₂ = (l₁ ⊝ l₂) ⊕ (# (+ 1)) ∷ []
+norm-rel <' l₁ l₂ = (l₂ ⊝ l₁) ⊕ (# (- + 1)) ∷ []
+norm-rel >' l₁ l₂ = (l₁ ⊝ l₂) ⊕ (# (- + 1)) ∷ []
 norm-rel ≤' l₁ l₂ = l₂ ⊝ l₁ ∷ []
 norm-rel ≥' l₁ l₂ = l₁ ⊝ l₂ ∷ []
 norm-rel =' l₁ l₂ = l₂ ⊝ l₁ ∷ l₁ ⊝ l₂ ∷ []
@@ -331,14 +335,14 @@ Env i = Vec ℤ i
 
 %<*decidability>
 \begin{code}
-⟦_⟧[_/x] : ∀ {i} → (a : Linear i) → (ρ : Env i) → Dec (⊨[ ρ /x] a)
-⟦ a ⟧[ ρ /x] = + 0 ≤? [ ρ /x] a
+⊨?_[_/x] : ∀ {i} → (a : Linear i) → (ρ : Env i) → Dec (⊨[ ρ /x] a)
+⊨? a [ ρ /x] = + 0 ≤? [ ρ /x] a
 
-⟦_⟧[_/x]ₚ : ∀ {i} → (lu : Pair i) → (ρ : Env i) → Dec (⊨[ ρ /x]ₚ lu)
-⟦ ((l , _) , (u , _)) ⟧[ ρ /x]ₚ with ⟦ l ⟧[ ρ /x] | ⟦ u ⟧[ ρ /x]
-⟦ (l , _) , u , _ ⟧[ ρ /x]ₚ | yes pl | yes pu = yes (pl , pu)
-⟦ (l , _) , u , _ ⟧[ ρ /x]ₚ | _      | no ¬pu = no λ {(_ , pu) → ¬pu pu}
-⟦ (l , _) , u , _ ⟧[ ρ /x]ₚ | no ¬pl | _      = no λ {(pl , _) → ¬pl pl}
+⊨?_[_/x]ₚ : ∀ {i} → (lu : Pair i) → (ρ : Env i) → Dec (⊨[ ρ /x]ₚ lu)
+⊨? ((l , _) , (u , _)) [ ρ /x]ₚ with ⊨? l [ ρ /x] | ⊨? u [ ρ /x]
+⊨? (l , _) , u , _ [ ρ /x]ₚ | yes pl | yes pu = yes (pl , pu)
+⊨? (l , _) , u , _ [ ρ /x]ₚ | _      | no ¬pu = no λ {(_ , pu) → ¬pu pu}
+⊨? (l , _) , u , _ [ ρ /x]ₚ | no ¬pl | _      = no λ {(pl , _) → ¬pl pl}
 \end{code}
 %</decidability>
 
@@ -749,7 +753,7 @@ by-contradiction {i} ρ xs lus ⊨lus↓ ∀xs¬∀lus =
     ¬ ∃[ xs ] (λ x → ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
       ∼⟨ (λ ¬∃xs∀lus ∀lus∃xs → ¬∃xs∀lus (∀lus∃xs⇒∃xs∀lus ∀lus∃xs)) ⟩
     ¬ ∀[ lus ] (λ lu → ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
-      ∼⟨ AllProp.¬All⇒Any¬ (λ lu → any (λ x → ⟦ lu ⟧[ x ∷ ρ /x]ₚ) xs) lus ⟩
+      ∼⟨ AllProp.¬All⇒Any¬ (λ lu → any (λ x → ⊨? lu [ x ∷ ρ /x]ₚ) xs) lus ⟩
     ∃[ lus ] (λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
       ∎
     where open ⇒-Reasoning
@@ -763,7 +767,7 @@ find-x : ∀ {i} (ρ : Env i) (lus : List (Pair (suc i)))
        → Σ ℤ λ x → ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ
 
 find-x ρ lus ⊨↓lus with search-space ρ lus
-find-x ρ lus ⊨↓lus | xs = search (λ x → all ⟦_⟧[ x ∷ ρ /x]ₚ lus ) xs (by-contradiction ρ xs lus ⊨↓lus)
+find-x ρ lus ⊨↓lus | xs = search (λ x → all ⊨?_[ x ∷ ρ /x]ₚ lus ) xs (by-contradiction ρ xs lus ⊨↓lus)
 \end{code}
 %</find-x>
 
@@ -789,25 +793,25 @@ data Result : Set where
 
 %<*elimination>
 \begin{code}
-⟦_⟧Ω : ∀ {i} → List (Linear i) → Result
-⟦_⟧Ω {zero}  as with all ⟦_⟧[ [] /x] as
-⟦_⟧Ω {zero}  as | yes _ = satisfiable
-⟦_⟧Ω {zero}  as | no _  = unsatisfiable
-⟦_⟧Ω {suc i} as with ⟦ eliminate as ⟧Ω
-⟦_⟧Ω {suc i} as | unsatisfiable with all α≡1∨-β≡-1? (pairs as)
-⟦_⟧Ω {suc i} as | unsatisfiable | yes _ = unsatisfiable
-⟦_⟧Ω {suc i} as | unsatisfiable | no _  = undecided
-⟦_⟧Ω {suc i} as | r                     = r
+Ω : ∀ {i} → List (Linear i) → Result
+Ω {zero}  as with all ⊨?_[ [] /x] as
+Ω {zero}  as | yes _ = satisfiable
+Ω {zero}  as | no _  = unsatisfiable
+Ω {suc i} as with Ω (eliminate as)
+Ω {suc i} as | unsatisfiable with all α≡1∨-β≡-1? (pairs as)
+Ω {suc i} as | unsatisfiable | yes _ = unsatisfiable
+Ω {suc i} as | unsatisfiable | no _  = undecided
+Ω {suc i} as | r                     = r
 \end{code}
 %</elimination>
 
 %<*correctness>
 \begin{code}
-⟦_⟧Ω-Sound : ∀ {i} (as : List (Linear i)) → Set
-⟦_⟧Ω-Sound as with ⟦ as ⟧Ω
-⟦_⟧Ω-Sound as | undecided      = ⊤
-⟦_⟧Ω-Sound as | satisfiable    = ⊨ as
-⟦_⟧Ω-Sound as | unsatisfiable  = ⊨ as → ⊥
+Ω-Sound : ∀ {i} (as : List (Linear i)) → Set
+Ω-Sound as with Ω as
+Ω-Sound as | undecided      = ⊤
+Ω-Sound as | satisfiable    = ⊨ as
+Ω-Sound as | unsatisfiable  = ⊨ as → ⊥
 \end{code}
 %</correctness>
 
@@ -851,11 +855,11 @@ postulate untangleᵖ : ∀ {i} {P : Linear (suc i) → Set} (as : List (Linear 
 \end{code}
 
 \begin{code}
-unsat : ∀ {i} (as : List (Linear i)) → ⟦ as ⟧Ω ≡ unsatisfiable → ⊨ as → ⊥
-unsat {zero} as ep with all ⟦_⟧[ [] /x] as
+unsat : ∀ {i} (as : List (Linear i)) → Ω as ≡ unsatisfiable → ⊨ as → ⊥
+unsat {zero} as ep with all ⊨?_[ [] /x] as
 unsat {zero} as () | yes p
 unsat {zero} as ep | no ¬p = λ {([] , ⊨as) → ¬p ⊨as}
-unsat {suc i} as ep with ⟦ eliminate as ⟧Ω | inspect ⟦_⟧Ω (eliminate as)
+unsat {suc i} as ep with Ω (eliminate as) | inspect Ω (eliminate as)
 unsat {suc i} as () | undecided     | _
 unsat {suc i} as () | satisfiable   | _
 unsat {suc i} as ep | unsatisfiable | _        with all α≡1∨-β≡-1? (pairs as)
@@ -866,11 +870,11 @@ unsat {suc i} as ep | unsatisfiable | >[ eq ]< | yes ∀α≡1∨-β≡-1 | ⊨a
     (strip-x x ρ (irrels as) (untangleⁱ as ⊨as))
     (⊨Ωlus x ρ (pairs as) ∀α≡1∨-β≡-1 (untangleᵖ as ⊨as)))}
 
-sat : ∀ {i} (as : List (Linear i)) → ⟦ as ⟧Ω ≡ satisfiable → ⊨ as
-sat {zero} as ep with all ⟦_⟧[ [] /x] as
+sat : ∀ {i} (as : List (Linear i)) → Ω as ≡ satisfiable → ⊨ as
+sat {zero} as ep with all ⊨?_[ [] /x] as
 sat {zero} as ep | yes p = [] , p
 sat {zero} as () | no ¬p
-sat {suc i} as ep with ⟦ eliminate as ⟧Ω | inspect ⟦_⟧Ω (eliminate as)
+sat {suc i} as ep with Ω (eliminate as) | inspect Ω (eliminate as)
 sat {suc i} as () | undecided | _
 sat {suc i} as ep | unsatisfiable | _ with all α≡1∨-β≡-1? (pairs as)
 sat {suc i} as () | unsatisfiable | _ | yes _
@@ -884,15 +888,10 @@ sat {suc i} as ep | _ | _ | ρ , ⊨as↓ | ⊨irs↓ , ⊨lus↓ | x , ⊨lus |
 
 %<*correct>
 \begin{code}
-⟦_⟧Ω-sound : ∀ {i} (as : List (Linear i)) → ⟦ as ⟧Ω-Sound
-⟦_⟧Ω-sound as with ⟦ as ⟧Ω | inspect ⟦_⟧Ω as
-⟦_⟧Ω-sound as | undecided     | _        = tt
-⟦_⟧Ω-sound as | unsatisfiable | >[ eq ]< = unsat as eq
-⟦_⟧Ω-sound as | satisfiable   | >[ eq ]< = sat as eq
+Ω-sound : ∀ {i} (as : List (Linear i)) → Ω-Sound as
+Ω-sound as with Ω as       | inspect Ω as
+Ω-sound as | undecided     | _        = tt
+Ω-sound as | unsatisfiable | >[ eq ]< = unsat as eq
+Ω-sound as | satisfiable   | >[ eq ]< = sat as eq
 \end{code}
 %</correct>
-
-\begin{code}
-example₁ : List (Linear 2)
-example₁ = (((+ 2) ∷ ((- + 4) ∷ [])) ∷+ (+ 0)) ∷ (((- + 2) ∷ ((- + 4) ∷ [])) ∷+ (+ 0)) ∷ []
-\end{code}
