@@ -75,6 +75,7 @@ search P? (a ∷ as) raa | no ¬p = search P? as (λ ¬pas → raa (¬p ∷ ¬pa
 data Atom (i : ℕ) : Set where
   num' : ℤ               → Atom i
   _+'_ : Atom i → Atom i → Atom i
+  _-'_ : Atom i → Atom i → Atom i
   _*'_ : ℤ      → Atom i → Atom i
   var' : Fin i           → Atom i
                           
@@ -228,6 +229,7 @@ norm-rel =' l₁ l₂ = l₂ ⊝ l₁ ∷ l₁ ⊝ l₂ ∷ []
 norm-atom : ∀ {i} → Atom i → Linear i
 norm-atom (num' n) = # n
 norm-atom (x +' y) = (norm-atom x) ⊕ (norm-atom y)
+norm-atom (x -' y) = (norm-atom x) ⊝ (norm-atom y)
 norm-atom (n *' x) = n ⊛ (norm-atom x)
 norm-atom (var' zero) = (+ 1) x+ ∅
 norm-atom (var' (suc n)) with norm-atom (var' n)
