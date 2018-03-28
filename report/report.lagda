@@ -1740,21 +1740,46 @@ although I recommend reading their code alongside.
 
 \ExecuteMetaData[Presburger.tex]{correct}
 
-Both proofs are recursively built. If after elimination an input is
-decided unsatisfiable, then ~\AgdaFunction{⊨real-shadow}~ is used to
-transform any assumption that it is satisfiable before elimination
-into a proof that it is satisfiable after elimination. Such proof is
-then provided to the recursive application and a the contradiction is
-derived.
+Both proofs are recursively built. If an input is decided
+unsatisfiable (goal ~\AgdaBound{⊨as→⊥}), a proof of unsatisfiability
+after elimination (\AgdaBound{⊨as↓→⊥}) is obtained recursively. Then
+satisfiability before elimination is assumed (\AgdaBound{⊨as}) and
+satisfiability after elimination derived (\AgdaBound{⊨as↓}) through
+the use of ~\AgdaFunction{⊨real-shadow}.= From there, a contradiction
+is obtained.
 
-If after elimination an input is decided satisfiable, the recursive
-application hands a proof of such satisfiability back. Given this
-proof, ~\AgdaFunction{find-x}~ adds a new $x$ to the environment, and
-returns a proof that by doing so, satisfiability is preserved.
+If an input is decided satisfiable (goal ~\AgdaBound{⊨as}), a proof of
+satisfiability after elimination (\AgdaBound{⊨as↓}) is obtained
+recursively. Then ~\AgdaFunction{find-x}~ adds a new $x$ to the
+environment, and returns a proof (\AgdaBound{⊨as}) that by doing so,
+satisfiability is preserved.
+
+Clearly, irrelevant constraints — those where the variable to
+eliminate has coefficient 0 — do not have their meaning altered after
+elimination. Similarly, the meaning of no constraint changes after an
+irrelevant variable is prepended to it. Given that the Omega Test
+requires constraints to be split into lower bounds and upper bounds, I
+handle irrelevant constraints outside of the it.
+
+\AgdaFunction{partition}~ partitions a list of constraints into three
+sub-lists: lower bound constraints, irrelevant constraints and upper
+bound constraints. Functions ~\AgdaFunction{pairs}~ and
+~\AgdaFunction{irrels}~ then use such output to generate a cartesian
+product of all lower bound and upper bound constraints, and a list of
+irrelevant constraints, respectively.  These functions carefully avoid
+pattern matching on the output of ~\AgdaFunction{partition}. If they
+were to pattern match, Agda would no longer relate the results of
+~\AgdaFunction{pairs}~ and ~\AgdaFunction{irrels}~ to the original
+list.
+
+The function ~\AgdaFunction{entangle}~ mixes together proofs on pairs
+of bounds and proofs on irrelevant constraints into proofs on their
+original list. ~\AgdaFunction{untangleⁱ}~ and
+~\AgdaFunction{untangleᵖ}~ do the reverse. If the satisfiability
+predicate were to be defined on sets instead of on lists, these
+functions would become unncesessary.
 
 \todo{Some kind of diagram?}
-\todo{Some remark on entangle and such}
-\todo{Comment somewhere on the definition of pairs and irrels and pattern matching}
 
 \subsection{Results and usage}
 
@@ -1929,8 +1954,8 @@ ill-defined concepts and vague ideas and no sense of their
 relevance. They were gradually refined and made more precise.
 
 I used my blog mostly to sketch new ideas and take notes. For
-organisation, I relied on my ever-present whiteboard, the source of
-any planning in my living.
+organisation, I relied on my whiteboard, the source of all planning in
+my living.
 
 In the course of this project, and sometimes indirectly, I learned
 bits and pieces about abstract algebra, type theory, category theory

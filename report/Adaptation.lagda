@@ -169,23 +169,23 @@ ex₁ = solve (∃' ∃' ⦂ ((num' (+ 0) [ <' ] x)
 ex₂ : ¬ Σ ℤ λ x → Σ ℤ λ y → y > + 0 × x - y ≥ x
 ex₂ =  solve (¬' ∃' ∃' ⦂ y [ >' ] num' (+ 0) ∧' (x -' y) [ ≥' ] x) 
 
--- False claims do not typecheck
+-- Predicates proven false do not typecheck
 
 ex₃ : Σ ℤ λ y → y < y
 ex₃ = {!solve (∃' ⦂ (y [ <' ] y))!}
 
-ex₄ : Σ ℤ λ x → Σ ℤ λ y → + 2 * x ≡ + 2 * y + + 1
-ex₄ = {!solve (∃' ∃' ⦂ (((+ 2) *' x) [ =' ] (((+ 2) *' y) +' num' (+ 1))))!}
-
--- The negation of claims proven false do typecheck
+-- The negation of predicates proven false does typecheck
 
 ¬ex₃ : ¬ Σ ℤ λ y → y < y
 ¬ex₃ = solve (¬' ∃' ⦂ (y [ <' ] y))
 
 -- The decision procedure is sound but incomplete
--- Some theorems do not typecheck
+-- Sometimes, neither a predicate nor its negation typecheck
+
+ex₄ : Σ ℤ λ x → Σ ℤ λ y → + 2 * x ≡ + 2 * y + + 1
+ex₄ = {!solve (∃' ∃' ⦂ (((+ 2) *' x) [ =' ] (((+ 2) *' y) +' num' (+ 1))))!}
 
 ¬ex₄ : ¬ Σ ℤ λ x → Σ ℤ λ y → + 2 * x ≡ + 2 * y + + 1
-¬ex₄ =  {! solve (¬' ∃' ∃' ⦂ (((+ 2) *' x) [ =' ] (((+ 2) *' y) +' num' (+ 1)))) !}
+¬ex₄ =  {!solve (¬' ∃' ∃' ⦂ (((+ 2) *' x) [ =' ] (((+ 2) *' y) +' num' (+ 1))))!}
 \end{code}
 %</examples>
