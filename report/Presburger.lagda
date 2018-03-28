@@ -542,9 +542,7 @@ module Norrish {i : ℕ} (ρ : Env i) (lu : Pair (suc i)) where
 
   αb-aβ<[α-1][β-1] : Linear i
   αb-aβ<[α-1][β-1] = (# [α-1][β-1]) ⊝ aβ≤αb ⊝ (# (+ 1))
-\end{code}
 
-\begin{code}
   α≡1∨-β≡-1→[α-1][β-1]≡0 : (α ≡ + 1 ⊎ -β ≡ - + 1) → [α-1][β-1] ≡ + 0
   α≡1∨-β≡-1→[α-1][β-1]≡0 (inj₁ α≡1) rewrite α≡1 = refl
   α≡1∨-β≡-1→[α-1][β-1]≡0 (inj₂ -β≡-1) rewrite -β≡-1 | IntProp.*-zeroʳ (α - + 1) = refl
@@ -624,7 +622,7 @@ module Norrish {i : ℕ} (ρ : Env i) (lu : Pair (suc i)) where
 \end{code}
 %</real-shadow>
 
-%<*norrish-subgoal-1>
+%<*example-subgoal>
 \begin{code}
   ⊨βa≤αb : ⊨[ ρ /x] (aβ≤αb ⊝ (# [α-1][β-1])) → ⊨[ ρ /x] aβ≤αb
   ⊨βa≤αb ⊨ds = begin 
@@ -642,39 +640,25 @@ module Norrish {i : ℕ} (ρ : Env i) (lu : Pair (suc i)) where
       ∎
     where open ≤-Reasoning
 \end{code}
-%</norrish-subgoal-1>
+%</example-subgoal>
 
-%<*norrish-subgoal-2>
 \begin{code}
   postulate ⊨αβn<aβ≤αb<αβ[n+1] : {xs : List ℤ}
                                → ⊨[ ρ /x] aβ≤αb
                                → ¬ (∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]ₚ lu))
                                → ∀[ αβn<aβ≤αb<αβ[n+1] ] ⊨[ ρ /x] 
-\end{code}
-%</norrish-subgoal-2>
 
-%<*norrish-subgoal-3>
-\begin{code}
   postulate ⊨α≤αβ[n+1]-αb : ∀[ αβn<aβ≤αb<αβ[n+1] ] ⊨[ ρ /x] 
                           → ⊨[ ρ /x] α≤αβ[n+1]-αb
-\end{code}
-%</norrish-subgoal-3>
 
-%<*norrish-subgoal-4>
-\begin{code}
   postulate ⊨β≤aβ-αβn : ∀[ αβn<aβ≤αb<αβ[n+1] ] ⊨[ ρ /x] 
                       → ⊨[ ρ /x] β≤aβ-αβn
-\end{code}
-%</norrish-subgoal-4>
 
-%<*norrish-subgoal-5>
-\begin{code}
   postulate ⊭[α-1][β-1]≤αb-aβ : ⊨[ ρ /x] α≤αβ[n+1]-αb
                               → ⊨[ ρ /x] β≤aβ-αβn
                               → ⊨[ ρ /x] (aβ≤αb ⊝ (# [α-1][β-1]))
                               → ⊥
 \end{code}
-%</norrish-subgoal-5>
 
 %<*norrish-type>
 \begin{code}
