@@ -15,17 +15,26 @@ open import Relation.Nullary using (¬_ ; yes ; no)
 open import Relation.Binary.PropositionalEquality using (_≡_ ; refl ; cong ; inspect ; sym) renaming ([_] to >[_]<)
 
 open import Presburger
+\end{code}
 
+%<*normal-form>
+\begin{code}
 data NormalForm (i : ℕ) : Set where
   ∃ : NormalForm (suc i) → NormalForm i
   ¬∃ : NormalForm (suc i) → NormalForm i
   st : List (Linear i) → NormalForm i
+\end{code}
+%</normal-form>
 
+\begin{code}
 ⟦_⇓⟧ : ∀ {i} → NormalForm i → Env i → Set
 ⟦ ∃ nf ⇓⟧ ρ = Σ ℤ λ x → ⟦ nf ⇓⟧ (x ∷ ρ)
 ⟦ ¬∃ nf ⇓⟧ ρ = ∀ (x : ℤ) → ⟦ nf ⇓⟧ (x ∷ ρ) → ⊥
 ⟦ st as ⇓⟧ ρ = All ⊨[ ρ /x] as
+\end{code}
 
+%<*elimination>
+\begin{code}
 Ω⇓ : ∀ {i} → NormalForm i → Result
 Ω⇓ (∃ nf) = Ω⇓ nf
 Ω⇓ (¬∃ nf) with Ω⇓ nf
@@ -33,50 +42,45 @@ data NormalForm (i : ℕ) : Set where
 Ω⇓ (¬∃ nf) | unsatisfiable = satisfiable
 Ω⇓ (¬∃ nf) | undecided = undecided
 Ω⇓ (st as) = Ω as
+\end{code}
+%</elimination>
 
-Ω⇓-Sound : NormalForm 0 → Set
-Ω⇓-Sound nf with Ω⇓ nf
-Ω⇓-Sound nf | undecided = ⊤
-Ω⇓-Sound nf | satisfiable = ⟦ nf ⇓⟧ []
-Ω⇓-Sound nf | unsatisfiable = ⟦ nf ⇓⟧ [] → ⊥
+%<*sat-unsat>
+\begin{code}
+unsat⇓ : ∀ {i} (nf : NormalForm i) → Ω⇓ nf ≡ unsatisfiable → (Σ (Env i) ⟦ nf ⇓⟧) → ⊥
 
-mutual
-  unsat⇓ : ∀ {i} (nf : NormalForm i) → Ω⇓ nf ≡ unsatisfiable → (Σ (Env i) ⟦ nf ⇓⟧) → ⊥
-  unsat⇓ (∃ nf) eq with Ω⇓ nf | inspect Ω⇓ nf
-  unsat⇓ (∃ nf) () | satisfiable | j
-  unsat⇓ (∃ nf) eq | unsatisfiable | >[ eq₁ ]< = λ { (ρ , x , ⊨nf) → unsat⇓ nf eq₁ ((x ∷ ρ) , ⊨nf)}
-  unsat⇓ (∃ nf) () | undecided | j
-  unsat⇓ (¬∃ nf) eq with Ω⇓ nf | inspect Ω⇓ nf
-  unsat⇓ (¬∃ nf) eq | satisfiable | >[ eq₁ ]< with sat⇓ nf eq₁
-  unsat⇓ (¬∃ nf) eq | satisfiable | >[ eq₁ ]< | x ∷ ρ , ⊨nf = λ {(ρ' , ⊭nf) → ⊭nf x {!!}}
-  unsat⇓ (¬∃ nf) () | unsatisfiable | j
-  unsat⇓ (¬∃ nf) () | undecided | j
-  unsat⇓ (st as) eq with Ω as | inspect Ω as
-  unsat⇓ (st as) () | satisfiable | j
-  unsat⇓ (st as) eq | unsatisfiable | >[ eq₁ ]< = unsat as eq₁
-  unsat⇓ (st as) () | undecided | j
-  
-  sat⇓ : ∀ {i} (nf : NormalForm i) → Ω⇓ nf ≡ satisfiable → Σ (Env _) ⟦ nf ⇓⟧
-  sat⇓ (∃ nf) eq with Ω⇓ nf | inspect Ω⇓ nf
-  sat⇓ (∃ nf) eq | satisfiable | >[ eq₁ ]< with sat⇓ nf eq₁
-  sat⇓ (∃ nf) eq | satisfiable | >[ eq₁ ]< | x ∷ ρ , ⊨nf = ρ , x , ⊨nf
-  sat⇓ (∃ nf) () | unsatisfiable | _
-  sat⇓ (∃ nf) () | undecided | _
-  sat⇓ (¬∃ nf) eq with Ω⇓ nf | inspect Ω⇓ nf
-  sat⇓ (¬∃ nf) () | satisfiable | j
-  sat⇓ (¬∃ nf) eq | unsatisfiable | >[ eq₁ ]< = (Vec.replicate (+ 0)) , λ x ⊨nf → unsat⇓ nf eq₁ ((x ∷ _) , ⊨nf)
-  sat⇓ (¬∃ nf) () | undecided | j
-  sat⇓ (st as) eq with Ω as | inspect Ω as
-  sat⇓ (st as) eq | satisfiable | >[ eq₁ ]< = sat as eq₁
-  sat⇓ (st as) () | unsatisfiable | j
-  sat⇓ (st as) () | undecided | j
+sat⇓ : ∀ {i} (nf : NormalForm i) → Ω⇓ nf ≡ satisfiable → Σ (Env _) ⟦ nf ⇓⟧
+\end{code}
+%</sat-unsat>
 
-Ω⇓-sound : (nf : NormalForm 0) → Ω⇓-Sound nf
-Ω⇓-sound nf with Ω⇓ nf      | inspect Ω⇓ nf
-Ω⇓-sound nf | undecided     | _        = tt
-Ω⇓-sound nf | unsatisfiable | >[ eq ]< = λ ⊨nf → unsat⇓ nf eq ([] , ⊨nf)
-Ω⇓-sound nf | satisfiable   | >[ eq ]< with sat⇓ nf eq
-Ω⇓-sound nf | satisfiable   | >[ eq ]< | [] , ⊨nf = ⊨nf
+\begin{code}
+unsat⇓ (∃ nf) eq with Ω⇓ nf | inspect Ω⇓ nf
+unsat⇓ (∃ nf) () | satisfiable | j
+unsat⇓ (∃ nf) eq | unsatisfiable | >[ eq₁ ]< = λ { (ρ , x , ⊨nf) → unsat⇓ nf eq₁ ((x ∷ ρ) , ⊨nf)}
+unsat⇓ (∃ nf) () | undecided | j
+unsat⇓ (¬∃ nf) eq with Ω⇓ nf | inspect Ω⇓ nf
+unsat⇓ (¬∃ nf) eq | satisfiable | >[ eq₁ ]< with sat⇓ nf eq₁
+unsat⇓ (¬∃ nf) eq | satisfiable | >[ eq₁ ]< | x ∷ ρ , ⊨nf = λ {(ρ' , ⊭nf) → ⊭nf x {!!}}
+unsat⇓ (¬∃ nf) () | unsatisfiable | j
+unsat⇓ (¬∃ nf) () | undecided | j
+unsat⇓ (st as) eq with Ω as | inspect Ω as
+unsat⇓ (st as) () | satisfiable | j
+unsat⇓ (st as) eq | unsatisfiable | >[ eq₁ ]< = unsat as eq₁
+unsat⇓ (st as) () | undecided | j
+
+sat⇓ (∃ nf) eq with Ω⇓ nf | inspect Ω⇓ nf
+sat⇓ (∃ nf) eq | satisfiable | >[ eq₁ ]< with sat⇓ nf eq₁
+sat⇓ (∃ nf) eq | satisfiable | >[ eq₁ ]< | x ∷ ρ , ⊨nf = ρ , x , ⊨nf
+sat⇓ (∃ nf) () | unsatisfiable | _
+sat⇓ (∃ nf) () | undecided | _
+sat⇓ (¬∃ nf) eq with Ω⇓ nf | inspect Ω⇓ nf
+sat⇓ (¬∃ nf) () | satisfiable | j
+sat⇓ (¬∃ nf) eq | unsatisfiable | >[ eq₁ ]< = (Vec.replicate (+ 0)) , λ x ⊨nf → unsat⇓ nf eq₁ ((x ∷ _) , ⊨nf)
+sat⇓ (¬∃ nf) () | undecided | j
+sat⇓ (st as) eq with Ω as | inspect Ω as
+sat⇓ (st as) eq | satisfiable | >[ eq₁ ]< = sat as eq₁
+sat⇓ (st as) () | unsatisfiable | j
+sat⇓ (st as) () | undecided | j
 
 data Constraint (i : ℕ) : Set where
   _[_]_ : Atom i → Rel → Atom i → Constraint i
@@ -128,24 +132,39 @@ expr⇓ : ∀ {i} → Expr i → NormalForm i
 expr⇓ (¬' e) = do-¬ (expr⇓ e)
 expr⇓ (∃' e) = ∃ (expr⇓ e)
 expr⇓ (⦂ e) = st (constraint⇓ e)
+\end{code}
                    
+%<*normalisation-sound>
+\begin{code}
 postulate ⇓-sound : ∀ {i} (e : Expr i) (ρ : Env i) → ⟦ expr⇓ e ⇓⟧ ρ → ⟦ e ⟧ ρ
+\end{code}
+%</normalisation-sound>
 
+%<*solution>
+\begin{code}
 Solution : Expr 0 → Set
 Solution e with Ω⇓ (expr⇓ e)
-Solution e | undecided = ⊤
+Solution e | undecided     = ⊤
 Solution e | unsatisfiable = ⊤ × ⊤
-Solution e | satisfiable = ⟦ e ⟧ []
+Solution e | satisfiable   = ⟦ e ⟧ []
+\end{code}
+%</solution>
 
+%<*solve>
+\begin{code}
 solve : (e : Expr 0) → Solution e
 solve e with Ω⇓ (expr⇓ e) | inspect Ω⇓ (expr⇓ e)
-solve e | undecided | _ = tt
+solve e | undecided     | _ = tt
 solve e | unsatisfiable | _ = tt , tt
-solve e | satisfiable | >[ eq ]< with Ω⇓ (expr⇓ e) | Ω⇓-sound (expr⇓ e)
-solve e | satisfiable | >[ eq ]< | satisfiable | ⊨⇓e = ⇓-sound e [] ⊨⇓e
-solve e | satisfiable | >[ () ]< | unsatisfiable | z
-solve e | satisfiable | >[ () ]< | undecided | z 
+solve e | satisfiable   | >[ eq ]< with Ω⇓ (expr⇓ e) | inspect Ω⇓ (expr⇓ e)
+solve e | satisfiable   | >[ () ]< | undecided     | _
+solve e | satisfiable   | >[ () ]< | unsatisfiable | _
+solve e | satisfiable   | >[ eq ]< | satisfiable   | >[ eq₁ ]< with sat⇓ (expr⇓ e) eq₁
+solve e | satisfiable   | >[ eq ]< | satisfiable   | >[ eq₁ ]< | [] , ⊨nf = ⇓-sound e [] ⊨nf
+\end{code}
+%</solve>
 
+\begin{code}
 example₂ : ¬ Σ ℤ λ x → (x Int.< x)
 example₂ = solve (¬' ∃' ⦂ var' zero [ <' ] var' zero)
 \end{code}
