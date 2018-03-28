@@ -3,7 +3,7 @@
 module Adaptation where
 
 open import Data.Nat using (ℕ ; zero ; suc)
-open import Data.Integer as Int using (ℤ ; _+_ ; _-_ ; _*_ ; +_)
+open import Data.Integer as Int using (ℤ ; _+_ ; _-_ ; _*_ ; +_ ; _<_ ; _≤_ ; _≥_ ; _>_)
 open import Data.Fin using (zero ; suc)
 open import Data.List as List using (List ; [] ; _∷_ ; _++_)
 open import Data.Vec as Vec using (Vec ; [] ; _∷_)
@@ -45,42 +45,37 @@ data NormalForm (i : ℕ) : Set where
 \end{code}
 %</elimination>
 
-%<*sat-unsat>
 \begin{code}
-unsat⇓ : ∀ {i} (nf : NormalForm i) → Ω⇓ nf ≡ unsatisfiable → (Σ (Env i) ⟦ nf ⇓⟧) → ⊥
-
-sat⇓ : ∀ {i} (nf : NormalForm i) → Ω⇓ nf ≡ satisfiable → Σ (Env _) ⟦ nf ⇓⟧
-\end{code}
-%</sat-unsat>
-
-\begin{code}
-unsat⇓ (∃ nf) eq with Ω⇓ nf | inspect Ω⇓ nf
-unsat⇓ (∃ nf) () | satisfiable | j
-unsat⇓ (∃ nf) eq | unsatisfiable | >[ eq₁ ]< = λ { (ρ , x , ⊨nf) → unsat⇓ nf eq₁ ((x ∷ ρ) , ⊨nf)}
-unsat⇓ (∃ nf) () | undecided | j
-unsat⇓ (¬∃ nf) eq with Ω⇓ nf | inspect Ω⇓ nf
-unsat⇓ (¬∃ nf) eq | satisfiable | >[ eq₁ ]< with sat⇓ nf eq₁
-unsat⇓ (¬∃ nf) eq | satisfiable | >[ eq₁ ]< | x ∷ ρ , ⊨nf = λ {(ρ' , ⊭nf) → ⊭nf x {!!}}
-unsat⇓ (¬∃ nf) () | unsatisfiable | j
-unsat⇓ (¬∃ nf) () | undecided | j
-unsat⇓ (st as) eq with Ω as | inspect Ω as
-unsat⇓ (st as) () | satisfiable | j
-unsat⇓ (st as) eq | unsatisfiable | >[ eq₁ ]< = unsat as eq₁
-unsat⇓ (st as) () | undecided | j
-
-sat⇓ (∃ nf) eq with Ω⇓ nf | inspect Ω⇓ nf
-sat⇓ (∃ nf) eq | satisfiable | >[ eq₁ ]< with sat⇓ nf eq₁
-sat⇓ (∃ nf) eq | satisfiable | >[ eq₁ ]< | x ∷ ρ , ⊨nf = ρ , x , ⊨nf
-sat⇓ (∃ nf) () | unsatisfiable | _
-sat⇓ (∃ nf) () | undecided | _
-sat⇓ (¬∃ nf) eq with Ω⇓ nf | inspect Ω⇓ nf
-sat⇓ (¬∃ nf) () | satisfiable | j
-sat⇓ (¬∃ nf) eq | unsatisfiable | >[ eq₁ ]< = (Vec.replicate (+ 0)) , λ x ⊨nf → unsat⇓ nf eq₁ ((x ∷ _) , ⊨nf)
-sat⇓ (¬∃ nf) () | undecided | j
-sat⇓ (st as) eq with Ω as | inspect Ω as
-sat⇓ (st as) eq | satisfiable | >[ eq₁ ]< = sat as eq₁
-sat⇓ (st as) () | unsatisfiable | j
-sat⇓ (st as) () | undecided | j
+mutual
+  unsat⇓ : ∀ {i} (nf : NormalForm i) → Ω⇓ nf ≡ unsatisfiable → (Σ (Env i) ⟦ nf ⇓⟧) → ⊥
+  unsat⇓ (∃ nf) eq with Ω⇓ nf | inspect Ω⇓ nf
+  unsat⇓ (∃ nf) () | satisfiable | j
+  unsat⇓ (∃ nf) eq | unsatisfiable | >[ eq₁ ]< = λ { (ρ , x , ⊨nf) → unsat⇓ nf eq₁ ((x ∷ ρ) , ⊨nf)}
+  unsat⇓ (∃ nf) () | undecided | j
+  unsat⇓ (¬∃ nf) eq with Ω⇓ nf | inspect Ω⇓ nf
+  unsat⇓ (¬∃ nf) eq | satisfiable | >[ eq₁ ]< with sat⇓ nf eq₁
+  unsat⇓ (¬∃ nf) eq | satisfiable | >[ eq₁ ]< | x ∷ ρ , ⊨nf = λ {(ρ' , ⊭nf) → ⊭nf x {!!}}
+  unsat⇓ (¬∃ nf) () | unsatisfiable | j
+  unsat⇓ (¬∃ nf) () | undecided | j
+  unsat⇓ (st as) eq with Ω as | inspect Ω as
+  unsat⇓ (st as) () | satisfiable | j
+  unsat⇓ (st as) eq | unsatisfiable | >[ eq₁ ]< = unsat as eq₁
+  unsat⇓ (st as) () | undecided | j
+  
+  sat⇓ : ∀ {i} (nf : NormalForm i) → Ω⇓ nf ≡ satisfiable → Σ (Env _) ⟦ nf ⇓⟧
+  sat⇓ (∃ nf) eq with Ω⇓ nf | inspect Ω⇓ nf
+  sat⇓ (∃ nf) eq | satisfiable | >[ eq₁ ]< with sat⇓ nf eq₁
+  sat⇓ (∃ nf) eq | satisfiable | >[ eq₁ ]< | x ∷ ρ , ⊨nf = ρ , x , ⊨nf
+  sat⇓ (∃ nf) () | unsatisfiable | _
+  sat⇓ (∃ nf) () | undecided | _
+  sat⇓ (¬∃ nf) eq with Ω⇓ nf | inspect Ω⇓ nf
+  sat⇓ (¬∃ nf) () | satisfiable | j
+  sat⇓ (¬∃ nf) eq | unsatisfiable | >[ eq₁ ]< = (Vec.replicate (+ 0)) , λ x ⊨nf → unsat⇓ nf eq₁ ((x ∷ _) , ⊨nf)
+  sat⇓ (¬∃ nf) () | undecided | j
+  sat⇓ (st as) eq with Ω as | inspect Ω as
+  sat⇓ (st as) eq | satisfiable | >[ eq₁ ]< = sat as eq₁
+  sat⇓ (st as) () | unsatisfiable | j
+  sat⇓ (st as) () | undecided | j
 
 data Constraint (i : ℕ) : Set where
   _[_]_ : Atom i → Rel → Atom i → Constraint i
@@ -132,40 +127,65 @@ expr⇓ : ∀ {i} → Expr i → NormalForm i
 expr⇓ (¬' e) = do-¬ (expr⇓ e)
 expr⇓ (∃' e) = ∃ (expr⇓ e)
 expr⇓ (⦂ e) = st (constraint⇓ e)
-\end{code}
-                   
-%<*normalisation-correct>
-\begin{code}
+
 postulate ⇓-correct : ∀ {i} (e : Expr i) (ρ : Env i) → ⟦ expr⇓ e ⇓⟧ ρ ≡ ⟦ e ⟧ ρ
+
+-- How can we otherwise rewrite the goal inside of a lambda?
 ⇓-correct-→ : ∀ {i} (e : Expr i) (ρ : Env i) → ⟦ expr⇓ e ⇓⟧ ρ → ⟦ e ⟧ ρ
 ⇓-correct-→ e ρ z rewrite ⇓-correct e ρ = z
 ⇓-correct-← : ∀ {i} (e : Expr i) (ρ : Env i) → ⟦ e ⟧ ρ → ⟦ expr⇓ e ⇓⟧ ρ
 ⇓-correct-← e ρ z rewrite ⇓-correct e ρ = z
-\end{code}
-%</normalisation-correct>
 
-%<*solution>
-\begin{code}
 Solution : Expr 0 → Set
 Solution e with Ω⇓ (expr⇓ e)
 Solution e | undecided     = ⊤
 Solution e | satisfiable   = ⟦ e ⟧ []
 Solution e | unsatisfiable = ⟦ e ⟧ [] → ⊥
-\end{code}
-%</solution>
 
-%<*solve>
-\begin{code}
 solve : (e : Expr 0) → Solution e
 solve e with Ω⇓ (expr⇓ e) | inspect Ω⇓ (expr⇓ e)
 solve e | undecided     | _ = tt
-solve e | unsatisfiable | >[ eq ]< = λ x → unsat⇓ (expr⇓ e) eq ([] , ⇓-correct-← e [] x) 
+solve e | unsatisfiable | >[ eq ]< = λ ⊨e → unsat⇓ (expr⇓ e) eq ([] , ⇓-correct-← e [] ⊨e) 
 solve e | satisfiable   | >[ eq ]< with sat⇓ (expr⇓ e) eq
 solve e | satisfiable   | >[ eq ]< | [] , ⊨nf = ⇓-correct-→ e [] ⊨nf
 \end{code}
-%</solve>
 
+%<*examples>
 \begin{code}
-example₂ : ¬ Σ ℤ λ x → (x Int.< x)
-example₂ = solve (¬' ∃' ⦂ var' zero [ <' ] var' zero)
+-- Shortcuts
+x : ∀ {i} → Atom (suc (suc i))
+x = var' (suc zero)
+
+y : ∀ {i} → Atom (suc i)
+y = var' zero
+
+-- Some theorems typecheck
+
+ex₁ : Σ ℤ λ x → Σ ℤ λ y → + 0 < x × x + + 1 < + 2 * y × y < + 4
+ex₁ = solve (∃' ∃' ⦂ ((num' (+ 0) [ <' ] x)
+                   ∧' (x +' (num' (+ 1))) [ <' ] ((+ 2) *' y)
+                   ∧' y [ <' ] (num' (+ 4)))) 
+
+ex₂ : ¬ Σ ℤ λ x → Σ ℤ λ y → y > + 0 × x - y ≥ x
+ex₂ =  solve (¬' ∃' ∃' ⦂ y [ >' ] num' (+ 0) ∧' (x -' y) [ ≥' ] x) 
+
+-- False claims do not typecheck
+
+ex₃ : Σ ℤ λ y → y < y
+ex₃ = {!solve (∃' ⦂ (y [ <' ] y))!}
+
+ex₄ : Σ ℤ λ x → Σ ℤ λ y → + 2 * x ≡ + 2 * y + + 1
+ex₄ = {!solve (∃' ∃' ⦂ (((+ 2) *' x) [ =' ] (((+ 2) *' y) +' num' (+ 1))))!}
+
+-- The negation of claims proven false do typecheck
+
+¬ex₃ : ¬ Σ ℤ λ y → y < y
+¬ex₃ = solve (¬' ∃' ⦂ (y [ <' ] y))
+
+-- The decision procedure is sound but incomplete
+-- Some theorems do not typecheck
+
+¬ex₄ : ¬ Σ ℤ λ x → Σ ℤ λ y → + 2 * x ≡ + 2 * y + + 1
+¬ex₄ =  {! solve (¬' ∃' ∃' ⦂ (((+ 2) *' x) [ =' ] (((+ 2) *' y) +' num' (+ 1)))) !}
 \end{code}
+%</examples>
