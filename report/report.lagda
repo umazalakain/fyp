@@ -142,12 +142,12 @@ module _ where
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The Curry-Howard correspondence draws a direct link between logic and
-computation: propositions are modelled by types and proofs by
+computation: propositions are modelled as types and proofs as
 programs; to prove a proposition is to construct a program inhabiting
 its corresponding type. Several computer-assisted theorem provers have
 been developed under this idea. They are not just used to verify human
-reasoning: they are also often capable of automatically generating
-proofs.
+reasoning: they are also often capable of generating proofs
+automatically.
 
 This project considers the development of such automated theorem
 provers in Agda, a dependently typed programming language. As a
@@ -754,8 +754,8 @@ The next example from Agda's documentation, shows how the macro
 ~\AgdaFunction{by-magic}~ uses ~\AgdaFunction{magic}~ to construct
 values of a given type. Note that ~\AgdaFunction{magic}~ returns a
 ~\AgdaDatatype{Term}~ inside a ~\AgdaDatatype{TC}~ monad: this allows
-~\AgdaFunction{magic}~ to throw type errors if the type that is
-supplied to it is outside of its problem domain.
+~\AgdaFunction{magic}~ to throw type errors with custom error
+messages.
 
 \AgdaHide{
 \begin{code}
@@ -825,7 +825,7 @@ where ~\AgdaPrimitiveType{Set}~ is the type of all small types like
 \subsubsection{Postulates and safe mode}
 
 In Agda, any proposition can be introduced as a postulate. Some
-postulates may lead to inconsistencies:
+postulates can lead to inconsistencies:
 
 \AgdaHide{
 \begin{code}
@@ -859,9 +859,9 @@ This report presents evidence providing problem solvers for three
 distinct domains — namely monoids, commutative rings, and Presburger
 arithmetic. The background and the work related to each of these
 domains is relevant only to itself. For that reason, and because I
-judge it beneficial to have those introductory sections close to work
-depending on them, I present the background of each problem in the
-chapter dedicated to it.
+judge it beneficial to have those introductory sections close to the
+work that depends on them, I present the background of each problem
+inside its dedicated chapter.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Solving monoids}
@@ -1115,9 +1115,9 @@ expressiveness of Presburger arithmetic.
 ∀x.\:x\,<\,x + 1
 \end{align}
 
-To out knowledge, there is no implementation of a decision procedure
-for Presburger arithmetic written in Agda. In this chapter, I
-introduce two decision procedures on integers, and partly implement
+To our knowledge, there is no other implementation of a decision
+procedure for Presburger arithmetic written in Agda. In this chapter,
+I introduce two decision procedures on integers, and partly implement
 and verify correct one of them.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1125,9 +1125,9 @@ and verify correct one of them.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 To solve Presburger arithmetic is to create a verified procedure
-capable of deciding any well-formed Presburger predicate with no free
-variables. Without an automated procedure, proving a predicate
-like~\ref{eq:even-or-odd} can already become burdensome:
+capable of deciding any well-formed Presburger predicate where all
+variables are bound. Without an automated procedure, proving a
+predicate like~\autoref{eq:even-or-odd} can already become burdensome:
 
 \AgdaHide{
 \begin{code}
@@ -1175,7 +1175,7 @@ formula. Quantifiers ~\AgdaInductiveConstructor{∀'\_}~ and
 ~\AgdaInductiveConstructor{∃'\_} make a new variable available to their
 arguments.
 
-Theorem~\ref{eq:even-or-odd} can be transcribed as follows:
+\autoref{eq:even-or-odd} can be transcribed as follows:
 
 \ExecuteMetaData[Presburger.tex]{pred}
 
@@ -1239,14 +1239,14 @@ normal form.
 This section starts by implementing a normalisation procedure that
 puts input formulae into their equivalent normal forms. It then takes
 a leap and implements variable elimination for quantifier-free
-formulae and verify it sound by transforming a proof by contradiction
-by Norrish into a constructive proof. Finally, it provides the reader
-with some usage examples and outlines future work.
+existential formulae and verifies it sound. Finally, it provides the
+reader with some usage examples and outlines future work.
 
 This section is significantly based on the material found in
 \cite{Norrish2003} and \cite{Norrish2006}.
 
 \subsection{Normalisation}
+\label{sec:normalisation}
 
 Transforming input formulae into disjunctive normal forms can blow up
 the size of formulae exponentialy, as can clearly be seen whenever a
@@ -1405,8 +1405,8 @@ computation of greatest common divisors:
   \shortintertext{$y$ is the variable to eliminate} \nonumber
 \end{align}
 
-Crucially, \ref{eq:divides} guarantees the eventual elimination of the
-divides term, as $b' < ℓ$ — and modulus if not. This recursive
+Crucially, \autoref{eq:divides} guarantees the eventual elimination of
+the divides term, as $b' < ℓ$ — and modulus if not. This recursive
 computation, justified because a transitive relation towards the left
 on $<$ for natural numbers eventually terminates, is not entirely
 trivial to model. Commonly, structural recursion is applied onto terms
@@ -1462,8 +1462,8 @@ Unsatisfiability can only be asserted if the real shadow's
 precondition is met. If it is not,
 ~\AgdaInductiveConstructor{unsatisfiable}~ needs to be interpreted as
 ~\AgdaInductiveConstructor{undecided}. Following, an elimination
-procedure for quantifier free formulas.
-~\AgdaFunction{⟦\_⟧[}~\AgdaInductiveConstructor{[]}~\AgdaFunction{/x]}~
+procedure for quantifier free formulae.
+~\AgdaFunction{⊨?\_[}~\AgdaInductiveConstructor{[]}~\AgdaFunction{/x]}~
 decides the validity of a constraint with no variables, as shown in
 the next section.
 
@@ -1472,7 +1472,8 @@ the next section.
 \subsection{Verification}
 
 This subsection verifies the soundness of the incomplete elimination
-procedure presented above. The exact specification follows:
+procedure on quantifier-free formulae presented above. The exact
+specification follows:
 
 \ExecuteMetaData[Presburger.tex]{correctness}
 
@@ -1506,7 +1507,7 @@ subsection.
 
   \item [\AgdaFunction{[}~\AgdaBound{ρ}~\AgdaFunction{/x]}~\AgdaBound{a}]
   The integer result of substituting the variables in ~\AgdaBound{a}~
-  with the values in ~\AgdaBound{ρ} and evaluating.
+  with the values in the environment ~\AgdaBound{ρ} and evaluating.
 
   \item [\AgdaFunction{⊨[}~\AgdaBound{ρ}~\AgdaFunction{/x]}~\AgdaBound{a}]
   The foundation stone of verification: the interpretation of the
@@ -1514,7 +1515,7 @@ subsection.
 
   \ExecuteMetaData[Presburger.tex]{meaning}
 
-  \item [\AgdaFunction{⟦}~\AgdaBound{a}~\AgdaFunction{⟧[}~\AgdaBound{ρ}~\AgdaFunction{/x]}]
+  \item [\AgdaFunction{⊨?}~\AgdaBound{a}~\AgdaFunction{[}~\AgdaBound{ρ}~\AgdaFunction{/x]}]
   A function deciding whether the interpretation of ~\AgdaBound{a}
   after substitution is inhabited.
 
@@ -1584,10 +1585,6 @@ lowest upper bound.
 
 \ExecuteMetaData[Presburger.tex]{search-space}
 
-\todo{Ask Conor: why does our proof by contradiction not need to check
-what the search space is? what happens if the search space is always
-set to [0]?}
-
 The proof outlined by Norrish is be used as a guarantee for the
 success of the search. However, while Norrish's proof by contradiction
 is on individual constraint pairs\ldots
@@ -1608,8 +1605,6 @@ once. Note that the unsolved postulate is the same justification
 required by Norrish's initial induction. The proof is a one-way
 implication, but bi-implication can be shown.
 
-\todo{Some kind of diagram?}
-
 \ExecuteMetaData[Presburger.tex]{contradiction-adaptation}
 
 Finally, the $lu$ pair for which $¬∃x.⊨ₓlu$ must be found,
@@ -1623,8 +1618,6 @@ Put together, this satisfies the proof by contradiction:
 
 \ExecuteMetaData[Presburger.tex]{by-contradiction-type}
 \ExecuteMetaData[Presburger.tex]{by-contradiction}
-
-\todo{Comment somewhere on the definition of pairs and irrels and pattern matching}
 
 The proof by contradiction can then be used to guarantee the success
 of the search for $x$: 
@@ -1692,19 +1685,10 @@ when both $0 < \alpha$ and $0 < \beta$. Observations that are a common
 requirement to multiple sub-goals have been abstracted away into
 lemmas.
 
-\ExecuteMetaData[Presburger.tex]{norrish-subgoal-1}
-
-The remaining sub-goals have been defined as:
-
-\begin{itemize}
-    \item \ExecuteMetaData[Presburger.tex]{norrish-subgoal-2}
-    \item \ExecuteMetaData[Presburger.tex]{norrish-subgoal-3}
-    \item \ExecuteMetaData[Presburger.tex]{norrish-subgoal-4}
-    \item \ExecuteMetaData[Presburger.tex]{norrish-subgoal-5}
-\end{itemize}
+\ExecuteMetaData[Presburger.tex]{example-subgoal}
 \end{AgdaAlign}
 
-Putting them all together, I supply Norrish's proof:
+Putting the remaining sub-goals together, I supply Norrish's proof:
 
 \ExecuteMetaData[Presburger.tex]{norrish-type}
 \ExecuteMetaData[Presburger.tex]{norrish}
@@ -1740,11 +1724,19 @@ written in Agda.
 \ExecuteMetaData[Presburger.tex]{real-shadow}
 
 \subsubsection{Delivering soundness}
+\label{sec:soundness}
+
+Next, I prove the soundness of the elimination procedure for
+normalised formulae of the following form:
+
+\begin{equation*}
+∃x. ∃x_1 . \ldots ∃x_n . \; 0 \leq A[x, x_1 , \ldots , x_n] \land 0 \leq B[x, x_1, \ldots , x_n] 
+\end{equation*}
 
 The elimination process has to be shown to preserve both
-unsatisfiability and satisfiability. I do not reproduce their proofs
-here, they are rather bulky. Instead, I comment on their logic, but I
-do recommend reading their code alongside my explanation.
+unsatisfiability and satisfiability. I do not reproduce these proofs
+here, they are rather bulky. Instead, I comment on their logic,
+although I recommend reading their code alongside.
 
 \ExecuteMetaData[Presburger.tex]{correct}
 
@@ -1752,7 +1744,7 @@ Both proofs are recursively built. If after elimination an input is
 decided unsatisfiable, then ~\AgdaFunction{⊨real-shadow}~ is used to
 transform any assumption that it is satisfiable before elimination
 into a proof that it is satisfiable after elimination. Such proof is
-then provided to the recursive application and the contradiction is
+then provided to the recursive application and a the contradiction is
 derived.
 
 If after elimination an input is decided satisfiable, the recursive
@@ -1760,11 +1752,42 @@ application hands a proof of such satisfiability back. Given this
 proof, ~\AgdaFunction{find-x}~ adds a new $x$ to the environment, and
 returns a proof that by doing so, satisfiability is preserved.
 
+\todo{Some kind of diagram?}
 \todo{Some remark on entangle and such}
+\todo{Comment somewhere on the definition of pairs and irrels and pattern matching}
 
 \subsection{Results and usage}
 
-\todo{Results and usage}
+To demonstrate an example usage of the presented elimination
+procedure, I slightly augment the syntax of the normalised input
+formulae handled by the soundness proof and include negated
+existentials.
+
+\ExecuteMetaData[Adaptation.tex]{normal-form}
+
+Accepting universal quantifiers implies accepting full-blown
+normalised Presburger formulae (because $∀x.P(x) \equiv ¬∃x.¬P(x)$,
+which results in disjunctions if $P(x)$ contains conjunctions).
+Accepting full-blown normalised Presburger formulae as presented in
+\autoref{sec:normalisation} increases the complexity of the proof of
+soundness. I restrict the syntax of unnormalised expressions
+accordingly and mark the handling of full-blown Presburger formulae
+for future work.
+
+The elimination procedure negates its output and ultimately relies on
+the previouly defined ~\AgdaFunction{Ω}.
+
+\ExecuteMetaData[Adaptation.tex]{elimination}
+
+Soundness is defined for such elimination procedure and proven in a
+way similar to the proof in \autoref{sec:soundness}. This time, the two
+functions proving satisfiability and unsatisfiability recurse on each
+other every time an existential quantifier is negated.
+
+Following, a set of example usages. The terms inside of
+\texttt{\{!…!\}} are not accepted by the type-checker:
+
+\ExecuteMetaData[Adaptation.tex]{examples}
 
 \subsection{Future work}
 
@@ -1781,17 +1804,17 @@ priority, of what my work after submission is likely to be.
   after that the correctness of the program is proven beyond any
   reasonable doubt.
 
-  \item [Evaluation of normal forms] Input formulae need still be
-  quantifier free. Evaluating formulae containing existential
-  quantifiers and conjunctions implies managing tree-like
-  environments. Still, these more complex environments would only need
-  to be handled by the ``outer'' layer of soundness proof; the
-  implementation of Norrish's proof would remain unchanged.
+  \item [Evaluation of normal forms] Evaluation is currently defined
+  for a subset of input formulae.  Evaluating full-blown formulae
+  requires managing more complex forms of environments. Still, these
+  more complex environments would only need to be handled by the
+  ``outer'' layer of the soundness proof; the implementation of
+  Norrish's proof would not need to be changed.
 
   \item [Verification of the normalisation process] Because I had not
   enough time to evaluate normal forms, I did not attempt to verify
-  normalisation correct. Although fairly labourious, I do not expect
-  this to be too challenging.
+  normalisation correct either. Although fairly labourious, I do not
+  expect this to be too challenging.
 
   \item [Quoting] Building input formulae automatically out of users'
   goals is a major usability improvement.
@@ -1853,26 +1876,31 @@ in favour of the simpler Omega Test.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Dependent types facilitate definitions up to a great level of
-precision. These types are often used to accurately model
-specifications. A formal specification is then considered to have been
-met if a term inhabiting its corresponding type is supplied. No amount
-of anecdotal evidence (testing) can attain the grade of verification
-that formal proofs offer.
+precision. These types are used to accurately model specifications. A
+formal specification is then considered to have been met if a term
+inhabiting its corresponding type is supplied. No amount of anecdotal
+evidence (testing) can attain the grade of verification attained by
+these machine-checked formal proofs.
 
-For exact details on the verification of the software developed for
-this report, I refer the reader to the corresponding sections in
-chapters \ref{ch:monoids}, \ref{ch:rings} and \ref{ch:presburger} and
-to the accompanying source code.
+\todo{refer to the exact sections}
 
-Due to time contraints, some propositions in \ref{ch:presburger}
+For the exact details on the verification of the software developed
+for this report, I refer the reader to the corresponding sections in
+chapters \autoref{ch:monoids}, \autoref{ch:rings} and
+\autoref{ch:presburger} and to the accompanying source code. The
+brevity of this chapter is a consequence of the central role that
+verification plays through the entire work.
+
+Due to time contraints, some propositions in \autoref{ch:presburger}
 remain postulates and therefore circumvent all verification. However,
-they are all relatively simple lemmas, and I am confident they could
-be satisfied given more time. If these postulates are accepted as
-truthful, the rest of the developed software follows as verified.
+these are all relatively simple lemmas or have been proven correct in
+\cite{Norrish2003}, and I am confident that with sufficient time I
+could satisfy them. If these postulates are accepted as truthful, the
+rest of the developed software follows as verified.
 
 This report and the accompanying source code are literate Agda
-files. They must be type-checked to get their syntax highlighted
-automatically. This occurs as part of the build process every time the
+files. They must be type-checked to automaticly highlight their
+syntax. This occurs as part of the build process every time this
 report is built.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
