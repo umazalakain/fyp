@@ -134,19 +134,23 @@ expr⇓ (∃' e) = ∃ (expr⇓ e)
 expr⇓ (⦂ e) = st (constraint⇓ e)
 \end{code}
                    
-%<*normalisation-sound>
+%<*normalisation-correct>
 \begin{code}
-postulate ⇓-sound : ∀ {i} (e : Expr i) (ρ : Env i) → ⟦ expr⇓ e ⇓⟧ ρ → ⟦ e ⟧ ρ
+postulate ⇓-correct : ∀ {i} (e : Expr i) (ρ : Env i) → ⟦ expr⇓ e ⇓⟧ ρ ≡ ⟦ e ⟧ ρ
+⇓-correct-→ : ∀ {i} (e : Expr i) (ρ : Env i) → ⟦ expr⇓ e ⇓⟧ ρ → ⟦ e ⟧ ρ
+⇓-correct-→ e ρ z rewrite ⇓-correct e ρ = z
+⇓-correct-← : ∀ {i} (e : Expr i) (ρ : Env i) → ⟦ e ⟧ ρ → ⟦ expr⇓ e ⇓⟧ ρ
+⇓-correct-← e ρ z rewrite ⇓-correct e ρ = z
 \end{code}
-%</normalisation-sound>
+%</normalisation-correct>
 
 %<*solution>
 \begin{code}
 Solution : Expr 0 → Set
 Solution e with Ω⇓ (expr⇓ e)
 Solution e | undecided     = ⊤
-Solution e | unsatisfiable = ⊤ × ⊤
 Solution e | satisfiable   = ⟦ e ⟧ []
+Solution e | unsatisfiable = ⟦ e ⟧ [] → ⊥
 \end{code}
 %</solution>
 
@@ -155,12 +159,9 @@ Solution e | satisfiable   = ⟦ e ⟧ []
 solve : (e : Expr 0) → Solution e
 solve e with Ω⇓ (expr⇓ e) | inspect Ω⇓ (expr⇓ e)
 solve e | undecided     | _ = tt
-solve e | unsatisfiable | _ = tt , tt
-solve e | satisfiable   | >[ eq ]< with Ω⇓ (expr⇓ e) | inspect Ω⇓ (expr⇓ e)
-solve e | satisfiable   | >[ () ]< | undecided     | _
-solve e | satisfiable   | >[ () ]< | unsatisfiable | _
-solve e | satisfiable   | >[ eq ]< | satisfiable   | >[ eq₁ ]< with sat⇓ (expr⇓ e) eq₁
-solve e | satisfiable   | >[ eq ]< | satisfiable   | >[ eq₁ ]< | [] , ⊨nf = ⇓-sound e [] ⊨nf
+solve e | unsatisfiable | >[ eq ]< = λ x → unsat⇓ (expr⇓ e) eq ([] , ⇓-correct-← e [] x) 
+solve e | satisfiable   | >[ eq ]< with sat⇓ (expr⇓ e) eq
+solve e | satisfiable   | >[ eq ]< | [] , ⊨nf = ⇓-correct-→ e [] ⊨nf
 \end{code}
 %</solve>
 
