@@ -315,7 +315,7 @@ module _ where
       lnc a a→⊥ = a→⊥ a
 
       -- No proof by contradiction in constructive mathematics
-      -- We need a witness in A, and we have none
+      -- A witness in A is needed, but there is none
       dne : ((A → ⊥) → ⊥) → A
       dne f = {!!} 
 
@@ -760,12 +760,12 @@ can be procedurally built and later ``unquoted'' into concrete Agda
 code. Additionally, Agda also offers means to directly control type
 checking and unification.
 
-Reflection is most commonly used to satisfy proof goals automatically.
-For this common use case, Agda provides ``macros'': functions that
-take their target quoted goal as an argument and hand back some
-computation that solves it.
+Agda's reflection mechanism is most commonly used to satisfy proof
+goals automatically. For this common use case, Agda provides
+``macros'': functions that take their target quoted goal as an
+argument and hand back some computation solving it.
 
-The next example from Agda's documentation, shows how the macro
+The next example from Agda's documentation shows how the macro
 ~\AgdaFunction{by-magic}~ uses ~\AgdaFunction{magic}~ to construct
 values of a given type. Note that ~\AgdaFunction{magic}~ returns a
 ~\AgdaDatatype{Term}~ inside a ~\AgdaDatatype{TC}~ monad: this allows
@@ -916,9 +916,9 @@ fact have the same meaning.
 \ExecuteMetaData[Monoids.tex]{eqn1}
 
 Without an automated solver, the number of law applications and hence
-the length of the proof grows linearly with respect to the size of the
-monoid. An automated solver should allow us to effortlessly satisfy a
-proposition like the following:
+the length of the proof grows with respect to the size of the term. An
+automated solver should allow to effortlessly satisfy a proposition
+like the following:
 
 \ExecuteMetaData[Monoids.tex]{eqn2}
 
@@ -954,9 +954,9 @@ Consider the following two expressions:
     not have any meaning and can be removed:}
     P &= x · x · y            &  Q &= x · x · y     \\
 \end{align*}
-Both propositions can now be seen to be equal. It is important to keep
-in mind that these are not commutative monoids, and that thus the
-order of the elements matters.
+Both propositions can now be seen to be equal. It is worth remembering
+that these are not commutative monoids, and that thus the order of the
+elements matters.
 
 Lists are a suitable data structure for representing flat elements —
 indices here — that can appear multiple times and whose order
@@ -1171,8 +1171,7 @@ Proving equalities on commutative rings can be tedious:
 \end{code}
 
 The goal of a problem solver for equalities on commutative rings is to
-generate these proofs automatically for any commutative ring given an
-inductive datatype representing the target theorem.
+generate these proofs automatically for any commutative ring.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Design and implementation}
@@ -1180,18 +1179,20 @@ inductive datatype representing the target theorem.
 
 Soon after I started to develop a solver in Agda, I found that Agda's
 standard library already included one, and that it was far more
-general than anything I could have written. I decided to learn from
-theirs, and thus I will comment on it here.
+general than anything I could have written. I decided to comment on
+their solution instead.
 
-An automated solver for equations on commutative rings was for the
-first time provided in \cite{Boutin1997} as an example use of
-reflection in automated theorem proving. Coq's \texttt{ring} tactic
-implemented such solver. Later, \cite{Gregoire2005} proposed a more
-performant solution, which Coq adopted.
+An automated solver for equations on commutative rings was provided in
+\cite{Boutin1997} as an example use of reflection in automated theorem
+proving. Coq's \texttt{ring} tactic implemented such solver. Later,
+\cite{Gregoire2005} proposed a more performant solution, which Coq
+adopted. \cite{Russinoff2017} adapts Grégoire and Mahboubi's solution
+to the theorem prover ACL2 in a structured manner and is clarifying in
+some regards.
 
-Expressions are represented as polynomials and indexed by the number
-of variables in them. Shortcut functions for common operations like
-addition, multiplication and subtraction are provided.
+Expressions are represented as polynomials that are indexed by the
+number of variables in them. Shortcut functions for common operations
+like addition, multiplication and subtraction are provided.
 
 \ExecuteMetaData[CommutativeRings.tex]{expr}
 
@@ -1215,11 +1216,11 @@ Polynomials with a single variable can be represented as
 \begin{AgdaAlign}
 \ExecuteMetaData[CommutativeRings.tex]{hnf}
 
-Coefficients can be replaced by polynomials that contain additional
-variables. Integer coefficients form a commutative ring of their own,
-and thus this results in an opportunity to handle both integer
-cofficients and coefficients containing additional variables
-uniformly, as commutative rings.
+To make the solution multivariate, coefficients are replaced by
+polynomials containing additional variables. Integer coefficients form
+a commutative ring too, and thus this results in an opportunity to
+handle both integer cofficients and coefficients containing additional
+variables uniformly, as commutative rings.
 
 \begin{align*}
 &y^2 x^2 + y ^ 2 + y x + 2 x + 2 \\
@@ -1236,57 +1237,75 @@ ring in a law-respecting manner and has decidable equality suffices.
 \ExecuteMetaData[CommutativeRings.tex]{requirements}
 
 The module handles equality generically, as a binary relation on the
-carrier set. That and the need to evaluate constant coefficients into
-the carrier set, result in an inductive definition of equality of
-normal forms.
+carrier set. This and the need to evaluate constant coefficients
+results in an inductive definition of equality of normal forms being
+necessary.
 
 Evaluation within an environment of both polynomial expressions and
 normal forms is then defined. Similar to monoids, environments are
-vectors of elements belonging to the carrier set, and they need to be
-of the same length as the number of unknowns in the polynomial or
-normal form being evaluated. Evaluation of normal forms is then shown
-to be congruent with repect to the inductive equality of normal forms.
+vectors of elements belonging to the carrier set, and need to be of
+the same length as the number of unknowns in the polynomial or normal
+form being evaluated. Evaluation of normal forms is then shown to be
+congruent with repect to the inductive equality.
 
 The exact choice of normal form influences both performance and the
-complexity of proofs. The data type presented previously does not
-ensure the uniqueness of the normal forms that evaluate to $0$ — $0x$
-can be represented both as ~\AgdaInductiveConstructor{∅}~ and
+complexity of proofs. The data type presented previously does not in
+itself ensure the uniqueness of those normal forms that evaluate to $0$
+— $0x$ can be represented both as ~\AgdaInductiveConstructor{∅}~ and
 ~\AgdaInductiveConstructor{∅}~\AgdaInductiveConstructor{*x+}~\AgdaInductiveConstructor{con}~\AgdaBound{C.0\#}.
-To remedy this, and to keep the size of terms small, a wrapper
-function that minimises univariate Horner normal forms to
+To remedy this (and keep the size of terms small) a wrapper function
+that (if pertinent) minimises univariate Horner normal forms to
 ~\AgdaInductiveConstructor{∅}~ is defined around
 ~\AgdaInductiveConstructor{\_*x+\_}.
 
-Operations like addition and multiplication for Horner normal forms
-are defined. Normalisation of polynomials into normal forms is defined
-recursively making use of these.
+Operations like addition and multiplication are defined for Horner
+normal forms and then used by the normalisation process, which
+operates inductively. Both the operations and the normalisation
+process use the simplifying variant of
+~\AgdaInductiveConstructor{\_*x+\_}~ to keep their results canonical.
 
-\todo{Homomorphism proofs defined inductively, comment something more about them}
+For each operation, an homomorphism lemma is proven, showing that
+evaluating the given operation on any two normal forms is equivalent
+to evaluating both normal forms separately and then applying the given
+operation to them. Finally, the main correctness proof uses these
+lemmas to inductively proof that as a whole, normalisation respects
+the structure of commutative rings.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Usage}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\AgdaHide{
 \begin{code}
 module _ where
-  open import Data.Fin 
-  import Data.Nat.Properties
-  open Data.Nat.Properties.SemiringSolver
-  open import Relation.Binary.PropositionalEquality
-  
-  ex₁ : Polynomial 2
-  -- x3y + x³ + 2
-  ex₁ = var zero :* (var (suc zero) :* con 3) :+ var zero :^ 3 :+ con 2
+  open import Data.Nat using (ℕ ; zero ; suc)
+  open import Data.Integer
+  import Data.Integer.Properties
+  open import Relation.Binary.PropositionalEquality using (_≡_ ; refl)
 
-  ex₁↓ : Normal 2
-  --                                        (x          *x+                 3y)             *x+                 2
-  ex₁↓ = poly ((((∅ *x+ poly (∅ *x+ con 1)) *x+ poly ∅) *x+ poly ((∅ *x+ con 3) *x+ con 0)) *x+ poly (∅ *x+ con 2))
-  
-  ex₁↓≡normalise-ex₁ : ex₁↓ ≡ normalise ex₁
-  ex₁↓≡normalise-ex₁ = refl
+  _^_ : ℤ → ℕ → ℤ
+  x ^ zero = + 1
+  x ^ (suc n) = x * (x ^ n)
+  infixl 15 _^_
+\end{code}}
 
+An example usage of a ring solver for integers follows. The last
+argument is an equality proof between the target theorem and the
+theorem proven by the solver. This allows later rewrites and
+adjustments.
+
+\begin{code}
+  open Data.Integer.Properties.RingSolver
+
+  ex₁ : (x y z : ℤ)
+      → x ^ 3 + y * x ^ 2 - x ^ 2 + + 2 * x * y + y ^ 2 - + 2 * x - + 2 * y
+      ≡ (x + y - + 2) * (x ^ 2 + x + y)
+  ex₁ = solve 3 (λ x y z → 
+                   x :^ 3 :+ y :* x :^ 2 :- x :^ 2 :+ con (+ 2) :* x :* y
+                   :+ y :^ 2 :- con (+ 2) :* x :- con (+ 2) :* y 
+                := (x :+ y :- con (+ 2)) :* (x :^ 2 :+ x :+ y))
+                refl
 \end{code}
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Solving Presburger arithmetic}
@@ -1299,9 +1318,9 @@ with addition as its only operation. The original paper
 \cite{Presburger1929} is in Polish and uses outdated notation;
 \cite{Stansifer1984} contains an English translation and comments
 clarifying the original. Several procedures capable of deciding
-Presburger arithmetic exist, some of them we introduce
-later on. Nevertheless, \cite{Fischer1974} showed that the worst case
-run time of any such procedure is doubly exponential.
+Presburger arithmetic exist, some of them I introduce later
+on. Nevertheless, \cite{Fischer1974} showed that the worst case run
+time of any such procedure is doubly exponential.
 
 Here are some example simple predicates that better illustrate the
 expressiveness of Presburger arithmetic.
@@ -2012,6 +2031,7 @@ Following, a set of example usages. The terms inside of
 \ExecuteMetaData[Adaptation.tex]{examples}
 
 \subsection{Future work}
+\label{sec:future-work}
 
 Although the present development is in my view satisfactory, there is
 ample room for further work. Below is a to-do list, ordered by
@@ -2143,24 +2163,28 @@ arithmetic.
 
 The research work involved in this work has been considerable —
 particularly during the problem selection phase. Although two
-deliverables were produced, this project was, in fact, primarily a
-research project. A plethora of little discoveries had to be made and
-often, progress was slow and irregular. As my supervisor well put it,
-my learning process was by implosion: I started with a multitude of
+deliverables were produced, this project was primarily a research
+project. A plethora of little discoveries had to be made and often,
+progress was slow and irregular. As my supervisor well put it, my
+learning process was by implosion: I started with a multitude of
 ill-defined concepts and vague ideas and no sense of their
 relevance. They were gradually refined and made more precise.
-
-I used my blog mostly to sketch new ideas and take notes. For
-organisation, I relied on my whiteboard, the source of all planning in
-my living.
 
 In the course of this project, and sometimes indirectly, I learned
 bits and pieces about abstract algebra, type theory, category theory
 and logic. I now better understand what it is to solve a problem
 constructively; how to structure proofs of correctness; how Agda's
 pattern matching and unification works; and what dependent types have
-to offer. Finally, the experience of interpreting and reproducing a
-scientific paper was invaluable.
+to offer. Finally, the experience of interpreting and formally
+reproducing a scientific paper has been invaluable.
+
+\section{Organisation}
+
+I used my blog mostly to sketch new ideas and take notes. For
+organisation, I relied on my whiteboard — the source of all planning
+in my living.
+
+\todo{Fill in organisation}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Summary and conclusions}
