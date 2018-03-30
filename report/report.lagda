@@ -9,12 +9,15 @@
 \usepackage{amsthm}
 \newtheorem{theorem}{Theorem}
 
+% Break urls
+\usepackage[T1,hyphens]{url}
+
 % Links and their colors
 \usepackage[
   colorlinks=true,
   linkcolor=darkgray,
   citecolor=darkgray,
-  urlcolor=darkgray
+  urlcolor=darkgray,
   ]{hyperref}
 
 % And fonts
@@ -514,8 +517,8 @@ are forced on datatypes, but indices are a choice.
         _∷_ : ∀ {n} → A → Vec A n → Vec A (suc n)
 \end{code}
 
-Pattern matching deconstructs a type by splitting it into those
-constructors capable of constructing it:
+Pattern matching deconstructs a type, which creates one case per every
+constructor capable of constructing that type:
 
 \begin{code}
     -- Both constructors match Vec A n
@@ -528,8 +531,9 @@ constructors capable of constructing it:
     head (x ∷ xs) = x
 \end{code}
 
-In Agda, computation is driven by pattern matching: every case result
-of it further refines the types in context.
+Computation is advanced by pattern matching. The RHS of each pattern
+match case will have the type of the terms in its context refined by
+the information obtained from the LHS.
 
 \begin{code}
     -- Note that xs, ys and the result have the same length
@@ -550,10 +554,10 @@ of it further refines the types in context.
     zipWith f (x ∷ xs) (y ∷ ys) = f x y ∷ zipWith f xs ys
 \end{code}
 
-If the type-checker can see that a type is impossible to construct,
-pattern matching on it renders the case absurd, and thus you do not
-need to provide a definition for it. Dependent types grant a level of
-precision that makes handling erroneous input uncessary.
+If a type has no constructors capable of constructing it, the
+type-checker will recognise the case as absurd and no definition will
+be required on the RHS. This, together with the precision that
+dependent types grant, makes handling erroneous input unecessary.
 
 \begin{code}
     -- The successor of an even number cannot be even
@@ -563,11 +567,12 @@ precision that makes handling erroneous input uncessary.
     prf₂ (suc (suc n)) {p} sp = prf₂ n {p} sp 
 \end{code}
 
-The type-checker uses dot patterns to show that pattern matching on
-one argument uniquely implies another. If a value can be inferred by
+If pattern matching against a type uniquely implies the constructor of
+some other argument, the type-checker will substitute the argument by
+the value preceded by a dot. If a term on the RHS can be inferred by
 the type-checker, you may replace it by an underscore. Additionally,
-outside of dot patterns underscores can be used as non-binded
-catch-alls on the left hand side of a definition.
+underscores can be used as non-binded catch-alls on the LHS of a
+definition.
 
 \begin{code}
     -- Pattern matching on xs determines n
@@ -576,10 +581,9 @@ catch-alls on the left hand side of a definition.
     zipWith' .(suc _) f (x ∷ xs) (y ∷ ys) = f x y ∷ zipWith' _ f xs ys
 \end{code}
 
-``With abstraction'' gives you the ability to steer unification in a
-particular direction by allowing you to pattern match on arbitrary
-well-formed expressions on the left hand side of a definition. This
-may result in the refinement of the rest of the arguments. The
+``With abstraction'' allows you to pattern match on the LHS against
+arbitrary computations. This is often used to refine the rest of the
+arguments and then perform further pattern matching on them. The
 following example is adapted from the standard library and was
 originally presented in \cite{McBride2004}:
 
@@ -603,8 +607,8 @@ originally presented in \cite{McBride2004}:
 
 As a result of pattern matching
 on \AgdaFunction{compare}~\AgdaBound{m}~\AgdaBound{n} you learn about
-\AgdaBound{m} and \AgdaBound{n}. This is the difference between with
-abstraction and ordinary case splitting on the right hand
+\AgdaBound{m} and \AgdaBound{n}. This is the key difference between
+with abstraction and ordinary case splitting on the right hand
 side. \cite{Oury2008} contains other interesting examples of views.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1174,7 +1178,7 @@ The goal of a problem solver for equalities on commutative rings is to
 generate these proofs automatically for any commutative ring.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Design and implementation}
+\section{A verified decision procedure}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Soon after I started to develop a solver in Agda, I found that Agda's
@@ -2216,17 +2220,29 @@ field.
 
 \chapter{Program listing}
 
-\todo{Link to the repo}
+The sources necessary to build this report — including the source
+files that contain all the quoted code listings — can be found in the
+\texttt{report} directory at \url{https://github.com/umazalakain/fyp}.
+All programs have been written for Agda 2.5.3.
 
-% \chapter{Detailed Specification and Design}
-%   Appendix A - Detailed Specification and Design This appendix should contain
-%   the details of your project specification that were not included in the main
-%   body of your report.
+Running \texttt{make modules} inside the \texttt{report} directory
+will compile all Agda code present in this report and all of its
+dependencies. The only required external library is Agda's standard
+library, obtainable at \url{https://github.com/agda/agda-stdlib}.
+(Instructions on how to install it can be found at
+\url{https://agda.readthedocs.io/en/v2.5.3/tools/package-system.html#example-using-the-standard-library}.)
 
-% \chapter{User Guide}
-%   Appendix C - User Guide This appendix should provide a detailed description
-%   of how to use your system. In some cases, it may also be appropriate to
-%   include a second guide dealing with maintenance and updating issues.
+Running \texttt{make} inside the \texttt{report} directory first
+compiles all source code and then generates a PDF file for the
+report. During the course of this project I fixed a small bug that
+made spacing of compiled literate Agda programs inconsistent and
+disagreeable to the eye. The commit \texttt{8b83da6} can be
+cherry-picked from Agda's master branch.
+
+\chapter{User Guide}
+%  Appendix C - User Guide This appendix should provide a detailed description
+%  of how to use your system. In some cases, it may also be appropriate to
+%  include a second guide dealing with maintenance and updating issues.
 
 \end{appendices}
 
