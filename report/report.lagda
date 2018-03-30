@@ -730,16 +730,17 @@ report.
 \subsection{Proof by reflection}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Procedures that generate proofs by reflection require some notion of
-what their target theorem is. This goal theorem has to be manipulated
-and inspected by pattern matching. To do so, it needs to be translated
-into an inductive data type — this process is often called
-\textit{metaification} or \textit{reflection}. Both
-\cite{Gregoire2005} and \cite{Boutin1997} introduce this idea.
+Procedures that try to automatically solve goals require some
+notion of what their target theorem is. To prove the goal within Agda,
+this notion has to be manipulated and inspected by pattern
+matching. To do so, it needs to be translated into an inductive data
+type — this process is often called \textit{metaification} or
+\textit{reflection}. Both \cite{Gregoire2005} and \cite{Boutin1997}
+introduce this idea.
 
 This is in contrast with proof assistants like Coq, which often supply
 externally defined ``tactics''; in Agda, automated theorem provers
-need to be defined internally.
+are defined within the system.
 
 \href{https://agda.readthedocs.io/en/latest/language/reflection.html}{
 The support for reflection offered by Agda} gives the programmer the
