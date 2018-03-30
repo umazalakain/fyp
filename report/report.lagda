@@ -55,7 +55,7 @@
 
 % Diagrams
 \usepackage{tikz}
-\usetikzlibrary{positioning}
+\usetikzlibrary{arrows,positioning}
 
 % Appendices
 \usepackage[toc,page]{appendix}
@@ -730,12 +730,16 @@ report.
 \subsection{Proof by reflection}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Proof generating procedures generally require some notion of what
-their target theorem is. This notion has to be translated — reflected
-— into a data structure that the procedure can manipulate to construct
-its target theorem. This is in contrast with proof assistants like
-Coq, which supply externally defined ``tactics'': in Agda, automated
-theorem provers need to be defined internally.
+Procedures that generate proofs by reflection require some notion of
+what their target theorem is. This goal theorem has to be manipulated
+and inspected by pattern matching. To do so, it needs to be translated
+into an inductive data type — this process is often called
+\textit{metaification} or \textit{reflection}. Both
+\cite{Gregoire2005} and \cite{Boutin1997} introduce this idea.
+
+This is in contrast with proof assistants like Coq, which often supply
+externally defined ``tactics''; in Agda, automated theorem provers
+need to be defined internally.
 
 \href{https://agda.readthedocs.io/en/latest/language/reflection.html}{
 The support for reflection offered by Agda} gives the programmer the
@@ -869,12 +873,10 @@ inside its dedicated chapter.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Monoids are common algebraic structures found in many problems. A
-monoid solver is an automated proof generator which can be used to
-prove an equation on monoids. Constructing such a solver is a good
+monoid solver is an procedure that automatically generates a proof of
+the equality of two monoids. Constructing such a solver is a good
 first approach to proof automation: it lacks the complexity of many
 other problems but still has their same high-level structure.
-
-\todo{Boutin's paper}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Problem description and specification}
@@ -887,7 +889,7 @@ self-contained and fairly simple definition:
 
 \ExecuteMetaData[Monoids.tex]{monoid}
 
-\AgdaRef{M}, the set on which the monoid is defined, is often referred
+\AgdaBound{M}, the set on which the monoid is defined, is often referred
 to as the carrier. $(ℕ, +, 0)$ and $(ℕ, ·, 1)$ are both examples of
 monoids. These examples also happen to be commutative, while monoids
 need not be — more on solving commutative monoids later. An example of
@@ -915,18 +917,17 @@ proposition like the following:
 
 A proposition containing variables and monoid operators can be
 normalised into a canonical form. The characteristics that make two
-propositions definitionally distinct — when they are, in fact, equal
-in meaning — can be eliminated. It is crucial that this process —
+propositions definitionally distinct — when they are equal modulo the
+monoid axioms — can be eliminated. It is crucial that this process —
 normalisation — guarantees the preservation of meaning. After
 normalisation, two results can be compared: if they are equal, so must
-the original propositions be. This is the sketch of the decision
+the original expressions be. This is the sketch of the decision
 procedure.
 
-The procedure requires some notion of the equation it is trying to
-solve. I use an abstract syntax tree to represent equations and
-finite indices to refer to variables — the
-type \AgdaDatatype{Fin}~\AgdaBound{n} contains \AgdaBound{n} distinct
-values. Moreover, I use a type parameter on \AgdaRef{Eqn} to
+I use an abstract syntax tree to represent equations and finite
+indices to refer to variables — the type
+\AgdaDatatype{Fin}~\AgdaBound{n} contains \AgdaBound{n} distinct
+values. Moreover, I use a type parameter on ~\AgdaDatatype{Eqn}~ to
 \textit{push in} this limitation on the number of indices.
 
 \ExecuteMetaData[Monoids.tex]{expr}
@@ -1013,6 +1014,8 @@ into its normalisation followed by the evaluation of such normal form,
 then by congruence of functions, an equivalence of normal forms
 implies an equivalence of terms after evaluation:
 
+\phantomsection
+\label{code:solve}
 \ExecuteMetaData[Monoids.tex]{solve}
 
 Put in a diagrammatic form, the following diagram must be shown to
@@ -1074,21 +1077,205 @@ in the following example usage:
 \label{ch:rings}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+A commutative ring is a carrier set ~\AgdaBound{R}~ together with two
+binary operations generalising multiplication and addition. Under
+multiplication, ~\AgdaBound{R}~ is a commutative monoid; under
+addition, an abelian group — providing an extra inverse law; and
+multiplication distributes over addition.
+
+\AgdaHide{
+\begin{code}
+module _ where
+  open import Relation.Binary.PropositionalEquality
+\end{code}}
+
+\begin{code}
+  record CommutativeRing (R : Set) : Set where
+    infixl 5 _+_
+    infixl 10 _*_
+    infix 15 -_
+    field
+      _*_ : R → R → R
+      1# : R
+      *-assoc : (x y z : R) → (x * y) * z ≡ x * (y * z)
+      *-comm : (x y : R) → x * y ≡ y * x
+      *-identity : (x : R) → x * 1# ≡ x 
+
+      _+_ : R → R → R
+      0# : R
+      +-assoc : (x y z : R) → (x + y) + z ≡ x + (y + z)
+      +-comm : (x y : R) → x + y ≡ y + x
+      +-identity : (x : R) → x + 0# ≡ x
+      -_ : R → R
+      +-inverse : (x : R) → x + - x ≡ 0#
+
+      distrib : (x y z : R) → (y + z) * x ≡ (y * x) + (z * x)
+\end{code}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Problem description and specification}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\todo{All of rings}
+\AgdaHide{
+\begin{code}
+  open import Data.Integer renaming (-_ to ℤ-_ ; _+_ to _ℤ+_ ; _*_ to _ℤ*_)
+  open import Data.Integer.Properties as IntProp using ()
+  INT-COMM-RING : CommutativeRing ℤ
+  INT-COMM-RING = record
+                    { _*_ = _ℤ*_
+                    ; 1# = (+ 1)
+                    ; *-assoc = IntProp.*-assoc
+                    ; *-comm = IntProp.*-comm
+                    ; *-identity = IntProp.*-identityʳ
+                    ; _+_ = _ℤ+_
+                    ; 0# = + 0
+                    ; +-assoc = IntProp.+-assoc
+                    ; +-comm = IntProp.+-comm
+                    ; +-identity = IntProp.+-identityʳ
+                    ; -_ = ℤ-_
+                    ; +-inverse = IntProp.inverseʳ
+                    ; distrib = IntProp.distribʳ
+                    }
+\end{code}}
+
+Proving equalities on commutative rings can be tedious:
+
+\begin{code}
+  open CommutativeRing INT-COMM-RING
+  eqn₃ : (x y z : ℤ) → y * (- ((+ 2) * x) + z + (+ 2) * x) ≡ y * z
+  eqn₃ x y z = begin 
+    y * ((- ((+ 2) * x) + z) + ((+ 2) * x))
+      ≡⟨ cong (λ ● → y * (● + (+ 2) * x)) (+-comm (- ((+ 2) * x)) z) ⟩
+    y * ((z + - ((+ 2) * x)) + ((+ 2) * x))
+      ≡⟨ cong (λ ● → y * ●) (+-assoc z _ _) ⟩
+    y * (z + (- ((+ 2) * x) + ((+ 2) * x)))
+      ≡⟨ cong (λ ● → y * (z + ●)) (+-comm _ _) ⟩
+    y * (z + ((+ 2) * x + - ((+ 2) * x)))
+      ≡⟨ cong (λ ● → y * (z + ●)) (+-inverse ((+ 2) * x)) ⟩
+    y * (z + (+ 0))
+      ≡⟨ cong (y *_) (+-identity z) ⟩
+    y * z
+      ∎
+    where open ≡-Reasoning
+\end{code}
+
+The goal of a problem solver for equalities on commutative rings is to
+generate these proofs automatically for any commutative ring given an
+inductive datatype representing the target theorem.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Design and implementation}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\cite{Gregoire2005}
-\cite{Boutin1997}
+Soon after I started to develop a solver in Agda, I found that Agda's
+standard library already included one, and that it was far more
+general than anything I could have written. I decided to learn from
+theirs, and thus I will comment on it here.
 
-- What is a commutative ring?
-- Horner normal form + constraints
+An automated solver for equations on commutative rings was for the
+first time provided in \cite{Boutin1997} as an example use of
+reflection in automated theorem proving. Coq's \texttt{ring} tactic
+implemented such solver. Later, \cite{Gregoire2005} proposed a more
+performant solution, which Coq adopted.
+
+Expressions are represented as polynomials and indexed by the number
+of variables in them. Shortcut functions for common operations like
+addition, multiplication and subtraction are provided.
+
+\ExecuteMetaData[CommutativeRings.tex]{expr}
+
+The solver's high-level structure is similar to the monoid solver's
+one described in \autoref{ch:monoids}. The heart of it proves that
+evaluating a polynomial within an environment $ρ$ is equal to first
+normalising it and then evaluating its normal form within $ρ$ — it
+shows that normalisation is structure-preserving. Akin to
+~\AgdaFunction{solve}~ in \autoref{code:solve}, this proof is then
+used to conclude that if two normal forms are equivalent, so must the
+original polynomials after evaluation be.
+
+Polynomials with a single variable can be represented as
+\textit{Horner normal forms}:
+
+\begin{align*}
+&a_{n} x^{n} + a_{n-1} x^{n-1} + \ldots + a_{0} \\
+\equiv &((a_{n} x + a_{n-1}) x + \ldots) x + a_{0}
+\end{align*}
+
+\begin{AgdaAlign}
+\ExecuteMetaData[CommutativeRings.tex]{hnf}
+
+Coefficients can be replaced by polynomials that contain additional
+variables. Integer coefficients form a commutative ring of their own,
+and thus this results in an opportunity to handle both integer
+cofficients and coefficients containing additional variables
+uniformly, as commutative rings.
+
+\begin{align*}
+&y^2 x^2 + y ^ 2 + y x + 2 x + 2 \\
+\equiv &((0 + y y + 1) x + y + 2) x + y y + 2
+\end{align*}
+
+\ExecuteMetaData[CommutativeRings.tex]{normal}
+\end{AgdaAlign}
+
+In fact, the module does not require constant coefficients to be
+integers. Any commutative ring that can be evaluated into the main
+ring in a law-respecting manner and has decidable equality suffices.
+
+\ExecuteMetaData[CommutativeRings.tex]{requirements}
+
+The module handles equality generically, as a binary relation on the
+carrier set. That and the need to evaluate constant coefficients into
+the carrier set, result in an inductive definition of equality of
+normal forms.
+
+Evaluation within an environment of both polynomial expressions and
+normal forms is then defined. Similar to monoids, environments are
+vectors of elements belonging to the carrier set, and they need to be
+of the same length as the number of unknowns in the polynomial or
+normal form being evaluated. Evaluation of normal forms is then shown
+to be congruent with repect to the inductive equality of normal forms.
+
+The exact choice of normal form influences both performance and the
+complexity of proofs. The data type presented previously does not
+ensure the uniqueness of the normal forms that evaluate to $0$ — $0x$
+can be represented both as ~\AgdaInductiveConstructor{∅}~ and
+~\AgdaInductiveConstructor{∅}~\AgdaInductiveConstructor{*x+}~\AgdaInductiveConstructor{con}~\AgdaBound{C.0\#}.
+To remedy this, and to keep the size of terms small, a wrapper
+function that minimises univariate Horner normal forms to
+~\AgdaInductiveConstructor{∅}~ is defined around
+~\AgdaInductiveConstructor{\_*x+\_}.
+
+Operations like addition and multiplication for Horner normal forms
+are defined. Normalisation of polynomials into normal forms is defined
+recursively making use of these.
+
+\todo{Homomorphism proofs defined inductively, comment something more about them}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Usage}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{code}
+module _ where
+  open import Data.Fin 
+  import Data.Nat.Properties
+  open Data.Nat.Properties.SemiringSolver
+  open import Relation.Binary.PropositionalEquality
+  
+  ex₁ : Polynomial 2
+  -- x3y + x³ + 2
+  ex₁ = var zero :* (var (suc zero) :* con 3) :+ var zero :^ 3 :+ con 2
+
+  ex₁↓ : Normal 2
+  --                                        (x          *x+                 3y)             *x+                 2
+  ex₁↓ = poly ((((∅ *x+ poly (∅ *x+ con 1)) *x+ poly ∅) *x+ poly ((∅ *x+ con 3) *x+ con 0)) *x+ poly (∅ *x+ con 2))
+  
+  ex₁↓≡normalise-ex₁ : ex₁↓ ≡ normalise ex₁
+  ex₁↓≡normalise-ex₁ = refl
+
+\end{code}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Solving Presburger arithmetic}
@@ -1464,8 +1651,7 @@ precondition is met. If it is not,
 ~\AgdaInductiveConstructor{undecided}. Following, an elimination
 procedure for quantifier free formulae.
 ~\AgdaFunction{⊨?\_[}~\AgdaInductiveConstructor{[]}~\AgdaFunction{/x]}~
-decides the validity of a constraint with no variables, as shown in
-the next section.
+decides constraints with no variables, as shown in the next section.
 
 \ExecuteMetaData[Presburger.tex]{elimination}
 
@@ -1624,7 +1810,7 @@ of the search for $x$:
 
 \ExecuteMetaData[Presburger.tex]{find-x}
 
-\subsubsection{Norrish}
+\subsubsection{Norrish's proof}
 
 Below, I briefly reproduce Norrish's proof of soundness for the dark
 shadow. For every pair of lower bound and upper bound constraints, it
@@ -1911,10 +2097,10 @@ these machine-checked formal proofs.
 
 For the exact details on the verification of the software developed
 for this report, I refer the reader to the corresponding sections in
-chapters \autoref{ch:monoids}, \autoref{ch:rings} and
-\autoref{ch:presburger} and to the accompanying source code. The
-brevity of this chapter is a consequence of the central role that
-verification plays through the entire work.
+\autoref{ch:monoids}, \autoref{ch:rings} and \autoref{ch:presburger}
+and to the accompanying source code. The brevity of this chapter is a
+consequence of the central role that verification plays through the
+entire work.
 
 Due to time contraints, some propositions in \autoref{ch:presburger}
 remain postulates and therefore circumvent all verification. However,
