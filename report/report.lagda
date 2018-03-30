@@ -2191,14 +2191,23 @@ in my living.
 \label{ch:conclusion}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\todo{Conclusion}
+This report researches the construction of verified problem solvers
+for three distinct problem domains. \autoref{ch:monoids} provides a
+detailed description of a solver for equations on monoids;
+\autoref{ch:rings} examines an existing solution for equations on
+commutative rings and draws parallelisms to the solution for monoids;
+\autoref{ch:presburger} is an ongoing attempt to define a solver for
+Presburger arithmetic in Agda.
 
-%   Summary and Conclusions In the final chapter of your report, you should
-%   summarise how successful you were in achieving the original project
-%   objectives, what problems arose in the course of the project which could not
-%   be readily solved in the time available, and how your work could be
-%   developed in future to enhance its utility. It is OK to be upbeat,
-%   especially if you are pleased with what you have achieved!
+Time constraints limited my work on the Presburger arithmetic solver.
+Much is still to be done, but the contributed work encompasses the
+heart of it — and provides an interface for a subset of Presburger
+formulae to be proven. Future work is outlined in
+\autoref{sec:future-work}.
+
+Perhaps most importantly, this project has been of invaluable
+educational value. I aspire to find further entertainment within the
+field.
 
 \bibliographystyle{apalike}
 \bibliography{bibliography}
