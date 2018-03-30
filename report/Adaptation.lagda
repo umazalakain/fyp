@@ -82,11 +82,11 @@ data Constraint (i : ℕ) : Set where
   _∧'_  : Constraint i → Constraint i → Constraint i
 
 data Expr (i : ℕ) : Set where
-  ⦂_  : Constraint i  → Expr i
+  ∶_  : Constraint i  → Expr i
   ¬'_ : Expr i        → Expr i
   ∃'_ : Expr (suc i)  → Expr i
 
-infixr 20 ∃'_ ¬'_ ⦂_
+infixr 20 ∃'_ ¬'_ ∶_
 infixr 25 _∧'_
 infix 30 _[_]_
 
@@ -112,7 +112,7 @@ open Rel public
 ⟦_⟧ : ∀ {i} → Expr i → Env i → Set
 ⟦ ¬' e ⟧ ρ = ⟦ e ⟧ ρ → ⊥
 ⟦ ∃' e ⟧ ρ = Σ ℤ λ x → ⟦ e ⟧ (x ∷ ρ) 
-⟦ ⦂ e ⟧ ρ = ⟦ e ⟧-constraint ρ
+⟦ ∶ e ⟧ ρ = ⟦ e ⟧-constraint ρ
 
 do-¬ : ∀ {i} → NormalForm i → NormalForm i
 do-¬ (∃ n) = ¬∃ n
@@ -126,7 +126,7 @@ constraint⇓ (a [ r ] b) = norm-rel r (norm-atom a) (norm-atom b)
 expr⇓ : ∀ {i} → Expr i → NormalForm i
 expr⇓ (¬' e) = do-¬ (expr⇓ e)
 expr⇓ (∃' e) = ∃ (expr⇓ e)
-expr⇓ (⦂ e) = st (constraint⇓ e)
+expr⇓ (∶ e) = st (constraint⇓ e)
 
 postulate ⇓-correct : ∀ {i} (e : Expr i) (ρ : Env i) → ⟦ expr⇓ e ⇓⟧ ρ ≡ ⟦ e ⟧ ρ
 
@@ -162,30 +162,30 @@ y = var' zero
 -- Some theorems typecheck
 
 ex₁ : Σ ℤ λ x → Σ ℤ λ y → + 0 < x × x + + 1 < + 2 * y × y < + 4
-ex₁ = solve (∃' ∃' ⦂ ((num' (+ 0) [ <' ] x)
+ex₁ = solve (∃' ∃' ∶ ((num' (+ 0) [ <' ] x)
                    ∧' (x +' (num' (+ 1))) [ <' ] ((+ 2) *' y)
                    ∧' y [ <' ] (num' (+ 4)))) 
 
 ex₂ : ¬ Σ ℤ λ x → Σ ℤ λ y → y > + 0 × x - y ≥ x
-ex₂ =  solve (¬' ∃' ∃' ⦂ y [ >' ] num' (+ 0) ∧' (x -' y) [ ≥' ] x) 
+ex₂ =  solve (¬' ∃' ∃' ∶ y [ >' ] num' (+ 0) ∧' (x -' y) [ ≥' ] x) 
 
 -- Predicates proven false do not typecheck
 
 ex₃ : Σ ℤ λ y → y < y
-ex₃ = {!solve (∃' ⦂ (y [ <' ] y))!}
+ex₃ = {!solve (∃' ∶ (y [ <' ] y))!}
 
 -- The negation of predicates proven false does typecheck
 
 ¬ex₃ : ¬ Σ ℤ λ y → y < y
-¬ex₃ = solve (¬' ∃' ⦂ (y [ <' ] y))
+¬ex₃ = solve (¬' ∃' ∶ (y [ <' ] y))
 
 -- The decision procedure is sound but incomplete
 -- Sometimes, neither a predicate nor its negation typecheck
 
 ex₄ : Σ ℤ λ x → Σ ℤ λ y → + 2 * x ≡ + 2 * y + + 1
-ex₄ = {!solve (∃' ∃' ⦂ (((+ 2) *' x) [ =' ] (((+ 2) *' y) +' num' (+ 1))))!}
+ex₄ = {!solve (∃' ∃' ∶ (((+ 2) *' x) [ =' ] (((+ 2) *' y) +' num' (+ 1))))!}
 
 ¬ex₄ : ¬ Σ ℤ λ x → Σ ℤ λ y → + 2 * x ≡ + 2 * y + + 1
-¬ex₄ =  {!solve (¬' ∃' ∃' ⦂ (((+ 2) *' x) [ =' ] (((+ 2) *' y) +' num' (+ 1))))!}
+¬ex₄ =  {!solve (¬' ∃' ∃' ∶ (((+ 2) *' x) [ =' ] (((+ 2) *' y) +' num' (+ 1))))!}
 \end{code}
 %</examples>

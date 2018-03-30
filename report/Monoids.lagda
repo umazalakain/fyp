@@ -12,14 +12,13 @@ open import Relation.Binary.PropositionalEquality
 open import Relation.Binary using (Decidable)
 open import Relation.Binary.List.Pointwise using () renaming (decidable-≡ to List-≟)
 open import Relation.Nullary using (yes ; no)
-open ≡-Reasoning
 \end{code}
 
 %<*monoid>
 \begin{code}
 -- A monoid is a set
 record Monoid (M : Set) : Set where
-  infix 25 _·_
+  infixl 25 _·_
   field
     -- Together with an associative binary operation
     _·_ : M → M → M
@@ -62,7 +61,9 @@ eqn₁ {T} xs = begin
     ≡⟨ law-·-ε xs ⟩
   xs ++ []
     ∎
-  where open Monoid (LIST-MONOID T) 
+  where
+  open ≡-Reasoning
+  open Monoid (LIST-MONOID T) 
 \end{code}
 %</eqn1>
 
@@ -83,7 +84,9 @@ eqn₂ xs ys zs = begin
     ≡⟨ cong (λ zs' → xs ++ ((ys ++ ys) ++ zs')) (law-·-ε _) ⟩
   xs ++ ((ys ++ ys) ++ (zs ++ []))
     ∎
-  where open Monoid (LIST-MONOID _)
+  where
+  open ≡-Reasoning
+  open Monoid (LIST-MONOID _)
 \end{code}
 %</eqn2>
 
@@ -170,6 +173,7 @@ module _ {M : Set} (monoid : Monoid M) where
       ≡⟨ cong (λ ● → lookup i ρ · ●) (eval-homo e₁ e₂ ρ) ⟩
     (lookup i ρ) · ⟦ e₁ ++ e₂ ⇓⟧ ρ
       ∎
+    where open ≡-Reasoning
 \end{code}
 %</eval-homo>
 
@@ -189,6 +193,7 @@ module _ {M : Set} (monoid : Monoid M) where
       ≡⟨ eval-homo (normalise e₁) (normalise e₂) ρ ⟩
     ⟦ normalise e₁ ++ normalise e₂ ⇓⟧ ρ
       ∎
+    where open ≡-Reasoning
 \end{code}
 %</eval-commutes>
 
@@ -211,6 +216,7 @@ module _ {M : Set} (monoid : Monoid M) where
       ≡⟨ sym (eval-commutes e₂ ρ) ⟩
     ⟦ e₂ ⟧ ρ
       ∎
+    where open ≡-Reasoning
 \end{code}
 %</solve>
 
