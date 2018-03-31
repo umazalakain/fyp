@@ -216,7 +216,7 @@ It is in these cases where automated theorem proving shines strongest:
 instead of applying inference rules manually, the user can provide an
 automated solver with a proposition and get a verified solution
 back. These decision procedures are often based on some meta-theory
-about the system, and thus can result in less rewriting steps than the
+about the system, and thus can result in fewer rewriting steps than the
 repeated application of inference rules from inside the system.
 
 The four color theorem was the first notable problem to be solved with
@@ -255,10 +255,10 @@ contain meta-analyses of the project's development process.
 \label{ch:background}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-This chapter starts by briefly introducing the case behind the use of
+This chapter starts by briefly introducing the case for the use of
 type-checkers as theorem verifiers. Next, a succint primer on
 programming in Agda is given. In itself, such introduction is probably
-not sufficient to get the unexperienced reader entirely comfortable
+not enough to get the unexperienced reader entirely comfortable
 reading Agda code. Only more in-depth reading and hands-on practice
 are likely to achieve that. Nevertheless, it is my hope that it
 facilitates enough understanding to intuitively grasp some of the
@@ -358,8 +358,8 @@ termination. If programs are considered to be proofs, programs for
 which termination cannot be verified must be rejected.
 
 One way of showing termination is by making recursive calls on
-structurally smaller arguments. If data is defined inductively, this
-assures that a base case is always eventually reached, and that
+structurally smaller arguments. If the data is defined inductively,
+this assures that a base case is always eventually reached, and that
 therefore recursion always eventually terminates.
 
 \begin{code}
@@ -555,7 +555,7 @@ the information obtained from the LHS.
 If a type has no constructors capable of constructing it, the
 type-checker will recognise the case as absurd and no definition will
 be required on the RHS. This, together with the precision that
-dependent types grant, makes handling erroneous input unecessary.
+dependent types grant, makes handling erroneous input unnecessary.
 
 \begin{code}
     -- The successor of an even number cannot be even
@@ -569,7 +569,7 @@ If pattern matching against a type uniquely implies the constructor of
 some other argument, the type-checker will substitute the argument by
 the value preceded by a dot. If a term on the RHS can be inferred by
 the type-checker, you may replace it by an underscore. Additionally,
-underscores can be used as non-binded catch-alls on the LHS of a
+underscores can be used as non-bound catch-alls on the LHS of a
 definition.
 
 \begin{code}
@@ -730,7 +730,7 @@ To aid reasoning, tools that enable whiteboard-style deductions have
 been developed. These functions exploit the transitivity of the binary
 relation they are defined for — may it be equality or other preorder
 relations like $≤$ or $⇒$. This style of reasoning, together with the
-congruent property of functions, is used profusely throughtout this
+congruent property of functions, is used profusely throughout this
 work.
 
 \AgdaHide{
@@ -838,7 +838,7 @@ conservative approach, Agda-Stdlib provides a large library of
 commonly used data structures and functions. It abstracts aggressively
 which, together with its heavy use of unicode symbols and infix
 notation, can often result in code challenging to read for the
-unexperienced user. It contains a rather vast set of already proven
+inexperienced user. It contains a rather vast set of already proven
 theorems for all of its data types.
 
 In comparison,
@@ -881,7 +881,7 @@ Executing Agda with the \texttt{{-}{-}safe} switch deactivates those
 features that may lead to inconsistencies, like postulates, accepting
 unsolved proofs or
 ~\AgdaPrimitiveType{Set}~\AgdaSymbol{:}~\AgdaPrimitiveType{Set}.
-Unfortunately, Agda's standard library does not quarentine unsafe
+Unfortunately, Agda's standard library does not quarantine unsafe
 definitions, so any module that depends on it is considered unsafe too
 — albeit not using any of its unsafe features. There is
 \href{https://github.com/agda/agda-stdlib/issues/143}{work in
@@ -1093,7 +1093,7 @@ that represent the target theorem. This includes appropriately
 handling the indices that refer to variables. As shown by
 \cite{Bove2009} at
 \url{http://www.cse.chalmers.se/~ulfn/code/tphols09/}, index
-referrences can be set up automatically, partially alleviating this
+references can be set up automatically, partially alleviating this
 problem and resulting in the following usage:
 
 \ExecuteMetaData[Monoids.tex]{eqn2-auto}
@@ -1208,7 +1208,7 @@ comment on their solution instead.
 An automated solver for equations on commutative rings was provided in
 \cite{Boutin1997} as an example use of reflection in automated theorem
 proving. Coq's \texttt{ring} tactic implemented such solver. Later,
-\cite{Gregoire2005} proposed a more performant solution, which Coq
+\cite{Gregoire2005} proposed a more efficient solution, which Coq
 adopted. \cite{Russinoff2017} adapts Grégoire and Mahboubi's solution
 to the theorem prover ACL2 in a structured manner and is clarifying in
 some regards.
@@ -1242,7 +1242,7 @@ Polynomials with a single variable can be represented as
 To make the solution multivariate, coefficients are replaced by
 polynomials containing the additional variables. Integer coefficients
 form a commutative ring too, and thus this results in an opportunity
-to handle both integer cofficients and coefficients containing
+to handle both integer coefficients and coefficients containing
 additional variables uniformly, as commutative rings.
 
 \begin{align*}
@@ -1271,7 +1271,7 @@ normal forms is then defined. Similar to monoids, environments are
 vectors of elements belonging to the carrier set, and need to be of
 the same length as the number of unknowns in the polynomial or normal
 form being evaluated. Evaluation of normal forms is then shown to be
-congruent with repect to the inductive equality.
+congruent with respect to the inductive equality.
 
 The exact choice of normal form influences both performance and the
 complexity of proofs. The data type presented previously does not in
@@ -1452,7 +1452,7 @@ the unsatisfiability gets carried onto subset domains, as noted in
 Some Presburger formulae are valid on integers but invalid on natural
 numbers: $∃x.\:x+1=0$. Others are valid on rational numbers but
 invalid on integers: $∃x.\:2x=1$. When considering which decision
-procedures to explore, I immediately discarted the ones acting on real
+procedures to explore, I immediately discarded the ones acting on real
 numbers — irrational numbers are not straightforward to handle in
 constructive mathematics. The most well-documented procedures are on
 integers, and the usage of integer Presburger arithmetic is common
@@ -1494,7 +1494,7 @@ This section is significantly based on the material found in
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Transforming input formulae into disjunctive normal forms can blow up
-the size of formulae exponentialy, as can clearly be seen whenever a
+the size of formulae exponentially, as can clearly be seen whenever a
 conjunction is normalised over a disjunction:
 
 \begin{equation*}
@@ -1585,7 +1585,7 @@ their substructures.
 Normalisation proceeds recursively, eliminating universal quantifiers,
 pushing conjunction and negation inward, normalising implication,
 evaluating operations on atoms and normalising relations between
-them. For the exact procedure see the accompainying code.
+them. For the exact procedure see the accompanying code.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Elimination}
@@ -1638,9 +1638,9 @@ computation of greatest common divisors:
   ∃y. ∃x. &\ldots \land ax = by + e \land \ldots \\
   \shortintertext{Find the lowest common divisor $ℓ$ of all the
         coefficients on $x$ and multiply every constraint by an
-        integer $n$ so that its coeffiecient on $x$ is $ℓ$}
+        integer $n$ so that its coefficient on $x$ is $ℓ$}
   ∃y. ∃x. &\ldots \land ℓx = b'y + e' \land \ldots \\
-  \shortintertext{Set all coeffients on $x$ to $1$ resorting to the
+  \shortintertext{Set all coefficients on $x$ to $1$ resorting to the
         equivalence $P(ℓx) \equiv P(x) \land ℓ ∣ x$.}
   ∃y. ∃x. &\ldots \land (x = b'y + e') \land (ℓ ∣ x) \land \ldots \\
   \shortintertext{Substitute $x$}
@@ -1820,7 +1820,7 @@ $P$ is false for every element — can be used to build a terminating
 search function that is guaranteed to find an element satisfying $P$.
 
 Below I present such a generalised search function, searching within a
-finate list for elements satisfying a decidable predicate.
+finite list for elements satisfying a decidable predicate.
 
 \ExecuteMetaData[Presburger.tex]{search}
 
@@ -2028,7 +2028,7 @@ of bounds and proofs on irrelevant constraints into proofs on their
 original list. ~\AgdaFunction{untangleⁱ}~ and
 ~\AgdaFunction{untangleᵖ}~ do the reverse. If the satisfiability
 predicate were to be defined on sets instead of on lists, these
-functions would become unncesessary.
+functions would become unnecessary.
 
 \todo{make p subscript}
 
@@ -2056,7 +2056,7 @@ accordingly and mark the handling of full-blown Presburger formulae
 for future work.
 
 The elimination procedure negates its output on every negated
-existential and ultimately relies on the previouly defined
+existential and ultimately relies on the previously defined
 ~\AgdaFunction{Ω}.
 
 \ExecuteMetaData[Adaptation.tex]{elimination}
@@ -2152,7 +2152,7 @@ applied to decide a formula unsatisfiable; partly verifying the
 theorem results in an incomplete procedure only capable of announcing
 the satisfiability of a quantifier-free formula. Verifying the whole
 theorem is considerably more complex than verifying the totality of
-the Omega Test, and I therefore discarted the more efficient Cooper's
+the Omega Test, and I therefore discarded the more efficient Cooper's
 Algorithm in favour of the simpler Omega Test.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2175,7 +2175,7 @@ for this report, I refer the reader to the corresponding sections
 code. The brevity of this chapter is a consequence of the central role
 that verification plays through the entire work.
 
-Due to time contraints, some propositions in \autoref{ch:presburger}
+Due to time constraints, some propositions in \autoref{ch:presburger}
 remain postulates and therefore circumvent all verification. However,
 these are all relatively simple lemmas or have been proven correct in
 \cite{Norrish2003}, and I am confident that with sufficient time I
@@ -2183,7 +2183,7 @@ could satisfy them. If these postulates are accepted as truthful, the
 rest of the developed software follows as verified.
 
 This report and the source code that comes with it are literate Agda
-files. They must be type-checked to automaticly have their syntax
+files. They must be type-checked to automatically have their syntax
 highlighted. This occurs as part of the build process every time this
 report is built.
 
