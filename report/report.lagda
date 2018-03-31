@@ -1,4 +1,4 @@
-\documentclass[12pt,a4paper,abstract=on,bibliography=openstyle]{scrreprt}
+\documentclass[12pt,a4paper,abstract=on,bibliography=openstyle,bibliography=totoc]{scrreprt}
 
 \usepackage[english]{babel}
 
@@ -61,10 +61,8 @@
 \usetikzlibrary{arrows,positioning}
 
 % Appendices
-\usepackage[toc,page]{appendix}
+\usepackage[header,title,titletoc]{appendix}
 \renewcommand{\appendixname}{Appendix}
-\renewcommand{\appendixtocname}{Appendix}
-\renewcommand{\appendixpagename}{Appendix}
 
 % Include parts of other files
 \usepackage{catchfilebetweentags}
@@ -2002,6 +2000,7 @@ functions would become unncesessary.
 \todo{Some kind of diagram?}
 
 \subsection{Results and usage}
+\label{sec:usage}
 
 To demonstrate an example usage of the presented elimination
 procedure, I slightly augment the syntax of the normalised input
@@ -2155,17 +2154,26 @@ report is built.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This project set out to research the construction of evidence
-providing problem solvers. I selected three problems to explore:
-equations on monoids, for which I provide a completely verified
-solver; equations on commutative rings, for which I gained insight
-from an already existing solution; and Presburger arithmetic, for
-which I build a solution for the first time implemented in Agda.
+providing problem solvers in Agda. I selected three problems to
+explore: equations on monoids, for which I provide a completely
+verified solver; equations on commutative rings, for which I gained
+insight from an already existing solution; and Presburger arithmetic,
+for which I build a solution for the first time implemented in Agda.
+
+The solutions in \autoref{ch:monoids} and \autoref{ch:rings} are final
+— they fully settle their respective problems. The solution for
+\autoref{ch:presburger} is not, hence I outline future work in
+\autoref{sec:future-work}. Nevertheless, in \autoref{sec:usage} I
+provide a limited interface through which the user can benefit from my
+work.
 
 There exists no reasonable doubt about the correctness of the solver
-for monoids or, obviating postulates, the solver for Presburger
-arithmetic.
+for monoids, the solver for commutative rings or, obviating
+postulates, the solver for Presburger arithmetic. The postulated
+claims are all reasonable to make and have, in many cases, already
+been proven by others.
 
-The research work involved in this work has been considerable —
+The research work involved in this project has been considerable —
 particularly during the problem selection phase. Although two
 deliverables were produced, this project was primarily a research
 project. A plethora of little discoveries had to be made and often,
@@ -2177,18 +2185,68 @@ relevance. They were gradually refined and made more precise.
 In the course of this project, and sometimes indirectly, I learned
 bits and pieces about abstract algebra, type theory, category theory
 and logic. I now better understand what it is to solve a problem
-constructively; how to structure proofs of correctness; how Agda's
+constructively; how proofs of correctness are structured; how Agda's
 pattern matching and unification works; and what dependent types have
-to offer. Finally, the experience of interpreting and formally
-reproducing a scientific paper has been invaluable.
+to bring to the table. Finally, the experience of interpreting and
+formally reproducing a scientific paper has been invaluable.
 
 \section{Organisation}
 
-I used my blog mostly to sketch new ideas and take notes. For
-organisation, I relied on my whiteboard — the source of all planning
-in my living.
+I used my blog mostly to sketch new ideas and take notes, not so much
+for planning. For that, I relied on my whiteboard — the source of all
+organisation in my living. Once I started writing this report, I used
+the \LaTeX package \texttt{todonotes} to keep track of tasks within
+the report itself. Tasks are highlighted as big orange notes on the
+sides of pages, and are impossible to miss during reviews. I used
+\texttt{grep} to list all these tasks.
 
-\todo{Fill in organisation}
+Bellow is a brief timeline for this project:
+
+\newpage
+\begin{multicols}{2}
+\begin{description}[style=unboxed,leftmargin=0cm]
+  \item [2017-10] \hfill \\
+    \vspace{-\topsep}
+    \begin{itemize}
+      \item understand what an evidence providing problem solver is
+      \item start absorbing the literature
+      \item start blog
+    \end{itemize}
+  \item [2017-11] \hfill \\
+    \vspace{-\topsep}
+    \begin{itemize}
+      \item solve equations on monoids
+      \item start reading about solving equations on commutative rings
+    \end{itemize}
+  \item [2017-12] \hfill \\
+    \vspace{-\topsep}
+    \begin{itemize}
+      \item examine the existing solution for commutative rings
+      \item start reading about solving Presburger arithmetic
+    \end{itemize}
+  \columnbreak
+  \item [2018-01] \hfill \\
+    \vspace{-\topsep}
+    \begin{itemize}
+      \item start working on solving Presburger arithmetic
+    \end{itemize}
+  \item [2018-02] \hfill \\
+    \vspace{-\topsep}
+    \begin{itemize}
+      \item decide what decision algorithm to use for Presburger arithmetic
+      \item write the background chapter
+      \item polish the monoid solver
+      \item write the chapter on solving monoids
+    \end{itemize}
+  \item [2018-03] \hfill \\
+    \vspace{-\topsep}
+    \begin{itemize}
+      \item solve Presburger arithmetic
+      \item write the chapter on solving Presburger arithmetic
+      \item write the chapter on solving commutative rings
+    \end{itemize}
+\end{description}
+\end{multicols}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Summary and conclusions}
@@ -2210,8 +2268,8 @@ formulae to be proven. Future work is outlined in
 \autoref{sec:future-work}.
 
 Perhaps most importantly, this project has been of invaluable
-educational value. I aspire to find further entertainment within the
-field.
+educational significance. I will likely aspire to find further
+entertainment within the field.
 
 \bibliographystyle{apalike}
 \bibliography{bibliography}

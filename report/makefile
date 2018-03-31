@@ -5,11 +5,14 @@ AFLAGS=-i. --latex --latex-dir=$(OUT)
 COMPILER=latexmk -pdf -use-make -e '$$pdflatex=q/xelatex %O %S/'
 
 RESOURCES=bibliography.bib agda.sty chi.png
-MODULES=report.lagda Presburger.lagda Monoids.lagda Adaptation.lagda CommutativeRings.lagda
+MODULES=Presburger.lagda Monoids.lagda Adaptation.lagda CommutativeRings.lagda
 MAIN=report
 POSTPROCESS=postprocess-latex.pl
 
-report.pdf: resources modules $(POSTPROCESS)
+all: modules report.pdf
+
+report.pdf: resources $(POSTPROCESS)
+	$(AGDA) $(AFLAGS) $(MAIN).lagda
 	cd $(OUT) && \
                  perl ../$(POSTPROCESS) $(MAIN).tex > $(MAIN).processed && \
                  mv $(MAIN).processed $(MAIN).tex && \
