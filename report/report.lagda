@@ -431,7 +431,7 @@ type-checker, you may omit it and use $∀$:
     -- All numbers are either even or not even
     prf₁ : ∀ {n} → Even n ⊎ (Even n → ⊥)
     prf₁ {zero} = inj₁ tt
-    prf₁ {suc zero} = inj₂ λ b → b
+    prf₁ {suc zero} = inj₂ (λ b → b)
     prf₁ {suc (suc n)} = prf₁ {n}
 \end{code}
 
@@ -697,11 +697,29 @@ special syntax exists for it:
 \subsection{The inspect idiom}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\todo{inspect}
+The so-called inspect idiom is occasionally used throughout the
+present work and deserves to be briefly mentioned. When you pattern
+match on some expression ~\AgdaBound{e}~, a case will be generated
+for every constructor ~\AgdaBound{c}~ capable of constructing such
+expression ~\AgdaBound{e}. On the RHS of each of these cases, it is
+clear that ~\AgdaBound{c}~\AgdaDatatype{≡}~\AgdaBound{e}. You might
+want to use this proof to pattern match on it, or to hand it over to
+other functions. However, the case split does not add it to context.
 
-% -- The inspect idiom can be used when you want to pattern match on
-% -- the result r of some expression e, and you also need to
-% -- "remember" that r ≡ e.
+In such cases, the inspect idiom can be used to ``remember'' the
+result of pattern matching.
+
+\AgdaHide{
+\begin{code}
+    open import Relation.Binary.PropositionalEquality using (inspect ; [_])
+    f : (n m : ℕ) → ⊤
+\end{code}}
+
+\begin{code}
+    f n m with pred n | inspect pred n
+    f n m | zero      | [ eq ] = {!!} -- eq : pred n ≡ zero
+    f n m | suc n'    | [ eq ] = {!!} -- eq : pred n ≡ suc n'
+\end{code}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Tools for reasoning}
@@ -926,6 +944,7 @@ like the following:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{A verified decision procedure}
+\label{sec:monoids-verified}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 A proposition containing variables and monoid operators can be
@@ -1083,8 +1102,6 @@ in the following example usage:
 
 \ExecuteMetaData[Monoids.tex]{eqn2-magic}
 
-\todo{forward reference general verification}
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Solving commutative rings}
 \label{ch:rings}
@@ -1127,6 +1144,7 @@ module _ where
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Problem description and specification}
+\label{sec:rings-verified}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \AgdaHide{
@@ -1464,8 +1482,10 @@ reader with some usage examples and outlines future work.
 This section is significantly based on the material found in
 \cite{Norrish2003} and \cite{Norrish2006}.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Normalisation}
 \label{sec:normalisation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Transforming input formulae into disjunctive normal forms can blow up
 the size of formulae exponentialy, as can clearly be seen whenever a
@@ -1561,7 +1581,9 @@ pushing conjunction and negation inward, normalising implication,
 evaluating operations on atoms and normalising relations between
 them. For the exact procedure see the accompainying code.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Elimination}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Once normalisation has taken place, the elimination process is ran
 recursively on quantifier-free sub-formulae. The heart of this is an
@@ -1687,7 +1709,10 @@ decides constraints with no variables, as shown in the next section.
 
 \ExecuteMetaData[Presburger.tex]{elimination}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Verification}
+\label{sec:presburger-verified}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This subsection verifies the soundness of the incomplete elimination
 procedure on quantifier-free formulae presented above. The exact
@@ -1999,8 +2024,10 @@ functions would become unncesessary.
 
 \todo{Some kind of diagram?}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Results and usage}
 \label{sec:usage}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 To demonstrate an example usage of the presented elimination
 procedure, I slightly augment the syntax of the normalised input
@@ -2033,8 +2060,10 @@ Following, a set of example usages. The terms inside of
 
 \ExecuteMetaData[Adaptation.tex]{examples}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Future work}
 \label{sec:future-work}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Although the present development is in my view satisfactory, there is
 ample room for further work. Below is a to-do list, ordered by
@@ -2127,14 +2156,12 @@ inhabiting its corresponding type is supplied. No amount of anecdotal
 evidence (testing) can attain the grade of verification attained by
 these machine-checked formal proofs.
 
-\todo{refer to the exact sections}
-
 For the exact details on the verification of the software developed
-for this report, I refer the reader to the corresponding sections in
-\autoref{ch:monoids}, \autoref{ch:rings} and \autoref{ch:presburger}
-and to the accompanying source code. The brevity of this chapter is a
-consequence of the central role that verification plays through the
-entire work.
+for this report, I refer the reader to the corresponding sections
+\autoref{sec:monoids-verified}, \autoref{sec:rings-verified} and
+\autoref{sec:presburger-verified} and to the accompanying source
+code. The brevity of this chapter is a consequence of the central role
+that verification plays through the entire work.
 
 Due to time contraints, some propositions in \autoref{ch:presburger}
 remain postulates and therefore circumvent all verification. However,
@@ -2200,7 +2227,7 @@ the report itself. Tasks are highlighted as big orange notes on the
 sides of pages, and are impossible to miss during reviews. I used
 \texttt{grep} to list all these tasks.
 
-Bellow is a brief timeline for this project:
+Bellow is a brief breakdown of this project's timeline:
 
 \newpage
 \begin{multicols}{2}
