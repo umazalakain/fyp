@@ -179,7 +179,7 @@ module _ {M : Set} (monoid : Monoid M) where
 
 %<*eval-commutes>
 \begin{code}
-  eval-commutes : ∀ {n} → (e : Expr n) → (ρ : Env n)
+  eval-commutes : ∀ {n} (e : Expr n) (ρ : Env n)
                 → ⟦ e ⟧ ρ ≡ ⟦ normalise e ⇓⟧ ρ
 
   eval-commutes ε'         ρ = refl

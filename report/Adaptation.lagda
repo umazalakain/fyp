@@ -174,7 +174,7 @@ ex₂ =  solve (¬' ∃' ∃' ∶ y [ >' ] num' (+ 0) ∧' (x -' y) [ ≥' ] x)
 ex₃ : Σ ℤ λ y → y < y
 ex₃ = {!solve (∃' ∶ (y [ <' ] y))!}
 
--- The negation of predicates proven false does typecheck
+-- The negation of predicates proven false do typecheck
 
 ¬ex₃ : ¬ Σ ℤ λ y → y < y
 ¬ex₃ = solve (¬' ∃' ∶ (y [ <' ] y))

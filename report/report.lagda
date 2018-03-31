@@ -177,11 +177,11 @@ it. This project was the perfect excuse for countless hours of
 education.
 
 Frustration, loneliness, self-doubt, dysphoria and my neighbour's
-barking dog have played the role of evil creatures of the darkness,
-and deserve to be acknowledged. Luckily for me, my friends, both local
+barking dog have played the role of creatures of the darkness, and
+deserve to be acknowledged too. Luckily for me, my friends, both local
 and remote, and my parents, on the other side of this planet, gave me
-enough resolution to shed some bright light on them. And my
-neighbour's dog, along with their owner, finally moved away.
+enough resolution to shed some bright light on them. My neighbour's
+dog, along with their owner, has finally moved away.
 
 Needless to say, this project, of little importance to anyone but me,
 is based on large amounts of previous science and countless hours of
@@ -221,8 +221,8 @@ repeated application of inference rules from inside the system.
 
 The four color theorem was the first notable problem to be solved with
 the help of a computer program. Since 1976, there remained doubts of
-the correctness of such program until in 2005 Georges Gonthier used a
-proof assistant to prove the theorem.
+the correctness of such program until Georges Gonthier used a proof
+assistant to prove the theorem in 2005.
 
 This project embarks upon constructing verified problem solvers.
 Three different problems are considered: the first two involve solving
@@ -233,9 +233,9 @@ lens.
 
 \autoref{ch:background} provides a brief introduction to the
 relationship between machine programs and formal proofs, illustrated
-with accompainying Agda programs. The chapter includes a short
+with accompainying Agda programs. It also includes a short
 introduction to programming in Agda, and establishes some of the base
-ground required for formal verification.
+ground required for the formal verification of programs.
 
 \autoref{ch:monoids} starts with a simple example: a verified solver
 for equations on monoids. \autoref{ch:rings} comments on a more
@@ -245,10 +245,10 @@ where the heart of a Presburger arithmetic solver written in Agda is
 presented. With some additional work, I am optimistic of its inclusion
 into Agda's standard library.
 
-Concluding, \autoref{ch:verification} reiterates the correctness that
-the precision of dependently typed specifications is able to express,
-and \autoref{ch:evaluation} and \autoref{ch:conclusion} contain
-meta-analyses of the project's development process.
+Concluding, \autoref{ch:verification} reiterates the on correctness
+that the precision of dependently typed specifications are able to
+guarantee, and \autoref{ch:evaluation} and \autoref{ch:conclusion}
+contain meta-analyses of the project's development process.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Background}
@@ -290,11 +290,11 @@ module _ where
 }
 
 \begin{code}
-    -- Truth: a type with a single constructor trivial to satisfy
+    -- Truth: a set with a single constructor trivial to satisfy
     record ⊤ : Set where
         constructor tt
 
-    -- Falsehood: an uninhabited type with no constructors
+    -- Falsehood: an uninhabited (empty) set
     data ⊥ : Set where
 
     -- Disjunction, with two constructors
@@ -303,7 +303,7 @@ module _ where
       inj₂ : B → A ⊎ B
 
     module Laws {A : Set} where
-      -- ⊥ is an initial object: from it, anything can be produced
+      -- Principle of explosion
       -- There is no constructor for ⊥, pattern matching on the
       -- argument renders the case absurd
       explosion : ⊥ → A
@@ -321,8 +321,7 @@ module _ where
       dne f = {!!} 
 
       -- No law of excluded middle in constructive mathematics
-      -- To be or not to be demands a choice
-      -- Decidability is not universal
+      -- (Decidability is not universal)
       lem : A ⊎ (A → ⊥)
       lem = {!!} 
 \end{code}
@@ -340,7 +339,7 @@ depend on a value — model predicate logics that contain quantifiers.
       zero :     ℕ
       suc  : ℕ → ℕ
 
-    -- A predicate, or a proposition that depends on a value
+    -- A predicate, or a type that depends on a value
     Even : ℕ → Set
     Even zero = ⊤
     Even (suc zero) = ⊥
@@ -349,12 +348,12 @@ depend on a value — model predicate logics that contain quantifiers.
     -- The type of t depends on the value n
     half : (n : ℕ) → (t : Even n) → ℕ
     half zero tt = zero
-    half (suc zero) ()  -- No t ∶ Even (suc zero)
+    half (suc zero) ()  -- Even (suc zero) is empty
     half (suc (suc n)) t = suc (half n t)
 \end{code}
 
-Proofs should not suffer from the halting problem — they should be
-rejected if they don't clearly show that they eventually reach
+Proofs should not suffer from the halting problem — they must be
+rejected if they do not clearly show that they will eventually reach
 termination. If programs are considered to be proofs, programs for
 which termination cannot be verified must be rejected.
 
@@ -388,7 +387,8 @@ excellent introduction to Agda; technical documentation can be found
 at \url{https://agda.readthedocs.io}. This section briefly covers the
 basics of what theorem proving in Agda looks like and, in the spirit
 of a tutorial, ocasionally uses the second person to avoid verbose
-references to some third person programmer.
+references to some third person programmer or the excessive use of the
+passive voice.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{The experience of programming in Agda}
@@ -403,7 +403,7 @@ then:
 \begin{itemize}[noitemsep]
   \item examine the type of that goal;
   \item examine the types of the values in context;
-  \item examine the type of any arbitrary expression;
+  \item examine the type of any other arbitrary expression;
   \item pattern match on a type;
   \item supply a value, possibly containing further holes;
   \item attempt to refine the goal; or
@@ -411,10 +411,10 @@ then:
 \end{itemize}
 
 This interactive way of programming is often described as ``hole
-driven''. Type-checking definitions before they writing them down
-promotes the construction of well-formed expressions — instead of the
-construction and subsequent debugging of malformed ones. Allowing holes
-in those definitions makes the development model realistic.
+driven''. Type-checking definitions before writing them down promotes
+the construction of well-formed expressions — instead of the
+construction and subsequent debugging of malformed ones. Allowing
+holes in those definitions makes the development model realistic.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Some peculiarities}
@@ -428,16 +428,16 @@ against. If the type of an argument can be inferred by the
 type-checker, you may omit it and use $∀$:
 
 \begin{code}
-    -- All numbers are either even or not even
+    -- All numbers are even or not even
     prf₁ : ∀ {n} → Even n ⊎ (Even n → ⊥)
     prf₁ {zero} = inj₁ tt
     prf₁ {suc zero} = inj₂ (λ b → b)
     prf₁ {suc (suc n)} = prf₁ {n}
 \end{code}
 
-Multiple arguments sharing the same type can be grouped by giving
-using multiple names. With the exception of whitespace and a few
-special symbols, names in Agda may contain arbitrary unicode
+Multiple arguments sharing the same type can be grouped by using
+multiple names for them. With the exception of whitespace and a few
+other special symbols, names in Agda may contain arbitrary unicode
 symbols. In addition, names can use underscores as placeholders for
 their arguments.
 
@@ -448,7 +448,7 @@ their arguments.
     ∣ suc x - suc y ∣ = ∣ x - y ∣
 \end{code}
 
-An anonymous function can be provided where a function is
+An anonymous function can be provided wherever a function is
 expected. You can pattern match against its arguments by wrapping the
 arguments and body in curly brances.
 
@@ -505,7 +505,7 @@ depends on the value of the other:
 
 Datatypes can be indexed. Each of these indices is said to introduce a
 family of types. Constructors do not need to keep within the same
-index, and may in fact \textit{jump} from one to another. Parameters
+index, and may in fact \textit{jump} between one and other. Parameters
 are forced on datatypes, but indices are a choice.
 
 \begin{code}
@@ -524,7 +524,7 @@ constructor capable of constructing that type:
     map f [] = []
     map f (x ∷ xs) = f x ∷ map f xs
 
-    -- Only matches _∷_ matches Vec A (suc n)
+    -- Only _∷_ matches Vec A (suc n)
     head : {A : Set}{n : ℕ} → Vec A (suc n) → A
     head (x ∷ xs) = x
 \end{code}
@@ -559,10 +559,10 @@ dependent types grant, makes handling erroneous input unecessary.
 
 \begin{code}
     -- The successor of an even number cannot be even
-    prf₂ : ∀ n → {p : Even n} → Even (suc n) → ⊥
-    prf₂ zero {p} ()
-    prf₂ (suc zero) {()} sp
-    prf₂ (suc (suc n)) {p} sp = prf₂ n {p} sp 
+    prf₂ : ∀ {n} → Even n → Even (suc n) → ⊥
+    prf₂ {zero} p ()
+    prf₂ {suc zero} () sp
+    prf₂ {suc (suc n)} p sp = prf₂ {n} p sp 
 \end{code}
 
 If pattern matching against a type uniquely implies the constructor of
@@ -606,8 +606,8 @@ originally presented in \cite{McBride2004}:
 As a result of pattern matching
 on \AgdaFunction{compare}~\AgdaBound{m}~\AgdaBound{n} you learn about
 \AgdaBound{m} and \AgdaBound{n}. This is the key difference between
-with abstraction and ordinary case splitting on the right hand
-side. \cite{Oury2008} contains other interesting examples of views.
+with abstraction and ordinary case splitting on the
+RHS. \cite{Oury2008} contains other interesting examples of views.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Intensional equality}
@@ -638,7 +638,7 @@ construction are considered different.
 In ~\AgdaBound{x}~\AgdaRef{≡}~\AgdaBound{y}, ~\AgdaBound{x}~ is the
 parameter and ~\AgdaBound{y}~ the index. The single constructor
 ~\AgdaRef{refl}~ constructs types where the parameter ~\AgdaBound{x}~
-is provided as the index. This means that for
+is provided as the index too. This means that for
 ~\AgdaBound{x}~\AgdaRef{≡}~\AgdaBound{y}~ to be well-formed, Agda has
 to be able to unify ~\AgdaBound{x}~ and ~\AgdaBound{y}: once both
 terms are normalised into a tree of constructors, they must be
@@ -650,7 +650,7 @@ syntactically equal.
     prf₃ = refl
 \end{code}
 
-You can now start writing functions that compute proofs that involve
+You can now start writing functions that compute proofs involving
 equality:
 
 \begin{code}
@@ -665,11 +665,11 @@ However, not all equations immediately unify. Consider the following:
     prf₅ : ∀ n → (n + zero) ≡ n
 \end{code}
 
-\AgdaBound{n} \AgdaFunction{+} \AgdaRef{zero} cannot normalise: as a
-consequence of the definition of \AgdaRef{\_+\_}, it needs to be known
-whether \AgdaBound{n} was constructed with \AgdaRef{zero} or
-\AgdaRef{suc}. The computation can be advanced by pattern matching
-on \AgdaBound{n}. While the base case is now trivial
+\AgdaBound{n}~\AgdaFunction{+}~\AgdaRef{zero} cannot be normalised: as
+a consequence of the definition of \AgdaRef{\_+\_}, it needs to be
+known whether \AgdaBound{n} was constructed with \AgdaRef{zero} or
+\AgdaRef{suc}. The computation can be advanced by pattern matching on
+\AgdaBound{n}. While the base case is now trivial
 (\AgdaRef{zero}~\AgdaFunction{+}~\AgdaRef{zero} unifies with
 \AgdaRef{zero}), the problem persists in the inductive case, where
 \AgdaRef{suc}~\AgdaSymbol{(}\AgdaBound{n}~\AgdaFunction{+}~\AgdaRef{zero}\AgdaSymbol{)}
@@ -703,11 +703,12 @@ match on some expression ~\AgdaBound{e}~, a case will be generated
 for every constructor ~\AgdaBound{c}~ capable of constructing such
 expression ~\AgdaBound{e}. On the RHS of each of these cases, it is
 clear that ~\AgdaBound{c}~\AgdaDatatype{≡}~\AgdaBound{e}. You might
-want to use this proof to pattern match on it, or to hand it over to
-other functions. However, the case split does not add it to context.
+want to pattern match on this proof or hand it over to other
+functions. However, the case split does not add such a proof to
+context.
 
 In such cases, the inspect idiom can be used to ``remember'' the
-result of pattern matching.
+result of pattern matching:
 
 \AgdaHide{
 \begin{code}
@@ -729,8 +730,8 @@ To aid reasoning, tools that enable whiteboard-style deductions have
 been developed. These functions exploit the transitivity of the binary
 relation they are defined for — may it be equality or other preorder
 relations like $≤$ or $⇒$. This style of reasoning, together with the
-congruent property of functions, is used profusely throught this
-report.
+congruent property of functions, is used profusely throughtout this
+work.
 
 \AgdaHide{
 \begin{code}
@@ -769,8 +770,8 @@ type — this process is often called \textit{metaification} or
 introduce this idea.
 
 This is in contrast with proof assistants like Coq, which often supply
-externally defined ``tactics''; in Agda, automated theorem provers
-are defined within the system.
+externally defined ``tactics'': in Agda, automated theorem provers
+must be defined within the system.
 
 \href{https://agda.readthedocs.io/en/latest/language/reflection.html}{
 The support for reflection offered by Agda} gives the programmer the
@@ -783,7 +784,7 @@ checking and unification.
 Agda's reflection mechanism is most commonly used to satisfy proof
 goals automatically. For this common use case, Agda provides
 ``macros'': functions that take their target quoted goal as an
-argument and hand back some computation solving it.
+argument and hand back some computation that solves it.
 
 The next example from Agda's documentation shows how the macro
 ~\AgdaFunction{by-magic}~ uses ~\AgdaFunction{magic}~ to construct
@@ -828,7 +829,7 @@ of builtin data types and functions} found under the
 by a set of directives (or \textit{pragmas}), so that Agda can, for
 instance, translate numerical literals into terms of type
 ~\AgdaDatatype{ℕ}. \AgdaModule{Agda.Builtin}~does not provide
-any proofs of the properties related to its data types.
+any proofs of the properties related to these data types.
 
 The development of
 \href{https://github.com/agda/Agda-Stdlib}{Agda-Stdlib} happens in
@@ -884,7 +885,7 @@ Unfortunately, Agda's standard library does not quarentine unsafe
 definitions, so any module that depends on it is considered unsafe too
 — albeit not using any of its unsafe features. There is
 \href{https://github.com/agda/agda-stdlib/issues/143}{work in
-progress} to address that.
+progress} to address this.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Problem solvers and their domains}
@@ -951,12 +952,12 @@ A proposition containing variables and monoid operators can be
 normalised into a canonical form. The characteristics that make two
 propositions definitionally distinct — when they are equal modulo the
 monoid axioms — can be eliminated. It is crucial that this process —
-normalisation — guarantees the preservation of meaning. After
-normalisation, two results can be compared: if they are equal, so must
-the original expressions be. This is the sketch of the decision
-procedure.
+normalisation into a canonical form — guarantees the preservation of
+meaning. After normalisation, two results can be compared: if they are
+equal, so must the original expressions be. This is the sketch of the
+decision procedure.
 
-I use an abstract syntax tree to represent equations and finite
+I use an abstract syntax tree to represent equations, and finite
 indices to refer to variables — the type
 \AgdaDatatype{Fin}~\AgdaBound{n} contains \AgdaBound{n} distinct
 values. Moreover, I use a type parameter on ~\AgdaDatatype{Eqn}~ to
@@ -982,10 +983,10 @@ elements matters.
 Lists are a suitable data structure for representing flat elements —
 indices here — that can appear multiple times and whose order
 carries meaning. In the case of commutative monoids, where order does
-not carry meaning, a matrix of indices and the number of occurrences
-of each could be represented as a vector of integers — where the
-position in the vector represents the index and the content represents
-the number of occurrences.
+not carry any meaning, a matrix of indices and the number of
+occurrences of each could be represented as a vector of integers —
+where the position in the vector represents the index and the content
+represents the number of occurrences.
 
 \ExecuteMetaData[Monoids.tex]{normal-form}
 
@@ -999,8 +1000,9 @@ inside of the module having \AgdaBound{M} and \AgdaBound{monoid}
 defined. When called from the outside of this module, these
 definitions have
 \AgdaSymbol{\{}\AgdaBound{M}~\AgdaSymbol{:}~\AgdaPrimitiveType{Set}\AgdaSymbol{\}}~\AgdaSymbol{(}\AgdaBound{monoid}~\AgdaSymbol{:}~\AgdaRecord{Monoid}~\AgdaBound{M}\AgdaSymbol{)}
-prepended to their type. I then make the insides of \AgdaBound{monoid}
-directly accessible by opening it as if it were a module.
+prepended to their type. I also make the definitions in
+\AgdaBound{monoid} directly accessible by opening it as if it were a
+module.
 
 \begin{AgdaAlign}
 
@@ -1009,9 +1011,7 @@ directly accessible by opening it as if it were a module.
 To evaluate an expression, a concrete assignment for the variables
 contained within is needed. This is often called an environment. An
 environment is a lookup table where each of the indices has an
-associated value in the carrier \AgdaBound{M}.  The size of
-\AgdaDatatype{Fin}~\AgdaBound{n} is equal to the size of
-\AgdaDatatype{Vec}~\AgdaBound{M}~\AgdaBound{n}.
+associated value in the carrier \AgdaBound{M}.
 
 \ExecuteMetaData[Monoids.tex]{env}
 
@@ -1023,11 +1023,11 @@ corresponding value in the environment.
 
 \ExecuteMetaData[Monoids.tex]{evaluation}
 
-Bellow, the formal specification of soundness of the decision
-procedure. If two monoids are decided equal, given any environment
-they must evaluate to an equal value. However, no no claims can be
-made if they are not decided equal: the carrier may have properties
-other than the monoidal. (Take, for instance, the natural numbers with
+Bellow, the formal specification of soundness for the decision
+procedure. If two monoids are decided equal, they must evaluate to an
+equal value given any environment.  However, no no claims can be made
+if they are not decided equal: the carrier may have properties other
+than the monoidal. (Take, for instance, the natural numbers with
 addition, where $a + b$ is equivalent to $b + a$.)
 
 \ExecuteMetaData[Monoids.tex]{solution}
@@ -1036,7 +1036,7 @@ The decidable equality of normal forms (here \AgdaFunction{\_≟\_}) is
 defined as the decidable equality of lists that relies on the
 decidable equality of finite indices.
 
-\AgdaRef{Solution}~ is a specification defined for a given
+\AgdaFunction{Solution}~ is a specification defined for a given
 equation. Such specification must be met for all equations:
 
 \ExecuteMetaData[Monoids.tex]{solve-type}
@@ -1066,6 +1066,8 @@ commute:
 \caption{\AgdaSymbol{∀}~\AgdaBound{e}~\AgdaBound{ρ}~\AgdaSymbol{→}~\AgdaFunction{eval-commutes}~\AgdaBound{e}~\AgdaBound{ρ}}
 \end{figure}
 
+\todo{Functions names are misleading, better commentary}
+
 This proof is inductively defined and depends on another proof showing
 that normalisation preserves a monoid's structure.
 
@@ -1087,8 +1089,9 @@ generated now:
 \ExecuteMetaData[Monoids.tex]{eqn1-auto}
 
 However, the user still needs to manually build the expressions
-that represent the target theorem. This includes handling the indices
-referring to variables appropriatly. As shown by \cite{Bove2009} at
+that represent the target theorem. This includes appropriately
+handling the indices that refer to variables. As shown by
+\cite{Bove2009} at
 \url{http://www.cse.chalmers.se/~ulfn/code/tphols09/}, index
 referrences can be set up automatically, partially alleviating this
 problem and resulting in the following usage:
@@ -1097,8 +1100,8 @@ problem and resulting in the following usage:
 
 Agda's support for reflection can be used to build a macro that
 inspects the type of the goal and translates it into a data structure
-that the proof generating procedure can understand. This would result
-in the following example usage:
+that the proof generating procedure can inspect. This would result in
+the following example usage:
 
 \ExecuteMetaData[Monoids.tex]{eqn2-magic}
 
@@ -1110,7 +1113,7 @@ in the following example usage:
 A commutative ring is a carrier set ~\AgdaBound{R}~ together with two
 binary operations generalising multiplication and addition. Under
 multiplication, ~\AgdaBound{R}~ is a commutative monoid; under
-addition, an abelian group — providing an extra inverse law; and
+addition, an abelian group — providing an extra inverse law; 
 multiplication distributes over addition.
 
 \AgdaHide{
@@ -1197,10 +1200,10 @@ generate these proofs automatically for any commutative ring.
 \section{A verified decision procedure}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Soon after I started to develop a solver in Agda, I found that Agda's
-standard library already included one, and that it was far more
-general than anything I could have written. I decided to comment on
-their solution instead.
+Soon after I started to develop a solver in Agda, I found out that
+Agda's standard library already includes one, and that it is far more
+general than anything I could have written. Consequently, I decided to
+comment on their solution instead.
 
 An automated solver for equations on commutative rings was provided in
 \cite{Boutin1997} as an example use of reflection in automated theorem
@@ -1237,10 +1240,10 @@ Polynomials with a single variable can be represented as
 \ExecuteMetaData[CommutativeRings.tex]{hnf}
 
 To make the solution multivariate, coefficients are replaced by
-polynomials containing additional variables. Integer coefficients form
-a commutative ring too, and thus this results in an opportunity to
-handle both integer cofficients and coefficients containing additional
-variables uniformly, as commutative rings.
+polynomials containing the additional variables. Integer coefficients
+form a commutative ring too, and thus this results in an opportunity
+to handle both integer cofficients and coefficients containing
+additional variables uniformly, as commutative rings.
 
 \begin{align*}
 &y^2 x^2 + y ^ 2 + y x + 2 x + 2 \\
@@ -1257,9 +1260,11 @@ ring in a law-respecting manner and has decidable equality suffices.
 \ExecuteMetaData[CommutativeRings.tex]{requirements}
 
 The module handles equality generically, as a binary relation on the
-carrier set. This and the need to evaluate constant coefficients
+carrier set. This and the need to evaluate constant coefficients,
 results in an inductive definition of equality of normal forms being
 necessary.
+
+\todo{Maybe show the code?}
 
 Evaluation within an environment of both polynomial expressions and
 normal forms is then defined. Similar to monoids, environments are
@@ -1333,8 +1338,8 @@ adjustments.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 In 1929, Mojżesz Presburger presented and proved decidable a predicate
-logic on natural numbers (expandable to integers and real numbers)
-with addition as its only operation. The original paper
+logic on natural numbers (expandable to integers, rational numbers or
+real numbers) with addition as its only operation. The original paper
 \cite{Presburger1929} is in Polish and uses outdated notation;
 \cite{Stansifer1984} contains an English translation and comments
 clarifying the original. Several procedures capable of deciding
@@ -1396,7 +1401,7 @@ following syntax:
 
 I use de Bruijn indices \cite{Bruijn1972} to refer to bindings by
 their proximity: a variable with index \AgdaNumber{0} refers to the
-variable introduced by the most immediate binding to the left; index
+variable introduced by the most immediate binding to its left; index
 \AgdaBound{n} refers to the variable introduced \AgdaBound{n} bindings
 away. Using de Bruijn indices instead of variable names has two main
 advantages:
@@ -1422,9 +1427,9 @@ arguments.
 
 There exist numerous procedures capable of deciding Presburger
 arithmetic. They are primarily distinguished by the domain of their
-formulae and their requirements for normalisation. The satisfiability
-of Presburger formulae in any domain gets carried onto superset
-domains; the unsatisfiability onto subset domains, as noted in
+formulae and their normalisation requirements. The satisfiability of
+Presburger formulae in any domain gets carried onto superset domains;
+the unsatisfiability gets carried onto subset domains, as noted in
 \cite{Janicic1997a}.
 
 \begin{figure}[h]
@@ -1452,8 +1457,9 @@ numbers — irrational numbers are not straightforward to handle in
 constructive mathematics. The most well-documented procedures are on
 integers, and the usage of integer Presburger arithmetic is common
 enough for an automated solver to be of great value. Given a solver
-for problems on integers, one just needs add the condition $0 \leq x$
-to every existential quantifier to solve problems on natural numbers.
+for problems on integers, one just needs add the extra condition $0
+\leq x$ to every existential quantifier to solve problems on natural
+numbers.
 
 I chose the Omega Test and Cooper's Algorithm as the two integer
 decision procedures to explore. Michael Norrish depicts in
@@ -1520,13 +1526,13 @@ double negation needs to be eliminated:
 
 Operations on ~\AgdaDatatype{Atom}s are evaluated into linear
 transformations of the form $ax + by + \ldots + cz + k$. As a
-consequence of limiting the domain to the integers, all constraints
-are translated into a canonical form $0 \leq ax + by + \ldots + cz +
+consequence of limiting the domain to integers, all constraints can be
+translated into the canonical form $0 \leq ax + by + \ldots + cz +
 k$. I use a single type to represent them both, and a parameter on
 that type to keep record of the number of variables within. A vector
-of that same length contains the coefficients $ax + by + \ldots + cz$,
+of the same length contains the coefficients $ax + by + \ldots + cz$,
 where each coefficient's index is a de Bruijn index indicating the
-distance in bindings to where that variable was introduced. An
+distance in bindings to where the variable was introduced. An
 additional constant is used to represent $k$.
 
 \ExecuteMetaData[Presburger.tex]{linear}
@@ -1661,10 +1667,10 @@ decreasing in steps of variable size.
 As for verification, splinters introduce considerable complexity too.
 Pugh's theorem is of form $\text{LHS} \equiv D_1 \lor D_2$. That
 shapes the proof, which first shows the soundness of both disjuncts by
-proving that $D_1 \implies LHS$ and $D_2 \implies \text{LHS}$ and then
-its completeness by proving that $\text{LHS} \land \neg D_1 \implies
-D_2$. From these three proof obligations, the last one is the hardest
-to satisfy.
+proving that $D_1 \implies \text{LHS}$ and $D_2 \implies \text{LHS}$
+and then its completeness by proving that $\text{LHS} \land \neg D_1
+\implies D_2$. From these three proof obligations, the last one is the
+hardest to satisfy.
 
 After some initial exploratory programming, given the complexity
 they entail, both in terms of implementation and verification, and
@@ -1823,14 +1829,14 @@ of constraints of form $a \leq \alpha x \land \beta x \leq b$, with
 $\alpha$ and $\beta$ positive and non-zero. For every constraint, $x$
 must be bound between $\left\lfloor\frac{a}{α}\right\rfloor$ and
 $\left\lceil\frac{b}{β}\right\rceil$; the conjunction of all
-constraints must be bound between such highest lower bound and such
+constraints must be bound between the highest lower bound and the
 lowest upper bound.
 
 \ExecuteMetaData[Presburger.tex]{search-space}
 
-The proof outlined by Norrish is be used as a guarantee for the
+The proof outlined by Norrish could be used as a guarantee of the
 success of the search. However, while Norrish's proof by contradiction
-is on individual constraint pairs\ldots
+is on individual pairs of constraints\ldots
 
 \ExecuteMetaData[Presburger.tex]{norrish-type}
 
@@ -1844,16 +1850,18 @@ $∀x.¬∀lu.⊨ₓlu$) is equivalent to the form $∃lu.¬∃x.⊨ₓlu$ — w
 $l$ is paired with every $u$. This later form is suitable to be fed
 into Norrish's proof by contradiction, which for any $lu$ expects
 $¬∃x.⊨ₓlu$. The difference is that Norrish's proof is used only
-once. Note that the unsolved postulate is the same justification
-required by Norrish's initial induction. The proof is a one-way
+once. Note that the unsolved postulate is the same justification that
+Norrish offers for his initial induction. The proof is a one-way
 implication, but bi-implication can be shown.
+
+\todo{Better function names}
 
 \ExecuteMetaData[Presburger.tex]{contradiction-adaptation}
 
 Finally, the $lu$ pair for which $¬∃x.⊨ₓlu$ must be found,
-Norrish's proof executed on it and
-~\AgdaBound{⊨Ωlu}~\AgdaSymbol{→}~\AgdaDatatype{⊥}~ derived and applied
-to ~\AgdaBound{⊨Ωlu}.
+Norrish's proof must be executed on it and
+~\AgdaBound{⊨lu↓}~\AgdaSymbol{→}~\AgdaDatatype{⊥}~ derived and applied
+to ~\AgdaBound{⊨lu↓}.
 
 \ExecuteMetaData[Presburger.tex]{contradiction-search}
 
@@ -1862,15 +1870,15 @@ Put together, this satisfies the proof by contradiction:
 \ExecuteMetaData[Presburger.tex]{by-contradiction-type}
 \ExecuteMetaData[Presburger.tex]{by-contradiction}
 
-The proof by contradiction can then be used to guarantee the success
-of the search for $x$: 
+The proof by contradiction is then be used to guarantee the success of
+the search for $x$:
 
 \ExecuteMetaData[Presburger.tex]{find-x}
 
 \subsubsection{Norrish's proof}
 
 Below, I briefly reproduce Norrish's proof of soundness for the dark
-shadow. For every pair of lower bound and upper bound constraints, it
+shadow. For any pair of lower bound and upper bound constraints, it
 has to be shown that:
 
 \begin{equation*}
@@ -1908,9 +1916,9 @@ sub-goals and how those are later put back together. I also give an
 example of a finished sub-goal proof to show the reader what it looks
 like.
 
-I use a parametrised module for every proof that involves a particular
+I use a parametrised module for all proofs that involves a particular
 lower bound and upper bound pair. I \textit{open} the constituents of
-the supplied pair so that I can refer to them more comfortably from
+the supplied pairs so that I can refer to them more comfortably from
 within types.
 
 \begin{AgdaAlign}
@@ -1949,7 +1957,7 @@ too. Where all $\alpha_i$ or all $\beta_i$ are $1$:
 
 That is, given arguments $\bigwedge_{i,j} (\alpha_i - 1)(\beta_j - 1)
 \leq \alpha_i b_j - a \beta_j \implies \bot$ and $∃x. L(x) \land U(x)$,
-the latter must be transformed into an argument suitable for the
+the latter must be transformed into an argument suitable to the
 former. Using induction, the proof obligation can be reduced to a
 predicate on lower bound and upper bound pairs.
 
@@ -1958,11 +1966,11 @@ predicate on lower bound and upper bound pairs.
 \implies (\alpha - 1)(\beta - 1) \leq \alpha b - a \beta
 \end{equation*}
 
-The conjuncts on the LHS of the implication are appropriately
-multiplied, then $a \beta \leq \alpha b$ by transitivity of
-$\leq$. The proof concludes as $(\alpha - 1)(\beta - 1)$ reduces to
-$0$ when either $\alpha$ or $\beta$ are $1$. Below, such a proof
-written in Agda.
+After the conjuncts on the LHS of the implication are appropriately
+multiplied, $a \beta \leq \alpha b$ by transitivity of $\leq$. The
+proof concludes as $(\alpha - 1)(\beta - 1)$ reduces to $0$ when
+either $\alpha$ or $\beta$ are $1$. Below, such a proof written in
+Agda.
 
 \ExecuteMetaData[Presburger.tex]{real-shadow}
 
@@ -1998,7 +2006,7 @@ environment, and returns a proof (\AgdaBound{⊨as}) that by doing so,
 satisfiability is preserved.
 
 Clearly, irrelevant constraints — those where the variable to
-eliminate has coefficient 0 — do not have their meaning altered after
+eliminate has coefficient 0 — do not have their meaning altered by
 elimination. Similarly, the meaning of no constraint changes after an
 irrelevant variable is prepended to it. Given that the Omega Test
 requires constraints to be split into lower bounds and upper bounds, I
@@ -2021,6 +2029,8 @@ original list. ~\AgdaFunction{untangleⁱ}~ and
 ~\AgdaFunction{untangleᵖ}~ do the reverse. If the satisfiability
 predicate were to be defined on sets instead of on lists, these
 functions would become unncesessary.
+
+\todo{make p subscript}
 
 \todo{Some kind of diagram?}
 
@@ -2045,8 +2055,9 @@ soundness. I restrict the syntax of unnormalised expressions
 accordingly and mark the handling of full-blown Presburger formulae
 for future work.
 
-The elimination procedure negates its output and ultimately relies on
-the previouly defined ~\AgdaFunction{Ω}.
+The elimination procedure negates its output on every negated
+existential and ultimately relies on the previouly defined
+~\AgdaFunction{Ω}.
 
 \ExecuteMetaData[Adaptation.tex]{elimination}
 
@@ -2079,16 +2090,16 @@ priority, of what my work after submission is likely to be.
   reasonable doubt.
 
   \item [Evaluation of normal forms] Evaluation is currently defined
-  for a subset of input formulae.  Evaluating full-blown formulae
-  requires managing more complex forms of environments. Still, these
-  more complex environments would only need to be handled by the
-  ``outer'' layer of the soundness proof; the implementation of
-  Norrish's proof would not need to be changed.
+  for a subset of input formulae. Evaluating full-blown formulae
+  requires a more complex proof of the correctness of normalisation
+  and a more complex evaluation procedure. Still, this complexity
+  would not impregnate the ``inner'' layer of the proof of soundness,
+  and the implementation of Norrish's proof would remain unchanged.
 
   \item [Verification of the normalisation process] Because I had not
   enough time to evaluate normal forms, I did not attempt to verify
-  normalisation correct either. Although fairly labourious, I do not
-  expect this to be too challenging.
+  normalisation correct either. This is likely to be mildly
+  labourious.
 
   \item [Quoting] Building input formulae automatically out of users'
   goals is a major usability improvement.
@@ -2122,7 +2133,7 @@ into DNF or CNF, but negation needs to be pushed inside. Once a
 quantifier-free expression is selected for variable elimination, the
 lowest common multiplier $ℓ$ of all coefficients on $x$ needs to be
 computed, all constraints multiplied appropriately so that their
-coefficients on $x$ are $\pm ℓ$ and finally, all coefficients on $x$
+coefficients on $x$ is $\pm ℓ$ and finally, all coefficients on $x$
 divided by $ℓ$ in accordance to the following equivalence:
 
 \begin{equation*}
@@ -2135,14 +2146,14 @@ need to eliminate them.
 
 As with the Omega Test, elimination occurs into an equivalent
 disjunction, which leaves three goals to be verified — $D_1 \implies
-LHS$, $D_2 \implies \text{LHS}$ and $\text{LHS} \land \neg D_2
+\text{LHS}$, $D_2 \implies \text{LHS}$ and $\text{LHS} \land \neg D_2
 \implies D_1$. However, unlike with the Omega Test, no shortcut can be
-applied to decide a formula unsatisfiable, partly verifying the
+applied to decide a formula unsatisfiable; partly verifying the
 theorem results in an incomplete procedure only capable of announcing
-the satisfiability of a formula. Verifying the whole theorem is
-considerably more complex than verifying the totality of the Omega
-Test, and I therefore discarted the more efficient Cooper's Algorithm
-in favour of the simpler Omega Test.
+the satisfiability of a quantifier-free formula. Verifying the whole
+theorem is considerably more complex than verifying the totality of
+the Omega Test, and I therefore discarted the more efficient Cooper's
+Algorithm in favour of the simpler Omega Test.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Verification and validation}
@@ -2153,8 +2164,9 @@ Dependent types facilitate definitions up to a great level of
 precision. These types are used to accurately model specifications. A
 formal specification is then considered to have been met if a term
 inhabiting its corresponding type is supplied. No amount of anecdotal
-evidence (testing) can attain the grade of verification attained by
-these machine-checked formal proofs.
+evidence (testing) can obtain the grade of verification attained by
+these machine-checked formal proofs. These machine-proofs are much
+stronger evidence than human pair reviews. \todo{Link intro}
 
 For the exact details on the verification of the software developed
 for this report, I refer the reader to the corresponding sections
@@ -2170,9 +2182,9 @@ these are all relatively simple lemmas or have been proven correct in
 could satisfy them. If these postulates are accepted as truthful, the
 rest of the developed software follows as verified.
 
-This report and the accompanying source code are literate Agda
-files. They must be type-checked to automaticly highlight their
-syntax. This occurs as part of the build process every time this
+This report and the source code that comes with it are literate Agda
+files. They must be type-checked to automaticly have their syntax
+highlighted. This occurs as part of the build process every time this
 report is built.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2183,7 +2195,7 @@ report is built.
 This project set out to research the construction of evidence
 providing problem solvers in Agda. I selected three problems to
 explore: equations on monoids, for which I provide a completely
-verified solver; equations on commutative rings, for which I gained
+verified solver; equations on commutative rings, for which I gain
 insight from an already existing solution; and Presburger arithmetic,
 for which I build a solution for the first time implemented in Agda.
 
@@ -2191,8 +2203,8 @@ The solutions in \autoref{ch:monoids} and \autoref{ch:rings} are final
 — they fully settle their respective problems. The solution for
 \autoref{ch:presburger} is not, hence I outline future work in
 \autoref{sec:future-work}. Nevertheless, in \autoref{sec:usage} I
-provide a limited interface through which the user can benefit from my
-work.
+provide a limited interface through which the user can already benefit
+from my work.
 
 There exists no reasonable doubt about the correctness of the solver
 for monoids, the solver for commutative rings or, obviating
@@ -2204,8 +2216,8 @@ The research work involved in this project has been considerable —
 particularly during the problem selection phase. Although two
 deliverables were produced, this project was primarily a research
 project. A plethora of little discoveries had to be made and often,
-progress was slow and irregular. As my supervisor well put it, my
-learning process was by implosion: I started with a multitude of
+progress was rather slow and irregular. As my supervisor well put it,
+my learning process was by implosion: I started with a multitude of
 ill-defined concepts and vague ideas and no sense of their
 relevance. They were gradually refined and made more precise.
 
@@ -2222,7 +2234,7 @@ formally reproducing a scientific paper has been invaluable.
 I used my blog mostly to sketch new ideas and take notes, not so much
 for planning. For that, I relied on my whiteboard — the source of all
 organisation in my living. Once I started writing this report, I used
-the \LaTeX package \texttt{todonotes} to keep track of tasks within
+the \LaTeX package \textbf{todonotes} to keep track of tasks within
 the report itself. Tasks are highlighted as big orange notes on the
 sides of pages, and are impossible to miss during reviews. I used
 \texttt{grep} to list all these tasks.
@@ -2237,7 +2249,7 @@ Bellow is a brief breakdown of this project's timeline:
     \begin{itemize}
       \item understand what an evidence providing problem solver is
       \item start absorbing the literature
-      \item start blog
+      \item start the blog
     \end{itemize}
   \item [2017-11] \hfill \\
     \vspace{-\topsep}
@@ -2248,7 +2260,7 @@ Bellow is a brief breakdown of this project's timeline:
   \item [2017-12] \hfill \\
     \vspace{-\topsep}
     \begin{itemize}
-      \item examine the existing solution for commutative rings
+      \item examine the existing solution for solving commutative rings
       \item start reading about solving Presburger arithmetic
     \end{itemize}
   \columnbreak
@@ -2295,7 +2307,7 @@ formulae to be proven. Future work is outlined in
 \autoref{sec:future-work}.
 
 Perhaps most importantly, this project has been of invaluable
-educational significance. I will likely aspire to find further
+educational significance for me. I will likely aspire to find further
 entertainment within the field.
 
 \bibliographystyle{apalike}

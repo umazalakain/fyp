@@ -752,8 +752,8 @@ find-x : ∀ {i} (ρ : Env i) (lus : List (Pair (suc i)))
        → ∀[ omega lus ] ⊨[ ρ /x]
        → Σ ℤ λ x → ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ
 
-find-x ρ lus ⊨↓lus with search-space ρ lus
-find-x ρ lus ⊨↓lus | xs = search (λ x → all ⊨?_[ x ∷ ρ /x]ₚ lus ) xs (by-contradiction ρ xs lus ⊨↓lus)
+find-x ρ lus ⊨lus↓ with search-space ρ lus
+find-x ρ lus ⊨lus↓ | xs = search (λ x → all ⊨?_[ x ∷ ρ /x]ₚ lus ) xs (by-contradiction ρ xs lus ⊨lus↓)
 \end{code}
 %</find-x>
 
