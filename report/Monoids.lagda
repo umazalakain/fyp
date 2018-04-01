@@ -160,42 +160,42 @@ module _ {M : Set} (monoid : Monoid M) where
 \end{code}
 %</solution>
 
-%<*eval-homo>
+%<*++-homo>
 \begin{code}
-  eval-homo : ∀ {n} (e₁ e₂ : NormalForm n) → (ρ : Env n)
+  ++-homo : ∀ {n} (e₁ e₂ : NormalForm n) → (ρ : Env n)
               → ⟦ e₁ ⇓⟧ ρ · ⟦ e₂ ⇓⟧ ρ ≡ ⟦ e₁ ++ e₂ ⇓⟧ ρ
 
-  eval-homo []       e₂ ρ = law-ε-· (⟦ e₂ ⇓⟧ ρ)
-  eval-homo (i ∷ e₁) e₂ ρ = begin
+  ++-homo []       e₂ ρ = law-ε-· (⟦ e₂ ⇓⟧ ρ)
+  ++-homo (i ∷ e₁) e₂ ρ = begin
     ((lookup i ρ) · ⟦ e₁ ⇓⟧ ρ) · ⟦ e₂ ⇓⟧ ρ
       ≡⟨ law-·-· _ _ _ ⟩
     (lookup i ρ) · (⟦ e₁ ⇓⟧ ρ · ⟦ e₂ ⇓⟧ ρ)
-      ≡⟨ cong (λ ● → lookup i ρ · ●) (eval-homo e₁ e₂ ρ) ⟩
+      ≡⟨ cong (λ ● → lookup i ρ · ●) (++-homo e₁ e₂ ρ) ⟩
     (lookup i ρ) · ⟦ e₁ ++ e₂ ⇓⟧ ρ
       ∎
     where open ≡-Reasoning
 \end{code}
-%</eval-homo>
+%</++-homo>
 
-%<*eval-commutes>
+%<*correct>
 \begin{code}
-  eval-commutes : ∀ {n} (e : Expr n) (ρ : Env n)
+  correct : ∀ {n} (e : Expr n) (ρ : Env n)
                 → ⟦ e ⟧ ρ ≡ ⟦ normalise e ⇓⟧ ρ
 
-  eval-commutes ε'         ρ = refl
-  eval-commutes (var' x)   ρ = law-·-ε (lookup x ρ)
-  eval-commutes (e₁ ·' e₂) ρ = begin 
+  correct ε'         ρ = refl
+  correct (var' x)   ρ = law-·-ε (lookup x ρ)
+  correct (e₁ ·' e₂) ρ = begin 
     ⟦ e₁ ⟧ ρ · ⟦ e₂ ⟧ ρ
-      ≡⟨ cong (λ ● → ● · _) (eval-commutes e₁ ρ) ⟩
+      ≡⟨ cong (λ ● → ● · _) (correct e₁ ρ) ⟩
     ⟦ normalise e₁ ⇓⟧ ρ · ⟦ e₂ ⟧ ρ
-      ≡⟨ cong (λ ● → _ · ●) (eval-commutes e₂ ρ) ⟩
+      ≡⟨ cong (λ ● → _ · ●) (correct e₂ ρ) ⟩
     ⟦ normalise e₁ ⇓⟧ ρ · ⟦ normalise e₂ ⇓⟧ ρ
-      ≡⟨ eval-homo (normalise e₁) (normalise e₂) ρ ⟩
+      ≡⟨ ++-homo (normalise e₁) (normalise e₂) ρ ⟩
     ⟦ normalise e₁ ++ normalise e₂ ⇓⟧ ρ
       ∎
     where open ≡-Reasoning
 \end{code}
-%</eval-commutes>
+%</correct>
 
 %<*solve-type>
 \begin{code}
@@ -209,11 +209,11 @@ module _ {M : Set} (monoid : Monoid M) where
   ...            | no  _  = tt
   ...            | yes eq = λ ρ → 
     ⟦ e₁ ⟧ ρ
-      ≡⟨ eval-commutes e₁ ρ ⟩
+      ≡⟨ correct e₁ ρ ⟩
     ⟦ normalise e₁ ⇓⟧ ρ
       ≡⟨ cong (λ ● → ⟦ ● ⇓⟧ ρ) eq  ⟩
     ⟦ normalise e₂ ⇓⟧ ρ
-      ≡⟨ sym (eval-commutes e₂ ρ) ⟩
+      ≡⟨ sym (correct e₂ ρ) ⟩
     ⟦ e₂ ⟧ ρ
       ∎
     where open ≡-Reasoning

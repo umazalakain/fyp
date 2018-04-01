@@ -1072,19 +1072,24 @@ commute:
   \draw[->] (N) to node [sloped, below] {\AgdaFunction{⟦}~\AgdaBound{l}~\AgdaFunction{⇓⟧}~\AgdaBound{ρ}}      (M);
   \draw[->] (E) to node [sloped, above] {\AgdaFunction{⟦}~\AgdaBound{e}~\AgdaFunction{⟧}~\AgdaBound{ρ}}       (M);
 \end{tikzpicture}
-\caption{\AgdaSymbol{∀}~\AgdaBound{e}~\AgdaBound{ρ}~\AgdaSymbol{→}~\AgdaFunction{eval-commutes}~\AgdaBound{e}~\AgdaBound{ρ}}
+\caption{\AgdaSymbol{∀}~\AgdaBound{e}~\AgdaBound{ρ}~\AgdaSymbol{→}~\AgdaFunction{correct}~\AgdaBound{e}~\AgdaBound{ρ}}
 \end{figure}
 
-\todo{Functions names are misleading, better commentary}
+For every expression constructor, it has to be shown that its
+corresponding normalisation function does not affect the structure of
+the monoid. In the case of the normalisation of
+~\AgdaBound{a}~\AgdaInductiveConstructor{·}~\AgdaBound{b} expressions,
+the proof for both subexpressions is obtained inductively.  For
+greater clarity, I use this top-down whiteboard-style reasoning
+instead of the shorter \AgdaKeyword{rewrite} directives.
 
-This proof is inductively defined and depends on another proof showing
-that normalisation preserves a monoid's structure.
+\ExecuteMetaData[Monoids.tex]{correct}
 
-\ExecuteMetaData[Monoids.tex]{eval-commutes}
+Proving that ~\AgdaFunction{\_++\_}~ preservers the monoid's structure
+must be done by induction on the first argument. Unsurprisingly,
+together these two proofs use all of the monoid laws.
 
-Unsurprisingly, together these two proofs use all of the monoid laws.
-
-\ExecuteMetaData[Monoids.tex]{eval-homo}
+\ExecuteMetaData[Monoids.tex]{++-homo}
 
 \end{AgdaAlign}
 
