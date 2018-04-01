@@ -2343,10 +2343,5 @@ made spacing of compiled literate Agda programs inconsistent and
 disagreeable to the eye. The commit \texttt{8b83da6} can be
 cherry-picked from Agda's master branch.
 
-\chapter{User Guide}
-%  Appendix C - User Guide This appendix should provide a detailed description
-%  of how to use your system. In some cases, it may also be appropriate to
-%  include a second guide dealing with maintenance and updating issues.
-
 \end{appendices}
 \end{document}
