@@ -176,11 +176,11 @@ mutual
 \begin{code}
 ------------------------------------------------------------------------
 -- Equality and decidability
+\end{code}
 
+%<*equality>
+\begin{code}
 mutual
-
-  -- Equality.
-
   data _≈H_ : ∀ {n} → HNF n → HNF n → Set (r₁ ⊔ r₃) where
     ∅     : ∀ {n} → _≈H_ {suc n} ∅ ∅
     _*x+_ : ∀ {n} {p₁ p₂ : HNF (suc n)} {c₁ c₂ : Normal n} →
@@ -189,7 +189,10 @@ mutual
   data _≈N_ : ∀ {n} → Normal n → Normal n → Set (r₁ ⊔ r₃) where
     con  : ∀ {c₁ c₂} → ⟦ c₁ ⟧′ ≈ ⟦ c₂ ⟧′ → con c₁ ≈N con c₂
     poly : ∀ {n} {p₁ p₂ : HNF (suc n)} → p₁ ≈H p₂ → poly p₁ ≈N poly p₂
+\end{code}
+%</equality>
 
+\begin{code}
 mutual
 
   -- Equality is decidable.

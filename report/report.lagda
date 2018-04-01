@@ -245,7 +245,7 @@ where the heart of a Presburger arithmetic solver written in Agda is
 presented. With some additional work, I am optimistic of its inclusion
 into Agda's standard library.
 
-Concluding, \autoref{ch:verification} reiterates the on correctness
+Concluding, \autoref{ch:verification} reiterates on the correctness
 that the precision of dependently typed specifications are able to
 guarantee, and \autoref{ch:evaluation} and \autoref{ch:conclusion}
 contain meta-analyses of the project's development process.
@@ -256,7 +256,7 @@ contain meta-analyses of the project's development process.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This chapter starts by briefly introducing the case for the use of
-type-checkers as theorem verifiers. Next, a succint primer on
+type-checkers as theorem verifiers. Next, a succinct primer on
 programming in Agda is given. In itself, such introduction is probably
 not enough to get the unexperienced reader entirely comfortable
 reading Agda code. Only more in-depth reading and hands-on practice
@@ -266,6 +266,7 @@ ideas put forward in later sections of this report.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Proofs as programs; propositions as types}
+\label{curry-howard}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 If a computer is to verify the proof of some proposition, some
@@ -290,18 +291,22 @@ module _ where
 }
 
 \begin{code}
-    -- Truth: a set with a single constructor trivial to satisfy
-    record ⊤ : Set where
-        constructor tt
+    -- Truth: a set with a single element trivial to construct
+    data ⊤ : Set where
+      tt : ⊤
 
     -- Falsehood: an uninhabited (empty) set
     data ⊥ : Set where
 
-    -- Disjunction, with two constructors
+    -- Disjunction
     data _⊎_ (A B : Set) : Set where
       inj₁ : A → A ⊎ B
       inj₂ : B → A ⊎ B
 
+    -- Conjunction
+    data _×_ (A B : Set) : Set where
+      _,_ : A → B → A × B
+      
     module Laws {A : Set} where
       -- Principle of explosion
       -- There is no constructor for ⊥, pattern matching on the
@@ -331,7 +336,7 @@ of simply typed lambda calculus — where $→$ is the only type
 constructor — is in itself enough to model propositional logic. Type
 theories with dependent types — where the definition of a type may
 depend on a value — model predicate logics that contain quantifiers.
-\cite{Sorensen2006d} is an comprehensive introduction to these ideas.
+\cite{Sorensen2006d} is a comprehensive introduction to these ideas.
 
 \begin{code}
     -- Natural numbers, defined inductively
@@ -386,7 +391,7 @@ Haskell is regarded as its main backend. \cite{Norell2009} is an
 excellent introduction to Agda; technical documentation can be found
 at \url{https://agda.readthedocs.io}. This section briefly covers the
 basics of what theorem proving in Agda looks like and, in the spirit
-of a tutorial, ocasionally uses the second person to avoid verbose
+of a tutorial, occasionally uses the second person to avoid verbose
 references to some third person programmer or the excessive use of the
 passive voice.
 
@@ -438,14 +443,15 @@ type-checker, you may omit it and use $∀$:
 Multiple arguments sharing the same type can be grouped by using
 multiple names for them. With the exception of whitespace and a few
 other special symbols, names in Agda may contain arbitrary unicode
-symbols. In addition, names can use underscores as placeholders for
-their arguments.
+symbols. In addition, function names can use the so-called ``misfix''
+notation, where underscores are used as placeholders that determine
+where the function's arguments are placed.
 
 \begin{code}
     ∣_-_∣ : (x y : ℕ) → ℕ
     ∣ zero - y ∣ = y
     ∣ suc x - zero ∣ = suc x
-    ∣ suc x - suc y ∣ = ∣ x - y ∣
+    ∣ suc x - suc y ∣ = ∣ x - y ∣ -- Or ∣_-_∣ x y
 \end{code}
 
 An anonymous function can be provided wherever a function is
@@ -492,8 +498,8 @@ these parameters need to be named:
 \end{code}
 
 Data types with a single constructor can be defined as records.
-Bellow, a record type where the type of one of the fields
-depends on the value of the other:
+Below, a record type where the type of one of the fields depends on
+the value of the other:
 
 \begin{code}
     record Σ (A : Set) (B : A → Set) : Set where
@@ -504,9 +510,9 @@ depends on the value of the other:
 \end{code}
 
 Datatypes can be indexed. Each of these indices is said to introduce a
-family of types. Constructors do not need to keep within the same
-index, and may in fact \textit{jump} between one and other. Parameters
-are forced on datatypes, but indices are a choice.
+family of types. Constructors have the liberty to choose any index for
+the type they are constructing. While parameters must remain unaltered
+by constructors, indices must not.
 
 \begin{code}
     -- Parametrised by A : Set, indexed by ℕ
@@ -515,7 +521,7 @@ are forced on datatypes, but indices are a choice.
         _∷_ : ∀ {n} → A → Vec A n → Vec A (suc n)
 \end{code}
 
-Pattern matching deconstructs a type, which creates one case per every
+Pattern matching deconstructs a type, which creates one case for each
 constructor capable of constructing that type:
 
 \begin{code}
@@ -529,9 +535,9 @@ constructor capable of constructing that type:
     head (x ∷ xs) = x
 \end{code}
 
-Computation is advanced by pattern matching. The RHS of each pattern
-match case will have the type of the terms in its context refined by
-the information obtained from the LHS.
+Computation is advanced by pattern matching. The right hand side of
+each pattern match case will have the type of the terms in its context
+refined by the information obtained from the left hand side.
 
 \begin{code}
     -- Note that xs, ys and the result have the same length
@@ -569,8 +575,8 @@ If pattern matching against a type uniquely implies the constructor of
 some other argument, the type-checker will substitute the argument by
 the value preceded by a dot. If a term on the RHS can be inferred by
 the type-checker, you may replace it by an underscore. Additionally,
-underscores can be used as non-bound catch-alls on the LHS of a
-definition.
+underscores can be used as a non-binding catch-all pattern on the LHS
+of a definition.
 
 \begin{code}
     -- Pattern matching on xs determines n
@@ -603,10 +609,9 @@ originally presented in \cite{McBride2004}:
     compare (suc .(suc m + k)) (suc .m)           | greater m k = greater (suc m) k
 \end{code}
 
-As a result of pattern matching
-on \AgdaFunction{compare}~\AgdaBound{m}~\AgdaBound{n} you learn about
-\AgdaBound{m} and \AgdaBound{n}. This is the key difference between
-with abstraction and ordinary case splitting on the
+Pattern matching on \AgdaFunction{compare}~\AgdaBound{m}~\AgdaBound{n}
+uniquely defines \AgdaBound{m} and \AgdaBound{n}. This is the key
+difference between with abstraction and ordinary case splitting on the
 RHS. \cite{Oury2008} contains other interesting examples of views.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -700,7 +705,7 @@ special syntax exists for it:
 The so-called inspect idiom is occasionally used throughout the
 present work and deserves to be briefly mentioned. When you pattern
 match on some expression ~\AgdaBound{e}~, a case will be generated
-for every constructor ~\AgdaBound{c}~ capable of constructing such
+for every constructor ~\AgdaBound{c}~ capable of constructing such an
 expression ~\AgdaBound{e}. On the RHS of each of these cases, it is
 clear that ~\AgdaBound{c}~\AgdaDatatype{≡}~\AgdaBound{e}. You might
 want to pattern match on this proof or hand it over to other
@@ -726,12 +731,14 @@ result of pattern matching:
 \subsection{Tools for reasoning}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-To aid reasoning, tools that enable whiteboard-style deductions have
-been developed. These functions exploit the transitivity of the binary
-relation they are defined for — may it be equality or other preorder
-relations like $≤$ or $⇒$. This style of reasoning, together with the
-congruent property of functions, is used profusely throughout this
-work.
+To aid reasoning, tools that enable top-down whiteboard-style
+deductions have been developed. These functions exploit the
+transitivity of the binary relation they are defined for — may be it
+equality or another preorder relation like $≤$ or $⇒$. Compared to the
+bare application of transitivity, this style of reasoning leaves a
+clear ``trail'' of interleaving types and justifications of their
+relation. Together with the congruent property of functions, it is
+used extensively throughout this work.
 
 \AgdaHide{
 \begin{code}
@@ -747,13 +754,15 @@ work.
 \begin{code}
     prf₇ : ∀ l n m → ((zero + (l + zero)) + (n + zero)) + m ≡ (l + n) + m
     prf₇ l n m = begin
+      -- LHS of the equality
       ((zero + (l + zero)) + (n + zero)) + m
-        ≡⟨⟩ -- Needs no justification, both types immediately unify
+        ≡⟨⟩ -- The rewrite needs no justification, both types unify
       ((l + zero) + (n + zero)) + m
         ≡⟨ cong (λ ● → (● + (n + zero)) + m) (prf₆ l) ⟩
       (l + (n + zero)) + m
         ≡⟨ cong (λ ● → (l + ●) + m) (prf₆ n) ⟩
       (l + n) + m
+      -- RHS of the equality
         ∎ 
 \end{code}
 
@@ -765,7 +774,7 @@ Procedures that try to automatically solve goals require some
 notion of what their target theorem is. To prove the goal within Agda,
 this notion has to be manipulated and inspected by pattern
 matching. To do so, it needs to be translated into an inductive data
-type — this process is often called \textit{metaification} or
+type — a process often called \textit{metaification} or
 \textit{reflection}. Both \cite{Gregoire2005} and \cite{Boutin1997}
 introduce this idea.
 
@@ -1264,7 +1273,7 @@ carrier set. This and the need to evaluate constant coefficients,
 results in an inductive definition of equality of normal forms being
 necessary.
 
-\todo{Maybe show the code?}
+\ExecuteMetaData[CommutativeRings.tex]{equality}
 
 Evaluation within an environment of both polynomial expressions and
 normal forms is then defined. Similar to monoids, environments are
@@ -1850,18 +1859,14 @@ $∀x.¬∀lu.⊨ₓlu$) is equivalent to the form $∃lu.¬∃x.⊨ₓlu$ — w
 $l$ is paired with every $u$. This later form is suitable to be fed
 into Norrish's proof by contradiction, which for any $lu$ expects
 $¬∃x.⊨ₓlu$. The difference is that Norrish's proof is used only
-once. Note that the unsolved postulate is the same justification that
-Norrish offers for his initial induction. The proof is a one-way
-implication, but bi-implication can be shown.
-
-\todo{Better function names}
+once. Note that the unsolved postulate is the justification offered by
+Norrish for his initial induction. The proof is a one-way implication,
+but bi-implication can be shown.
 
 \ExecuteMetaData[Presburger.tex]{contradiction-adaptation}
 
-Finally, the $lu$ pair for which $¬∃x.⊨ₓlu$ must be found,
-Norrish's proof must be executed on it and
-~\AgdaBound{⊨lu↓}~\AgdaSymbol{→}~\AgdaDatatype{⊥}~ derived and applied
-to ~\AgdaBound{⊨lu↓}.
+Finally, the $lu$ pair for which $¬∃x.⊨ₓlu$ is found and used to
+derive a constradiction using Norrish's proof.
 
 \ExecuteMetaData[Presburger.tex]{contradiction-search}
 
@@ -2030,8 +2035,6 @@ original list. ~\AgdaFunction{untangleᵢ}~ and
 predicate were to be defined on sets instead of on lists, these
 functions would become unnecessary.
 
-\todo{Some kind of diagram?}
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Results and usage}
 \label{sec:usage}
@@ -2164,7 +2167,8 @@ formal specification is then considered to have been met if a term
 inhabiting its corresponding type is supplied. No amount of anecdotal
 evidence (testing) can obtain the grade of verification attained by
 these machine-checked formal proofs. These machine-proofs are much
-stronger evidence than human pair reviews. \todo{Link intro}
+stronger evidence than human pair reviews. \autoref{curry-howard}
+introduces the correspondence between logic and computation.
 
 For the exact details on the verification of the software developed
 for this report, I refer the reader to the corresponding sections
@@ -2340,5 +2344,4 @@ cherry-picked from Agda's master branch.
 %  include a second guide dealing with maintenance and updating issues.
 
 \end{appendices}
-
 \end{document}

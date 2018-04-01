@@ -707,21 +707,24 @@ by-contradiction : ∀ {i} (ρ : Env i) (xs : List ℤ) (lus : List (Pair (suc i
 %<*by-contradiction>
 \begin{code}
 by-contradiction {i} ρ xs lus ⊨lus↓ ∀xs¬∀lus =
-  ¬∃lus→¬∃xs lus ⊨lus↓ (∀xs→¬∀lus⇒∃lus→¬∃xs ∀xs¬∀lus)
-  where
+  ¬∃lus¬∃xs lus ⊨lus↓ (∀xs¬∀lus⇒∃lus¬∃xs ∀xs¬∀lus)
 \end{code}
 %</by-contradiction>
 
+\begin{code}
+  where
+\end{code}
+
 %<*contradiction-search>
 \begin{code}
-  ¬∃lus→¬∃xs : (lus : List (Pair (suc i)))
+  ¬∃lus¬∃xs : (lus : List (Pair (suc i)))
              → ∀[ omega lus ] ⊨[ ρ /x]
              → ∃[ lus ] (λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
              → ⊥
 
-  ¬∃lus→¬∃xs [] [] ()
-  ¬∃lus→¬∃xs (lu ∷ lus) (⊨lu↓ ∷ ⊨lus↓) (here ¬∃xs)       = ⊨norrish ρ xs lu ¬∃xs ⊨lu↓
-  ¬∃lus→¬∃xs (lu ∷ lus) (⊨lu↓ ∷ ⊨lus↓) (there ∃lus→¬∃xs) = ¬∃lus→¬∃xs lus ⊨lus↓ ∃lus→¬∃xs
+  ¬∃lus¬∃xs [] [] ()
+  ¬∃lus¬∃xs (lu ∷ lus) (⊨lu↓ ∷ ⊨lus↓) (here ¬∃xs)       = ⊨norrish ρ xs lu ¬∃xs ⊨lu↓
+  ¬∃lus¬∃xs (lu ∷ lus) (⊨lu↓ ∷ ⊨lus↓) (there ∃lus¬∃xs) = ¬∃lus¬∃xs lus ⊨lus↓ ∃lus¬∃xs
 \end{code}
 %</contradiction-search>
 
@@ -730,10 +733,10 @@ by-contradiction {i} ρ xs lus ⊨lus↓ ∀xs¬∀lus =
   postulate ∀lus∃xs⇒∃xs∀lus : ∀[ lus ] (λ lu → ∃[ xs ] (λ x → ⊨[ x ∷ ρ /x]ₚ lu))
                             → ∃[ xs ] (λ x → ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
 
-  ∀xs→¬∀lus⇒∃lus→¬∃xs : ∀[ xs ] (λ x → ¬ ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
+  ∀xs¬∀lus⇒∃lus¬∃xs : ∀[ xs ] (λ x → ¬ ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
                       → ∃[ lus ] (λ lu → ¬ ∃[ xs ] λ x → ⊨[ x ∷ ρ /x]ₚ lu)
 
-  ∀xs→¬∀lus⇒∃lus→¬∃xs = begin
+  ∀xs¬∀lus⇒∃lus¬∃xs = begin
     ∀[ xs ] (λ x → ¬ ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
       ∼⟨ AllProp.All¬⇒¬Any ⟩
     ¬ ∃[ xs ] (λ x → ∀[ lus ] ⊨[ x ∷ ρ /x]ₚ)
@@ -865,7 +868,7 @@ sat {suc i} as () | undecided | _
 sat {suc i} as ep | unsatisfiable | _ with all α≡1∨-β≡-1? (pairs as)
 sat {suc i} as () | unsatisfiable | _ | yes _
 sat {suc i} as () | unsatisfiable | _ | no _ 
-sat {suc i} as ep | satisfiable  | >[ eq ]< with sat (eliminate as) eq
+sat {suc i} as ep | satisfiable   | >[ eq ]< with sat (eliminate as) eq
 sat {suc i} as ep | _ | _ | ρ , ⊨as↓ with AllProp.++⁻ (elim-irrel (irrels as)) ⊨as↓
 sat {suc i} as ep | _ | _ | ρ , ⊨as↓ | ⊨irs↓ , ⊨lus↓ with find-x ρ (pairs as) ⊨lus↓
 sat {suc i} as ep | _ | _ | ρ , ⊨as↓ | ⊨irs↓ , ⊨lus↓ | x , ⊨lus with prepend-x x ρ (irrels as) ⊨irs↓
