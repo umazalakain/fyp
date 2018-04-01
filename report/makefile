@@ -9,9 +9,9 @@ MODULES=Presburger.lagda Monoids.lagda Adaptation.lagda CommutativeRings.lagda
 MAIN=report
 POSTPROCESS=postprocess-latex.pl
 
-all: modules report.pdf
+report.pdf: resources modules xetex
 
-report.pdf: resources $(POSTPROCESS)
+xetex: $(POSTPROCESS)
 	$(AGDA) $(AFLAGS) $(MAIN).lagda
 	cd $(OUT) && \
                  perl ../$(POSTPROCESS) $(MAIN).tex > $(MAIN).processed && \
