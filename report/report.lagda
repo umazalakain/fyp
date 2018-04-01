@@ -2025,12 +2025,10 @@ list.
 
 The function ~\AgdaFunction{entangle}~ mixes together proofs on pairs
 of bounds and proofs on irrelevant constraints into proofs on their
-original list. ~\AgdaFunction{untangleⁱ}~ and
-~\AgdaFunction{untangleᵖ}~ do the reverse. If the satisfiability
+original list. ~\AgdaFunction{untangleᵢ}~ and
+~\AgdaFunction{untangleₚ}~ do the reverse. If the satisfiability
 predicate were to be defined on sets instead of on lists, these
 functions would become unnecessary.
-
-\todo{make p subscript}
 
 \todo{Some kind of diagram?}
 

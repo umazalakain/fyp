@@ -831,11 +831,11 @@ postulate entangle : ∀ {i} {P : Linear (suc i) → Set} (as : List (Linear (su
                    → ∀[ pairs as ] (λ lu → P (proj₁ (proj₁ lu)) × P (proj₁ (proj₂ lu)))
                    → ∀[ as ] P
 
-postulate untangleⁱ : ∀ {i} {P : Linear (suc i) → Set} (as : List (Linear (suc i)))
+postulate untangleᵢ : ∀ {i} {P : Linear (suc i) → Set} (as : List (Linear (suc i)))
                    → ∀[ as ] P
                    → ∀[ irrels as ] (λ i → P (proj₁ i))
 
-postulate untangleᵖ : ∀ {i} {P : Linear (suc i) → Set} (as : List (Linear (suc i)))
+postulate untangleₚ : ∀ {i} {P : Linear (suc i) → Set} (as : List (Linear (suc i)))
                    → ∀[ as ] P
                    → ∀[ pairs as ] (λ lu → P (proj₁ (proj₁ lu)) × P (proj₁ (proj₂ lu)))
 \end{code}
@@ -853,8 +853,8 @@ unsat {suc i} as () | unsatisfiable | _        | no ¬∀α≡1∨-β≡-1
 unsat {suc i} as ep | unsatisfiable | >[ eq ]< | yes ∀α≡1∨-β≡-1 with unsat (eliminate as) eq
 unsat {suc i} as ep | unsatisfiable | >[ eq ]< | yes ∀α≡1∨-β≡-1 | ⊨as↓→⊥ = λ {
   (x ∷ ρ , ⊨as) → ⊨as↓→⊥ (ρ , AllProp.++⁺
-    (strip-x x ρ (irrels as) (untangleⁱ as ⊨as))
-    (⊨Ωlus x ρ (pairs as) ∀α≡1∨-β≡-1 (untangleᵖ as ⊨as)))}
+    (strip-x x ρ (irrels as) (untangleᵢ as ⊨as))
+    (⊨Ωlus x ρ (pairs as) ∀α≡1∨-β≡-1 (untangleₚ as ⊨as)))}
 
 sat : ∀ {i} (as : List (Linear i)) → Ω as ≡ satisfiable → ⊨ as
 sat {zero} as ep with all ⊨?_[ [] /x] as
