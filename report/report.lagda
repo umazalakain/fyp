@@ -16,8 +16,8 @@
 \usepackage[
   colorlinks=true,
   linkcolor=darkgray,
-  citecolor=darkgray,
-  urlcolor=darkgray,
+  citecolor=violet,
+  urlcolor=violet,
   ]{hyperref}
 
 % And fonts
@@ -783,7 +783,7 @@ externally defined ``tactics'': in Agda, automated theorem provers
 must be defined within the system.
 
 \href{https://agda.readthedocs.io/en/latest/language/reflection.html}{
-The support for reflection offered by Agda} gives the programmer the
+The support for reflection that Agda offers} gives the programmer the
 ability to ``quote'' arbitrary parts of the program into abstract
 terms representing them. In the other direction, these abstract terms
 can be procedurally built and later ``unquoted'' into concrete Agda
@@ -892,7 +892,7 @@ unsolved proofs or
 ~\AgdaPrimitiveType{Set}~\AgdaSymbol{:}~\AgdaPrimitiveType{Set}.
 Unfortunately, Agda's standard library does not quarantine unsafe
 definitions, so any module that depends on it is considered unsafe too
-— albeit not using any of its unsafe features. There is
+— even if does not use any of its unsafe features. There is
 \href{https://github.com/agda/agda-stdlib/issues/143}{work in
 progress} to address this.
 
@@ -933,9 +933,9 @@ self-contained and fairly simple definition:
 \AgdaBound{M}, the set on which the monoid is defined, is often referred
 to as the carrier. $(ℕ, +, 0)$ and $(ℕ, ·, 1)$ are both examples of
 monoids. These examples also happen to be commutative, while monoids
-need not be — more on solving commutative monoids later. An example of
-a non-commutative monoid are lists together with the concatenation
-operation:
+need not be — more on solving commutative monoids later. Lists
+together with the concatenation operation form non-commutative
+monoids.
 
 \ExecuteMetaData[Monoids.tex]{list-monoid}
 
@@ -963,7 +963,7 @@ propositions definitionally distinct — when they are equal modulo the
 monoid axioms — can be eliminated. It is crucial that this process —
 normalisation into a canonical form — guarantees the preservation of
 meaning. After normalisation, two results can be compared: if they are
-equal, so must the original expressions be. This is the sketch of the
+equal, the original expressions must be too. This is the sketch of the
 decision procedure.
 
 I use an abstract syntax tree to represent equations, and finite
@@ -987,7 +987,7 @@ Consider the following two expressions:
 \end{align*}
 Both propositions can now be seen to be equal. It is worth remembering
 that these are not commutative monoids, and that thus the order of the
-elements matters.
+elements can matter.
 
 Lists are a suitable data structure for representing flat elements —
 indices here — that can appear multiple times and whose order
@@ -1032,18 +1032,18 @@ corresponding value in the environment.
 
 \ExecuteMetaData[Monoids.tex]{evaluation}
 
-Bellow, the formal specification of soundness for the decision
+Below, the formal specification of soundness for the decision
 procedure. If two monoids are decided equal, they must evaluate to an
-equal value given any environment.  However, no no claims can be made
-if they are not decided equal: the carrier may have properties other
-than the monoidal. (Take, for instance, the natural numbers with
-addition, where $a + b$ is equivalent to $b + a$.)
+equal value given any environment.  However, no claims can be made if
+they are not decided equal: the carrier may have properties other than
+the monoidal. (Take, for instance, the natural numbers with addition,
+where $a + b$ is equivalent to $b + a$.)
 
 \ExecuteMetaData[Monoids.tex]{solution}
 
 The decidable equality of normal forms (here \AgdaFunction{\_≟\_}) is
-defined as the decidable equality of lists that relies on the
-decidable equality of finite indices.
+defined as the decidable equality of lists of finite indices, which in
+turn relies on the decidable equality of finite indices.
 
 \AgdaFunction{Solution}~ is a specification defined for a given
 equation. Such specification must be met for all equations:
@@ -1717,8 +1717,8 @@ and $b$ as per Pugh:
 \ExecuteMetaData[Presburger.tex]{dark-shadow}
 
 The dark shadow reduces to the real shadow when all $\alpha_i$ or all
-$\beta_j$ are $1$. I use the function ~\AgdaFunction{dark-shadow}~ for
-both computations, and then interpret the results accordingly.
+$\beta_j$ are $1$. I use the function ~\AgdaFunction{\_↓ₚ}~ for both
+computations, and then interpret the results accordingly.
 Unsatisfiability can only be asserted if the real shadow's
 precondition is met. If it is not,
 ~\AgdaInductiveConstructor{unsatisfiable}~ needs to be interpreted as
@@ -2246,7 +2246,7 @@ the report itself. Tasks are highlighted as big orange notes on the
 sides of pages, and are impossible to miss during reviews. I used
 \texttt{grep} to list all these tasks.
 
-Bellow is a brief breakdown of this project's timeline:
+Below is a brief breakdown of this project's timeline:
 
 \newpage
 \begin{multicols}{2}
