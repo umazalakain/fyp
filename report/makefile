@@ -5,7 +5,7 @@ AFLAGS=-i. --latex --latex-dir=$(OUT)
 COMPILER=latexmk -pdf -use-make -e '$$pdflatex=q/xelatex %O %S/'
 
 RESOURCES=bibliography.bib agda.sty chi.png
-MODULES=Presburger.lagda Monoids.lagda Adaptation.lagda CommutativeRings.lagda
+MODULES=Presburger.lagda Monoids.lagda Adaptation.lagda Normalisation.lagda CommutativeRings.lagda
 MAIN=report
 POSTPROCESS=postprocess-latex.pl
 
