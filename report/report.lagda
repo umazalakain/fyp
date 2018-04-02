@@ -2246,10 +2246,11 @@ relevance. They were gradually refined and made more precise.
 In the course of this project, and sometimes indirectly, I learned
 bits and pieces about abstract algebra, type theory, category theory
 and logic. I now better understand what it is to solve a problem
-constructively; how proofs of correctness are structured; how Agda's
-pattern matching and unification works; and what dependent types have
-to bring to the table. Finally, the experience of interpreting and
-formally reproducing a scientific paper has been invaluable.
+constructively; how proofs of correctness are structured; how
+implementation and verification relate; how Agda's pattern matching
+and unification works; and what dependent types have to bring to the
+table. Finally, the experience of interpreting and formally
+reproducing a scientific paper has been invaluable.
 
 \section{Organisation}
 
@@ -2314,7 +2315,7 @@ Below is a brief breakdown of this project's timeline:
 \label{ch:conclusion}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-This report researches the construction of verified problem solvers
+This report explores the construction of verified problem solvers
 for three distinct problem domains. \autoref{ch:monoids} provides a
 detailed description of a solver for equations on monoids;
 \autoref{ch:rings} examines an existing solution for equations on
@@ -2329,7 +2330,8 @@ formulae to be proven. Future work is outlined in
 \autoref{sec:future-work}.
 
 Perhaps most importantly, this project has been of invaluable
-educational significance for me. I will likely aspire to find further
+educational significance for me — more on this in
+\ref{ch:evaluation}. I will likely aspire to find further
 entertainment within the field.
 
 \bibliographystyle{apalike}
@@ -2347,7 +2349,7 @@ All programs have been written for Agda 2.5.3.
 Running \texttt{make modules} inside the \texttt{report} directory
 will compile all Agda code present in this report and all of its
 dependencies. The only required external library is Agda's standard
-library, obtainable at \url{https://github.com/agda/agda-stdlib}.
+library, obtainable from \url{https://github.com/agda/agda-stdlib}.
 (Instructions on how to install it can be found at
 \url{https://agda.readthedocs.io/en/v2.5.3/tools/package-system.html#example-using-the-standard-library}.)
 
