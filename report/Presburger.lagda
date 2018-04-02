@@ -1,4 +1,9 @@
 \begin{code}
+-----------------------------------------------------------------------------------------
+-- Verified decision procedure for quantifier-free conjunctions of Presburger formulae --
+-- Implements the Omega Test. It is still a work in progress                           --
+-----------------------------------------------------------------------------------------
+
 module Presburger where
 
 open import Function using (id ; _∘_)

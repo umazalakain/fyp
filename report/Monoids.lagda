@@ -1,4 +1,8 @@
 \begin{code}
+------------------------------------------------
+-- A verified solver for equations on monoids --
+------------------------------------------------
+
 module Monoids where
 
 open import Data.Unit using (⊤ ; tt)

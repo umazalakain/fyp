@@ -1,4 +1,8 @@
 \begin{code}
+-------------------------------------------------------------------
+-- A limited interface showcasing the Presburger formulae solver --
+-------------------------------------------------------------------
+
 {-# OPTIONS --allow-unsolved-metas #-}
 module Adaptation where
 

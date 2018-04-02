@@ -1,4 +1,8 @@
 \begin{code}
+-------------------------------------------------------------------------------------
+-- Expressions, normal forms, and unverified normalisation for Presburger formulae --
+-------------------------------------------------------------------------------------
+
 module Normalisation where
 
 open import Function using (_∘_)
