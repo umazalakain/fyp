@@ -101,7 +101,7 @@ module _ where
         \rule{\textwidth}{1.6pt}
         \vspace{0mm}
 
-        {\Huge Evidence providing\\ problem solvers\\ in Agda\\}
+        {\Huge Evidence-providing\\ problem solvers\\ in Agda\\}
 
         \vspace{8mm}
         \rule{\textwidth}{1.6pt}
@@ -396,7 +396,7 @@ references to some third person programmer or the excessive use of the
 passive voice.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{The experience of programming in Agda}
+\subsection{Hole-driven development}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Development in Agda happens inside Emacs, and is a two way
@@ -736,7 +736,7 @@ deductions have been developed. These functions exploit the
 transitivity of the binary relation they are defined for — may be it
 equality or another preorder relation like $≤$ or $⇒$. Compared to the
 bare application of transitivity, this style of reasoning leaves a
-clear ``trail'' of interleaving types and justifications of their
+clear ``trail'' of interleaving types and justifications for their
 relation. Together with the congruent property of functions, it is
 used extensively throughout this work.
 
@@ -1303,7 +1303,7 @@ operates inductively. Both the operations and the normalisation
 process use the simplifying variant of
 ~\AgdaInductiveConstructor{\_*x+\_}~ to keep their results canonical.
 
-For each operation, an homomorphism lemma is proven, showing that
+For each operation, a homomorphism lemma is proven, showing that
 evaluating the given operation on any two normal forms is equivalent
 to evaluating both normal forms separately and then applying the given
 operation to them. Finally, the main correctness proof uses these
@@ -1373,8 +1373,8 @@ expressiveness of Presburger arithmetic.
 
 To our knowledge, there is no other implementation of a decision
 procedure for Presburger arithmetic written in Agda. In this chapter,
-I introduce two decision procedures on integers, and partly implement
-and verify correct one of them.
+I introduce two decision procedures on integers and partly implement
+one of them, then verify its correctness.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Problem description and specification}
@@ -1411,7 +1411,7 @@ module _ where
 I define Presburger predicates as any formulae built using the
 following syntax:
 
-\ExecuteMetaData[Presburger.tex]{formula}
+\ExecuteMetaData[Normalisation.tex]{formula}
 
 I use de Bruijn indices \cite{Bruijn1972} to refer to bindings by
 their proximity: a variable with index \AgdaNumber{0} refers to the
@@ -1433,7 +1433,22 @@ arguments.
 
 \autoref{eq:even-or-odd} can be transcribed as follows:
 
-\ExecuteMetaData[Presburger.tex]{pred}
+\AgdaHide{
+\begin{code}
+module _ where
+  open import Data.Fin using (zero ; suc)
+  open import Data.Integer using (+_)
+  open import Normalisation
+\end{code}}
+
+\begin{code}
+  pred₁' : Formula 0
+  pred₁' = ∀' ∃' ((x [ =' ] ((+ 2) *' y))
+              ∨' (x [ =' ] (((+ 2) *' y) +' (num' (+ 1)))))
+    where
+      x = var' (suc zero)
+      y = var' zero
+\end{code}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Decision procedures}
@@ -1594,7 +1609,7 @@ constructors ~\AgdaInductiveConstructor{∃}~ and
 ~\AgdaInductiveConstructor{¬∃}~ make one more variable available to
 their substructures.
 
-\ExecuteMetaData[Presburger.tex]{normal-form}
+\ExecuteMetaData[Normalisation.tex]{normal-form}
 
 Normalisation proceeds recursively, eliminating universal quantifiers,
 pushing conjunction and negation inward, normalising implication,
@@ -1880,7 +1895,7 @@ Put together, this satisfies the proof by contradiction:
 \ExecuteMetaData[Presburger.tex]{by-contradiction-type}
 \ExecuteMetaData[Presburger.tex]{by-contradiction}
 
-The proof by contradiction is then be used to guarantee the success of
+The proof by contradiction is then used to guarantee the success of
 the search for $x$:
 
 \ExecuteMetaData[Presburger.tex]{find-x}
@@ -1926,7 +1941,7 @@ sub-goals and how those are later put back together. I also give an
 example of a finished sub-goal proof to show the reader what it looks
 like.
 
-I use a parametrised module for all proofs that involves a particular
+I use a parametrised module for all proofs that involve a particular
 lower bound and upper bound pair. I \textit{open} the constituents of
 the supplied pairs so that I can refer to them more comfortably from
 within types.
@@ -2006,21 +2021,21 @@ unsatisfiable (goal ~\AgdaBound{⊨as→⊥}), a proof of unsatisfiability
 after elimination (\AgdaBound{⊨as↓→⊥}) is obtained recursively. Then
 satisfiability before elimination is assumed (\AgdaBound{⊨as}) and
 satisfiability after elimination derived (\AgdaBound{⊨as↓}) through
-the use of ~\AgdaFunction{⊨real-shadow}.= From there, a contradiction
+the use of ~\AgdaFunction{⊨real-shadow}. From there, a contradiction
 is obtained.
 
 If an input is decided satisfiable (goal ~\AgdaBound{⊨as}), a proof of
 satisfiability after elimination (\AgdaBound{⊨as↓}) is obtained
-recursively. Then ~\AgdaFunction{find-x}~ adds a new $x$ to the
+recursively. Then ~\AgdaFunction{⊨↑ₚ}~ adds a new $x$ to the
 environment, and returns a proof (\AgdaBound{⊨as}) that by doing so,
 satisfiability is preserved.
 
 Clearly, irrelevant constraints — those where the variable to
 eliminate has coefficient 0 — do not have their meaning altered by
-elimination. Similarly, the meaning of no constraint changes after an
-irrelevant variable is prepended to it. Given that the Omega Test
-requires constraints to be split into lower bounds and upper bounds, I
-handle irrelevant constraints outside of the it.
+elimination. Similarly, the meaning of no constraint changes after a
+variable with coefficient 0 is prepended to it. Given that the Omega
+Test requires constraints to be split into lower bounds and upper
+bounds, I handle irrelevant constraints outside of the it.
 
 \AgdaFunction{partition}~ partitions a list of constraints into three
 sub-lists: lower bound constraints, irrelevant constraints and upper
