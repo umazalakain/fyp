@@ -1079,7 +1079,7 @@ For every expression constructor, it has to be shown that its
 corresponding normalisation function does not affect the structure of
 the monoid. In the case of the normalisation of
 ~\AgdaBound{a}~\AgdaInductiveConstructor{·}~\AgdaBound{b} expressions,
-the proof for both subexpressions is obtained inductively.  For
+the proof for both sub-expressions is obtained inductively.  For
 greater clarity, I use this top-down whiteboard-style reasoning
 instead of the shorter \AgdaKeyword{rewrite} directives.
 
@@ -1599,7 +1599,7 @@ structure where:
 
 The following tree-like structure contains ~\AgdaDatatype{Linear}s as
 leafs and, within each conjunction, distinguishes leafs from further
-subtrees containing existential quantifiers.
+sub-trees containing existential quantifiers.
 
 As with ~\AgdaDatatype{Formula}s, note that the restriction on the
 number of available variables is pushed inside the structure —
@@ -1690,8 +1690,6 @@ that have been deconstructed by pattern matching — and thus structures
 get smaller in ``fixed steps''. Here, on the other hand, recursion has
 to be shown to terminate by account of the divides term's coefficient
 decreasing in steps of variable size.
-
-\todo{NatRec}
 
 As for verification, splinters introduce considerable complexity too.
 Pugh's theorem is of form $\text{LHS} \equiv D_1 \lor D_2$. That
@@ -2347,18 +2345,25 @@ files that contain all the quoted code listings — can be found in the
 All programs have been written for Agda 2.5.3.
 
 Running \texttt{make modules} inside the \texttt{report} directory
-will compile all Agda code present in this report and all of its
-dependencies. The only required external library is Agda's standard
+will compile all Agda code present in this report and any modules it
+depends on.  The only required external library is Agda's standard
 library, obtainable from \url{https://github.com/agda/agda-stdlib}.
-(Instructions on how to install it can be found at
+(Installation instructions can be found at
 \url{https://agda.readthedocs.io/en/v2.5.3/tools/package-system.html#example-using-the-standard-library}.)
-
 Running \texttt{make} inside the \texttt{report} directory first
-compiles all source code and then generates a PDF file for the
-report. During the course of this project I fixed a small bug that
-made spacing of compiled literate Agda programs inconsistent and
-disagreeable to the eye. The commit \texttt{8b83da6} can be
-cherry-picked from Agda's master branch.
+compiles all source code and then outputs the report as PDF. 
+
+Dependent types accurately describe the behaviour of functions, often
+more so than documentation. The interesting parts of the source code
+are already commented in this work and therefore — in the interest of
+not repeating oneself and judging dependent types self-documenting
+enough — there has been \textbf{no significant documentation added to
+the source code} itself.
+
+During the course of this project I fixed a small bug making spacing
+of compiled literate Agda programs inconsistent and unpleasant to
+the eye. The commit \texttt{8b83da6} can be cherry-picked from Agda's
+master branch.
 
 \end{appendices}
 \end{document}
