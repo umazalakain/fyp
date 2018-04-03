@@ -1,6 +1,8 @@
 
 # Evidence-providing problem solvers in Agda
 
+[PDF](https://umazalakain.info/static/report.pdf)
+
 The report, including all software written for it, is in the `report` directory.
 It can be compiled into PDF by running `make`. Note that for this to succeed,
 all literate Agda files need to be compiled. These were written for Agda 2.5.3
