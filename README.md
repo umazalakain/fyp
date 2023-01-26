@@ -1,7 +1,7 @@
 
 # Evidence-providing problem solvers in Agda
 
-[PDF](https://umazalakain.info/static/report.pdf)
+[PDF](https://umazalakain.info/static/Z18/bsc-thesis.pdf)
 
 The report, including all software written for it, is in the `report` directory.
 It can be compiled into PDF by running `make`. Note that for this to succeed,
